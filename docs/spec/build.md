@@ -23,13 +23,16 @@ docv build --out <dir>  # 出力先を一時的に変える
 ```
 docv/                 # output.dir
   index.html
-  ...                 # 各ページ
+  README.html         # 管理対象のファイルごとのページ。元のパスの .md を .html にした場所に置く
+  docs/spec/kind.html
   assets/             # CSS と JS
   jpg/                # output.jpg が true のとき
   .gitignore          # output.commit が false のとき
+  .docv               # docv build が作ったことを示す目印
 ```
 
-- build は、毎回 output.dir の中を作り直す。output.dir の外には書かない
+- build は、毎回出力先の中を作り直す。出力先の外には書かない
+- 出力先に .docv がなく、空でもないときは、消さずにエラーで終わる。output.dir や --out を間違えて既存のディレクトリを指しても消さないため
 
 ---
 

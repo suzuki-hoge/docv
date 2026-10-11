@@ -1,6 +1,13 @@
 //! Markdown のファイルを、frontmatter と、check が見る要素（見出し、リンク、地の文、タスク）に分ける。
 
+use std::path::{Component, Path, PathBuf};
+
 use pulldown_cmark::{Event, HeadingLevel, Options, Parser, Tag, TagEnd};
+
+/// docv が Markdown を読むときの拡張。
+pub const OPTIONS: Options = Options::ENABLE_TABLES
+    .union(Options::ENABLE_TASKLISTS)
+    .union(Options::ENABLE_STRIKETHROUGH);
 
 /// frontmatter と本文に分けたファイル。
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -107,13 +114,11 @@ pub fn outline(document: &Document) -> Outline {
         document.body_start_line + line_starts.partition_point(|&s| s <= offset) - 1
     };
 
-    let options =
-        Options::ENABLE_TABLES | Options::ENABLE_TASKLISTS | Options::ENABLE_STRIKETHROUGH;
     let mut outline = Outline::default();
     let mut heading: Option<Heading> = None;
     let mut in_code_block = false;
 
-    for (event, range) in Parser::new_ext(body, options).into_offset_iter() {
+    for (event, range) in Parser::new_ext(body, OPTIONS).into_offset_iter() {
         match event {
             Event::Start(Tag::Heading { level, .. }) => {
                 heading = Some(Heading {
@@ -160,6 +165,60 @@ pub fn outline(document: &Document) -> Outline {
     outline
 }
 
+/// リンク先を、ルートからの相対パスと `#` 以降に分ける。ルートの中を指す相対リンクでなければ None。
+/// base はリンク元のファイルがあるディレクトリ（ルートからの相対パス）。
+pub fn resolve_link(base: &Path, dest: &str) -> Option<(PathBuf, Option<String>)> {
+    if dest.is_empty()
+        || dest.starts_with('#')
+        || dest.contains("://")
+        || dest.starts_with("mailto:")
+    {
+        return None;
+    }
+    let (path, fragment) = match dest.split_once('#') {
+        Some((path, fragment)) => (path, Some(fragment.to_string())),
+        None => (dest, None),
+    };
+    let path = percent_decode(path.split('?').next().unwrap_or_default());
+    let joined = match path.strip_prefix('/') {
+        Some(rest) => PathBuf::from(rest),
+        None => base.join(&path),
+    };
+    let mut normalized = PathBuf::new();
+    for component in joined.components() {
+        match component {
+            Component::Normal(c) => normalized.push(c),
+            Component::ParentDir => {
+                if !normalized.pop() {
+                    return None;
+                }
+            }
+            _ => {}
+        }
+    }
+    Some((normalized, fragment))
+}
+
+fn percent_decode(s: &str) -> String {
+    let bytes = s.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%'
+            && let Some(b) = s
+                .get(i + 1..i + 3)
+                .and_then(|h| u8::from_str_radix(h, 16).ok())
+        {
+            out.push(b);
+            i += 3;
+            continue;
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
 fn heading_level(level: HeadingLevel) -> u8 {
     match level {
         HeadingLevel::H1 => 1,
@@ -174,6 +233,22 @@ fn heading_level(level: HeadingLevel) -> u8 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn resolves_links() {
+        let base = Path::new("docs/spec");
+        assert_eq!(
+            resolve_link(base, "../plan/a%20b.md#x"),
+            Some((PathBuf::from("docs/plan/a b.md"), Some("x".to_string())))
+        );
+        assert_eq!(
+            resolve_link(base, "/README.md"),
+            Some((PathBuf::from("README.md"), None))
+        );
+        assert_eq!(resolve_link(base, "../../../outside.md"), None);
+        assert_eq!(resolve_link(base, "https://example.com"), None);
+        assert_eq!(resolve_link(base, "#top"), None);
+    }
 
     #[test]
     fn splits_frontmatter() {

@@ -1,0 +1,194 @@
+:root {
+  --text: #1f2328;
+  --muted: #59636e;
+  --line: #d1d9e0;
+  --surface: #f6f8fa;
+  --link: #0969da;
+  --present: #1a7f37;
+  --future: #9a6700;
+  --past: #6e7781;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif;
+  line-height: 1.7;
+  background: #fff;
+}
+
+a {
+  color: var(--link);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+header.site {
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--line);
+  font-weight: 600;
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.meta .path {
+  color: var(--muted);
+  margin-left: auto;
+}
+
+.time,
+.kind,
+.status,
+.topic {
+  display: inline-block;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid var(--line);
+}
+
+.time {
+  color: #fff;
+  border-color: transparent;
+}
+
+.time-present {
+  background: var(--present);
+}
+
+.time-future {
+  background: var(--future);
+}
+
+.time-past {
+  background: var(--past);
+}
+
+.status {
+  background: #fff8c5;
+}
+
+.topic {
+  background: var(--surface);
+  color: var(--muted);
+}
+
+p.question {
+  margin: 12px 0;
+  padding: 8px 12px;
+  border-left: 4px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.time-group {
+  margin: 32px 0;
+}
+
+.time-group > h2,
+.time-group > summary {
+  font-size: 20px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 4px;
+}
+
+details.time-group > summary {
+  cursor: pointer;
+}
+
+.kind-group h3 {
+  font-size: 16px;
+  margin: 20px 0 8px;
+}
+
+.count {
+  color: var(--muted);
+  font-weight: normal;
+  font-size: 13px;
+}
+
+ul.docs,
+ul.unmanaged {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+ul.docs li {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--surface);
+}
+
+ul.docs li p.question {
+  margin: 4px 0 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 14px;
+}
+
+article.doc table {
+  border-collapse: collapse;
+  margin: 16px 0;
+  display: block;
+  overflow-x: auto;
+}
+
+article.doc th,
+article.doc td {
+  border: 1px solid var(--line);
+  padding: 6px 12px;
+  vertical-align: top;
+}
+
+article.doc th {
+  background: var(--surface);
+}
+
+article.doc pre {
+  background: var(--surface);
+  padding: 12px 16px;
+  overflow-x: auto;
+  border-radius: 6px;
+}
+
+article.doc code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+}
+
+article.doc :not(pre) > code {
+  background: var(--surface);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+article.doc hr {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 24px 0;
+}
+
+article.doc img {
+  max-width: 100%;
+}

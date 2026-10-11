@@ -6,9 +6,9 @@ use std::process::ExitCode;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
-use crate::check;
 use crate::diagnostic::Level;
 use crate::workspace::{Locate, Project};
+use crate::{build, check};
 
 /// 終了コード。docs/spec/cli.md の 2 章。
 pub const EXIT_FAILURE: u8 = 1;
@@ -37,6 +37,12 @@ enum Command {
     Check {
         /// 確かめるファイル。省略すると管理対象のファイルをすべて確かめる
         paths: Vec<PathBuf>,
+    },
+    /// 人間向けの HTML を作る
+    Build {
+        /// 出力先。省略すると docv.yaml の output.dir
+        #[arg(long)]
+        out: Option<PathBuf>,
     },
 }
 
@@ -79,6 +85,15 @@ fn execute(cli: Cli) -> Result<ExitCode> {
             } else {
                 ExitCode::SUCCESS
             })
+        }
+        Command::Build { out } => {
+            let out = out.map_or_else(
+                || project.root.join(&project.config.output.dir),
+                |out| cwd.join(out),
+            );
+            build::run(&project, &out)?;
+            println!("{} に出力した", out.display());
+            Ok(ExitCode::SUCCESS)
         }
     }
 }

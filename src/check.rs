@@ -1,7 +1,7 @@
 //! docv check のルール。docs/spec/check.md。
 
 use std::fs;
-use std::path::{Component, Path, PathBuf};
+use std::path::Path;
 
 use anyhow::{Context, Result};
 use serde_yaml_ng::Value;
@@ -382,7 +382,7 @@ fn check_links(cx: &mut Checker, outline: &Outline) {
         .unwrap_or(Path::new(""))
         .to_path_buf();
     for link in &outline.links {
-        let Some(target) = resolve(&base, &link.dest) else {
+        let Some((target, _)) = markdown::resolve_link(&base, &link.dest) else {
             continue;
         };
         if !root.join(&target).exists() {
@@ -394,56 +394,6 @@ fn check_links(cx: &mut Checker, outline: &Outline) {
             );
         }
     }
-}
-
-/// リンク先を、ルートからの相対パスにする。ルートの中を指す相対リンクでなければ None。
-fn resolve(base: &Path, dest: &str) -> Option<PathBuf> {
-    if dest.is_empty()
-        || dest.starts_with('#')
-        || dest.contains("://")
-        || dest.starts_with("mailto:")
-    {
-        return None;
-    }
-    let path = dest.split(['#', '?']).next().unwrap_or_default();
-    let path = percent_decode(path);
-    let joined = match path.strip_prefix('/') {
-        Some(rest) => PathBuf::from(rest),
-        None => base.join(&path),
-    };
-    let mut normalized = PathBuf::new();
-    for component in joined.components() {
-        match component {
-            Component::Normal(c) => normalized.push(c),
-            Component::ParentDir => {
-                if !normalized.pop() {
-                    return None;
-                }
-            }
-            _ => {}
-        }
-    }
-    Some(normalized)
-}
-
-fn percent_decode(s: &str) -> String {
-    let bytes = s.as_bytes();
-    let mut out = Vec::with_capacity(bytes.len());
-    let mut i = 0;
-    while i < bytes.len() {
-        if bytes[i] == b'%'
-            && let Some(b) = s
-                .get(i + 1..i + 3)
-                .and_then(|h| u8::from_str_radix(h, 16).ok())
-        {
-            out.push(b);
-            i += 3;
-            continue;
-        }
-        out.push(bytes[i]);
-        i += 1;
-    }
-    String::from_utf8_lossy(&out).into_owned()
 }
 
 #[cfg(test)]
