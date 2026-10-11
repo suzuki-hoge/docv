@@ -69,12 +69,12 @@ docs/plan/009-impl.md:1: error status-invalid status は todo か doing
 | past-wording | warn | 本文に、過去や実装状態の言い回しがある |
 | past-heading | warn | 見出しに、過去を扱う語がある |
 
-既定の語は次のとおり。docv.yaml の lint.words で足したり外したりできる。語は大文字と小文字を区別し、部分一致で探す（種類の fixme や、plan の status の todo は警告しない）。
+既定の語は次のとおり。docv.yaml の lint.words.add は past-wording に語を足し、lint.words.remove は両方から語を外す。語は大文字と小文字を区別し、部分一致で探す（種類の fixme や、plan の status の todo は警告しない）。
 
 | ルール | 既定の語 |
 |---|---|
-| past-wording | 以前は、従来は、旧仕様、旧方式、に変更した、に変更しました、を廃止した、を廃止しました、未実装、実装予定、実装済み、今後は、将来的に、TODO、FIXME |
-| past-heading | 変更履歴、更新履歴、経緯、廃案、不採用、未実装、今後の予定 |
+| past-wording | `以前は`、`従来は`、`旧仕様`、`旧方式`、`に変更した`、`に変更しました`、`を廃止した`、`を廃止しました`、`未実装`、`実装予定`、`実装済み`、`今後は`、`将来的に`、`TODO`、`FIXME` |
+| past-heading | `変更履歴`、`更新履歴`、`経緯`、`廃案`、`不採用`、`未実装`、`今後の予定` |
 
 ### リンク
 
