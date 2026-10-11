@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=./schema/docv.schema.json
+version: 1
+title: docv
+
+topics: [ルール, 設定, CLI, 出力, 配布]
+
+docs:
+  - path: README.md
+    kind: overview
+    question: docv は何で、どこから見ればいいか
+  - path: docs/spec/*.md
+    kind: spec
+  - path: docs/rule/*.md
+    kind: rule
+  - path: docs/plan/*.md
+    kind: plan
+  - path: docs/fixme/*.md
+    kind: fixme
+  - path: docs/archive/**/*.md
+    kind: archive
+
+ignore:
+  - templates/**
+  - CLAUDE.md
+  - tmp/**
+
+archive:
+  dir: docs/archive
+
+output:
+  dir: docv
+  commit: true
+  jpg: false

@@ -1,0 +1,178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "docv.yaml",
+  "description": "docv の設定ファイル。項目の意味は docs/spec/config.md を参照。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "docs"],
+  "properties": {
+    "version": {
+      "description": "設定ファイルの形式の版。",
+      "const": 1
+    },
+    "title": {
+      "description": "HTML とインデックスに出すプロジェクト名。省略するとルートのディレクトリ名。",
+      "type": "string",
+      "minLength": 1
+    },
+    "repository": {
+      "description": "HTML で、管理対象でないファイルへのリンクを GitHub の URL にするために使う。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url"],
+      "properties": {
+        "url": {
+          "description": "GitHub のリポジトリの URL。",
+          "type": "string",
+          "pattern": "^https://"
+        },
+        "branch": {
+          "description": "リンクで使うブランチ。",
+          "type": "string",
+          "default": "main"
+        }
+      }
+    },
+    "topics": {
+      "description": "話題の一覧。frontmatter の topics にはここにある話題だけを書ける。",
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "docs": {
+      "description": "どのファイルをどの種類として管理するか。上から順に見て、最初に当てはまった項目を使う。",
+      "type": "array",
+      "items": { "$ref": "#/$defs/docEntry" }
+    },
+    "ignore": {
+      "description": "管理対象にも管理外にもしないファイルの glob。",
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "kinds": {
+      "description": "独自の種類。",
+      "type": "array",
+      "items": { "$ref": "#/$defs/kind" }
+    },
+    "templates": {
+      "description": "種類ごとのテンプレの差し替え。種類の ID をキーに、テンプレのファイルのパスを書く。",
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/kindId" },
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "archive": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "dir": {
+          "description": "docv retire が archive を書くディレクトリ。",
+          "type": "string",
+          "default": "docs/archive"
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "dir": {
+          "description": "docv build の出力先。",
+          "type": "string",
+          "default": "docv"
+        },
+        "commit": {
+          "description": "出力を git で管理するか。false なら出力先に .gitignore を置く。",
+          "type": "boolean",
+          "default": true
+        },
+        "jpg": {
+          "description": "HTML に加えて JPG を作るか。true ならローカルの Chrome が必要。",
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "lint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "words": {
+          "description": "過去の言い回しとして警告する語の調整。",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "add": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 }
+            },
+            "remove": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "kindId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "builtinKind": {
+      "enum": ["overview", "spec", "operation", "cost", "rule", "plan", "proposal", "fixme", "archive"]
+    },
+    "docEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "kind"],
+      "properties": {
+        "path": {
+          "description": "対象のファイルの glob。ルートからの相対パス。.md のファイルだけが対象。",
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "description": "種類の ID。組み込みの種類か、kinds で足した種類。",
+          "anyOf": [{ "$ref": "#/$defs/builtinKind" }, { "$ref": "#/$defs/kindId" }]
+        },
+        "check": {
+          "description": "error / warn / off。",
+          "enum": ["error", "warn", "off"],
+          "default": "error"
+        },
+        "question": {
+          "description": "frontmatter の question の代わり。path が 1 ファイルだけを指すときに書ける。",
+          "type": "string",
+          "minLength": 1
+        },
+        "topics": {
+          "description": "frontmatter の topics の代わり。question と同じ条件で書ける。",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
+    "kind": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "time"],
+      "properties": {
+        "id": {
+          "description": "種類の ID。組み込みの種類と同じ ID は使えない。",
+          "allOf": [{ "$ref": "#/$defs/kindId" }, { "not": { "$ref": "#/$defs/builtinKind" } }]
+        },
+        "label": {
+          "description": "HTML に出す表示名。省略すると id。",
+          "type": "string",
+          "minLength": 1
+        },
+        "time": {
+          "description": "future / present / past。",
+          "enum": ["future", "present", "past"]
+        }
+      }
+    }
+  }
+}
