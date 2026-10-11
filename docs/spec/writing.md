@@ -66,4 +66,6 @@ docv で管理するドキュメントを書く・直すときのルール。人
 ## 6. 書式
 
 - docv が決めるのは、frontmatter（[spec/frontmatter.md](frontmatter.md)）と、種類ごとの見出しの制約だけ
-- 章番号、文体、強調の使い方などは、プロジェクトの rule に書く
+- 章番号、文体、強調の使い方などは、プロジェクトが決めて rule に書く
+- そのうち機械で確かめられるものは、docv.yaml で書式の規則（[spec/style.md](style.md)）と textlint（[spec/textlint.md](textlint.md)）を使うように設定して、check で確かめる
+- 空行や表の余白は、手で揃えずに `docv fmt` で整形する（[spec/fmt.md](fmt.md)）

@@ -19,7 +19,9 @@ spec/ の設計をもとに CLI を作り、試作の HTML を見て中身を決
 
 ## 2. 読むだけのコマンド
 
-- [ ] check
+- [ ] check（frontmatter、構造、言い回し、リンク）
+- [ ] check の書式の規則（lint.style）
+- [ ] check の textlint（組み込みと持ち込み）
 - [ ] index
 - [ ] desc（ルールファイルを書いて埋め込む）
 - [ ] migrate-guide
@@ -32,6 +34,7 @@ spec/ の設計をもとに CLI を作り、試作の HTML を見て中身を決
 - [ ] migrate-guide と build を試す
 - [ ] 生成したものを見て画面とセクションを決め、spec/build.md に書き、fixme/open.md の 1 章を消す
 - [ ] 過去の言い回しの既定の語を見直す（fixme/open.md の 8 章）
+- [ ] textlint のプリセットを両リポジトリにかけ、既定で切るルールを決める（fixme/open.md の 12 章）
 
 ---
 
@@ -39,6 +42,7 @@ spec/ の設計をもとに CLI を作り、試作の HTML を見て中身を決
 
 - [ ] init、new（テンプレを埋め込む）
 - [ ] retire
+- [ ] fmt（dprint-plugin-markdown を埋め込み、fixme/open.md の 11 章を確かめる）
 
 ---
 

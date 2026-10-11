@@ -5,7 +5,7 @@ topics: [CLI]
 
 # check
 
-`docv check` が確かめるルールと、報告の形。ルールの元になっている決まりは [spec/kind.md](kind.md)、[spec/frontmatter.md](frontmatter.md)、[spec/writing.md](writing.md)。
+`docv check` が確かめるルールと、報告の形。ルールの元になっている決まりは [spec/kind.md](kind.md)、[spec/frontmatter.md](frontmatter.md)、[spec/writing.md](writing.md)。docv.yaml で使うと決めたときだけ確かめるものは、[spec/style.md](style.md)、[spec/textlint.md](textlint.md)、[spec/fmt.md](fmt.md) に書く。
 
 ---
 
@@ -14,6 +14,7 @@ topics: [CLI]
 ```sh
 docv check                     # 管理対象のファイルをすべて確かめる
 docv check docs/spec/order.md # 指定したファイルだけ確かめる
+docv check --no-textlint       # textlint だけを飛ばす
 ```
 
 - パスを渡す使い方は、hook から編集したファイルだけを確かめるためにある。管理対象でないパスは無視する
@@ -82,3 +83,11 @@ docs/plan/009-impl.md:1: error status-invalid status は todo か doing
 | link-broken | error | ルートの中を指す相対リンクの先にファイルがない。archive のファイルは確かめない |
 
 アンカー（`#` 以降）は確かめない。
+
+### 使うと決めたときだけ確かめるもの
+
+| ID | 強さ | 使う条件 | 内容 |
+|---|---|---|---|
+| style-* | error | lint.style に規則を書いたとき | 書式の規則（[spec/style.md](style.md)） |
+| format-diff | error | format.enabled が true のとき | 整形が必要（[spec/fmt.md](fmt.md)） |
+| textlint/* | lint.textlint.level（既定は warn） | lint.textlint.enabled が true のとき | textlint の結果（[spec/textlint.md](textlint.md)） |

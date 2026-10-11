@@ -92,10 +92,23 @@
         }
       }
     },
+    "format": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "check、new、retire を整形と連動させるか。",
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
     "lint": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "style": { "$ref": "#/$defs/style" },
+        "textlint": { "$ref": "#/$defs/textlint" },
         "words": {
           "description": "過去の言い回しとして警告する語の調整。",
           "type": "object",
@@ -151,7 +164,84 @@
           "type": "array",
           "items": { "type": "string", "minLength": 1 },
           "uniqueItems": true
+        },
+        "style": {
+          "description": "この項目のファイルにだけ効く lint.style の上書き。",
+          "$ref": "#/$defs/style"
         }
+      }
+    },
+    "style": {
+      "description": "書式の規則。項目の意味は docs/spec/style.md を参照。書いた規則だけを確かめる。false を書くと使わない。",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bold": { "enum": ["deny", false] },
+        "italic": { "enum": ["deny", false] },
+        "html": {
+          "description": "使ってよい HTML タグの配列。[] ならすべて禁止。",
+          "oneOf": [
+            { "type": "array", "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" }, "uniqueItems": true },
+            { "const": false }
+          ]
+        },
+        "dollar": { "enum": ["deny", false] },
+        "heading_number": { "enum": ["require", false] },
+        "section_separator": { "enum": ["require", false] },
+        "link_text": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["base"],
+              "properties": {
+                "base": {
+                  "description": "表示文字のパスの起点のディレクトリ。",
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            { "const": false }
+          ]
+        },
+        "image_alt": { "enum": ["require", false] }
+      }
+    },
+    "textlint": {
+      "description": "textlint の設定。項目の意味は docs/spec/textlint.md を参照。",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "level": { "enum": ["warn", "error"], "default": "warn" },
+        "presets": {
+          "type": "array",
+          "items": { "enum": ["ja-technical-writing", "ja-spacing", "jtf-style"] },
+          "uniqueItems": true
+        },
+        "rules": {
+          "description": "<プリセット>/<ルール> をキーに、false か、ルールのオプションを書く。",
+          "type": "object",
+          "propertyNames": { "pattern": "^(ja-technical-writing|ja-spacing|jtf-style)/[a-z0-9-]+$" },
+          "additionalProperties": {
+            "oneOf": [{ "const": false }, { "type": "object" }]
+          }
+        },
+        "prh": {
+          "description": "表記ゆれの辞書のパス。",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "config": {
+          "description": "持ち込みの使い方で使う、textlint の設定ファイルのパス。",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "not": {
+        "required": ["config"],
+        "anyOf": [{ "required": ["presets"] }, { "required": ["rules"] }, { "required": ["prh"] }]
       }
     },
     "kind": {

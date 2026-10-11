@@ -48,6 +48,17 @@ output:
   dir: docv
   commit: true
   jpg: false
+
+lint:
+  style:
+    bold: deny
+    dollar: deny
+  textlint:
+    enabled: true
+    presets: [ja-technical-writing]
+
+format:
+  enabled: true
 ```
 
 ---
@@ -71,6 +82,14 @@ output:
 | output.jpg | 任意 | false | HTML に加えて JPG を作るか（[spec/build.md](build.md)） |
 | lint.words.add | 任意 | なし | 過去の言い回しとして警告する語を足す（[spec/check.md](check.md)） |
 | lint.words.remove | 任意 | なし | 既定の語から外す |
+| lint.style | 任意 | なし | 使う書式の規則と、その値（[spec/style.md](style.md)） |
+| lint.textlint.enabled | 任意 | false | textlint を使うか（[spec/textlint.md](textlint.md)） |
+| lint.textlint.level | 任意 | warn | textlint の結果の強さ。warn / error |
+| lint.textlint.presets | 任意 | なし | 組み込みの使い方で使うプリセット |
+| lint.textlint.rules | 任意 | なし | 組み込みの使い方で、ルールごとに使わない・オプションを変える |
+| lint.textlint.prh | 任意 | なし | 表記ゆれの辞書のパス |
+| lint.textlint.config | 任意 | なし | 持ち込みの使い方で使う、textlint の設定ファイルのパス。presets・rules・prh とは同時に書けない |
+| format.enabled | 任意 | false | check、new、retire を整形と連動させるか（[spec/fmt.md](fmt.md)） |
 
 - パスと glob はすべてルートからの相対パスで書く
 - ignore に当てはまるファイルは、check、index、HTML、migrate-guide のどれにも出さない
@@ -87,6 +106,7 @@ output:
 | check | 任意 | error | error / warn / off。warn にすると、このファイルの error を warn に下げる。off にすると check しない（index と HTML には出る） |
 | question | 任意 | — | frontmatter の question の代わり。path が 1 ファイルだけを指すときに書ける |
 | topics | 任意 | — | frontmatter の topics の代わり。question と同じ条件 |
+| style | 任意 | — | この項目のファイルにだけ効く lint.style の上書き。false を書くと、その規則を使わない（[spec/style.md](style.md) の 4 章） |
 
 - 上から順に見て、最初に当てはまった項目を使う
 - どの項目にも当てはまらない .md のファイルは管理外になる

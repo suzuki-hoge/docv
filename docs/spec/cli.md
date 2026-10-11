@@ -19,6 +19,7 @@ docv の CLI のコマンドの一覧と、すべてのコマンドに共通す�
 | `docv retire <ファイル>` | 章やファイルを archive に移す | [spec/retire.md](retire.md) |
 | `docv index` | AI 用のインデックスを出す | 4 章 |
 | `docv desc` | フレームワークのルールファイルを出す | 4 章 |
+| `docv fmt [パス...]` | 管理対象のファイルを整形する | [spec/fmt.md](fmt.md) |
 | `docv build` | HTML と JPG を作る | [spec/build.md](build.md) |
 | `docv migrate-guide` | 後から導入するときのガイドを出す | [spec/migrate-guide.md](migrate-guide.md) |
 
@@ -62,9 +63,11 @@ docv の CLI のコマンドの一覧と、すべてのコマンドに共通す�
 | init | docv.yaml だけ |
 | new | 指定したファイルだけ |
 | retire | 移す元のファイルと、archive のファイルだけ |
+| fmt | 管理対象のファイルだけ。整形以外の変更はしない |
 | build | output.dir の中だけ |
 
 - それ以外のコマンドはファイルを書かない
+- format.enabled が true なら、new と retire は整形してから書く（[spec/fmt.md](fmt.md)）
 - CLAUDE.md、リポジトリのルートの .gitignore、hook の設定には、どのコマンドも触らない
 
 ---

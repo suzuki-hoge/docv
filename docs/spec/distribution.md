@@ -12,7 +12,8 @@ docv の作り、リリースの仕組み、利用者の入れ方。コマンド
 ## 1. 作り
 
 - Rust で書いた単一のバイナリ。利用者に Rust の環境はいらない
-- テンプレ、ルールファイル（`docv desc` が出すもの）、HTML の CSS と JS は、バイナリに埋め込む
+- テンプレ、ルールファイル（`docv desc` が出すもの）、HTML の CSS と JS、Markdown の整形に使う dprint-plugin-markdown は、バイナリに埋め込む
+- textlint を使うとき（[spec/textlint.md](textlint.md)）だけ Node.js が、JPG を作るとき（[spec/build.md](build.md)）だけ Chrome が必要になる
 - JSON Schema（[schema/docv.schema.json](../../schema/docv.schema.json)）は、リポジトリに置いて公開する
 
 ---

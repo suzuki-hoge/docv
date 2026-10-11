@@ -8,6 +8,9 @@ docs:
   - path: README.md
     kind: overview
     question: docv は何で、どこから見ればいいか
+    style:
+      heading_number: false
+      section_separator: false
   - path: docs/spec/*.md
     kind: spec
   - path: docs/rule/*.md
@@ -31,3 +34,20 @@ output:
   dir: docv
   commit: true
   jpg: false
+
+lint:
+  style:
+    bold: deny
+    dollar: deny
+    heading_number: require
+    section_separator: require
+    link_text: { base: docs }
+  textlint:
+    enabled: true
+    presets: [ja-technical-writing, ja-spacing]
+    rules:
+      ja-technical-writing/no-exclamation-question-mark: false
+      ja-spacing/ja-space-between-half-and-full-width: { space: always }
+
+format:
+  enabled: true

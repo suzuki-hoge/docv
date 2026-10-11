@@ -4,7 +4,7 @@ question: このリポジトリのドキュメントは、どんな書式で書�
 
 # 書式
 
-このリポジトリのドキュメントの書式。docv としてのルール（種類、frontmatter、書き換えと retire）は [spec/writing.md](../spec/writing.md) に従い、ここではそれ以外の書式を決める。
+このリポジトリのドキュメントの書式。docv としてのルール（種類、frontmatter、書き換えと retire）は [spec/writing.md](../spec/writing.md) に従い、ここではそれ以外の書式を決める。機械で確かめられるものは、[docv.yaml](../../docv.yaml) の lint で確かめる。
 
 ---
 
