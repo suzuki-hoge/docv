@@ -32,7 +32,7 @@ cargo test
 
 - build の出力は、入力が同じなら毎回同じにする（生成日時・実行したマシンのパス・乱数を入れない、並び順を固定する）。[docs/spec/build.md](docs/spec/build.md) の 4 章
 - ファイルを書くコマンドは、[docs/spec/cli.md](docs/spec/cli.md) の 3 章に書いた範囲の外に書かない
-- templates/ と schema/ は製品の一部（バイナリへの埋め込みと公開の対象）。変えるときは spec と揃える
+- templates/、schema/、assets/ は製品の一部（バイナリへの埋め込みと公開の対象）。変えるときは spec と揃える
 
 ---
 

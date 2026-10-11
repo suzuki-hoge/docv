@@ -3,7 +3,7 @@
 ## 終わったこと
 
 - 設計
-  - spec 14 ファイル（考え方、種類、frontmatter、書き方、docv.yaml、CLI 全体、check、retire、build、migrate-guide、書式の規則、textlint、fmt、配布）
+  - spec 14 ファイル（考え方、種類、frontmatter、書き方、docv.yaml、CLI 全体、check、retire、build、migrate-guide、書式の規則、textlint、fix、配布）
   - このリポジトリの rule、archive（検討で捨てた案）、JSON Schema、種類ごとのテンプレ、CLAUDE.md
 - CLI の土台
   - docv.yaml の読み込みとスキーマ・意味の検証
@@ -17,6 +17,14 @@
   - リンクの書き換え、出力が毎回同じになること、出力先を作り直すときの安全策（.docv の目印）
 - tmp という種類（このメモを書いたときに追加）
 - Homebrew の tap は用意しないと決めた ( どこにも何も書かないので決定で完 )
+- CLI およびツールの挙動
+  - check の書式の規則、check の textlint、fix（fmt と textlint の自動修正をまとめて docv fix にした。check は検査だけ）
+  - index、desc（ルールファイルの文面から）、migrate-guide
+  - init、new、retire
+  - CLI のメッセージとルールファイルは日本語だけにする、と spec に書いた
+  - textlint の自動修正は docv fix から呼ぶ、と spec に書いた
+  - dprint-plugin-markdown で決めた整形の形にできることを確かめた（frontmatter は docv が切り分けて残す）
+  - textlint が frontmatter を本文として扱わないことを確かめた
 
 ## やっていないこと
 
@@ -31,12 +39,6 @@
   - proposal と fixme は分けたままにする、と spec に書く。proposal は確度の高い内容、fixme は雑多なメモに近い
 - YAML スキーマ
   - docv.yaml のスキーマをまとめて見直す（もう少し進んだら人間がまとめて確認する）
-- CLI およびツールの挙動
-  - check の書式の規則、check の textlint、fmt
-  - index、desc（ルールファイルの文面から）、migrate-guide
-  - init、new、retire
-  - CLI のメッセージとルールファイルは日本語だけにする、と spec に書く
-  - textlint の自動修正を docv から呼ぶ、と spec に書く
 - ほか
   - 名前を docv に決めた、と書く（document viewer の略、読み方はドックブイ）。「仮の名前」の書き方を外す
 
@@ -55,5 +57,5 @@
   - リンクのアンカーを check するか
   - retire のあとに章番号を振り直すか
   - desc のルールファイルと spec をどう揃えるか
-  - dprint-plugin-markdown で決めた整形の形にできるか
   - textlint のプリセットで既定で切るルール
+    - このリポジトリの docv.yaml の設定で check すると、textlint の warn が 181 件出る。ほとんどは ja-spacing の、インラインコードとリンクの前後のスペース（このリポジトリの書き方とぶつかる）

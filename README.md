@@ -19,7 +19,7 @@
 ```sh
 docv init            # docv.yaml を作る
 docv migrate-guide   # 既存のドキュメントのうち、管理外のものとルールに沿っていないものを見る
-docv fmt             # 空行や表の余白を整形する
+docv fix             # 空行や表の余白を整形し、textlint で直せるところを直す
 docv check           # ルールに沿っているかを確かめる
 docv build           # HTML を作る
 ```
@@ -47,7 +47,7 @@ AI Agent には、CLAUDE.md などに次のように書いて伝える。
 - [docs/spec/retire.md](docs/spec/retire.md) — docv retire は何を、どこへ、どんな形で移すか
 - [docs/spec/style.md](docs/spec/style.md) — docv check は、Markdown の書き方のどんな規則を静的に確かめられるか
 - [docs/spec/textlint.md](docs/spec/textlint.md) — docv check は textlint をどう使い、利用者はルールをどこまで決められるか
-- [docs/spec/fmt.md](docs/spec/fmt.md) — docv fmt は Markdown をどう整形し、エディタの自動整形とどう付き合うか
+- [docs/spec/fix.md](docs/spec/fix.md) — docv fix は Markdown をどう整形・修正し、エディタの自動整形とどう付き合うか
 - [docs/spec/build.md](docs/spec/build.md) — docv build は何を生成し、その出力をどう扱うか
 - [docs/spec/migrate-guide.md](docs/spec/migrate-guide.md) — 既存のプロジェクトに後から docv を入れるとき、docv migrate-guide は何を示すか
 - [docs/spec/distribution.md](docs/spec/distribution.md) — docv は何で作られ、どう配られ、利用者はどう入れるか

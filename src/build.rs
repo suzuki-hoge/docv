@@ -2,14 +2,14 @@
 
 use std::fmt::Write as _;
 use std::fs;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
 use pulldown_cmark::{CowStr, Event, Parser, Tag, html};
-use serde_yaml_ng::Value;
 
 use crate::kind::{Kind, Time};
-use crate::markdown::{self, Document};
+use crate::markdown::{self, Document, relative_path};
+use crate::meta;
 use crate::workspace::{Class, Project};
 
 const STYLE: &str = include_str!("../assets/style.css");
@@ -66,38 +66,18 @@ fn read_page(project: &Project, path: &str, index: usize) -> Result<Page> {
     let text = fs::read_to_string(project.root.join(path))
         .with_context(|| format!("{path} を読めない"))?;
     let document = markdown::split(&text);
-    let outline = markdown::outline(&document);
-    let frontmatter = document
-        .frontmatter
-        .as_ref()
-        .and_then(|fm| serde_yaml_ng::from_str::<Value>(&fm.yaml).ok());
-    let field = |key: &str| frontmatter.as_ref().and_then(|v| v.get(key));
-    let string = |key: &str| field(key).and_then(Value::as_str).map(str::to_string);
-
-    let entry = project.entry(index);
-    let topics = entry.topics.clone().unwrap_or_else(|| {
-        field("topics")
-            .and_then(Value::as_sequence)
-            .map(|seq| {
-                seq.iter()
-                    .filter_map(Value::as_str)
-                    .map(str::to_string)
-                    .collect()
-            })
-            .unwrap_or_default()
-    });
-    let title = outline
-        .headings
-        .iter()
-        .find(|h| h.level == 1)
-        .map_or_else(|| path.to_string(), |h| h.text.clone());
+    let meta = meta::read(
+        project.entry(index),
+        &document,
+        &markdown::outline(&document),
+    );
     Ok(Page {
         source: path.to_string(),
         page: page_path(path),
-        title,
-        question: entry.question.clone().or_else(|| string("question")),
-        topics,
-        status: string("status"),
+        title: meta.title.unwrap_or_else(|| path.to_string()),
+        question: meta.question,
+        topics: meta.topics,
+        status: meta.status,
         kind: project.kind_of(index).clone(),
         document,
     })
@@ -303,7 +283,7 @@ impl Site<'_> {
         let Some((target, fragment)) = markdown::resolve_link(base, dest) else {
             return dest.clone();
         };
-        let target = slash_path(&target);
+        let target = markdown::slash_path(&target);
         let fragment = fragment.map(|f| format!("#{f}")).unwrap_or_default();
         if let Some(page) = self.pages.iter().find(|p| p.source == target) {
             let href = format!("{}{}{fragment}", up_to_root(page_dir), page.page);
@@ -367,27 +347,6 @@ fn up_to_root(dir: &str) -> String {
         return String::new();
     }
     "../".repeat(dir.split('/').count())
-}
-
-fn slash_path(path: &Path) -> String {
-    path.components()
-        .map(|c| c.as_os_str().to_string_lossy().into_owned())
-        .collect::<Vec<_>>()
-        .join("/")
-}
-
-/// 絶対パス同士の相対パス。区切りは `/`。
-fn relative_path(from_dir: &Path, to: &Path) -> String {
-    let from: Vec<Component> = from_dir.components().collect();
-    let to: Vec<Component> = to.components().collect();
-    let common = from.iter().zip(&to).take_while(|(a, b)| a == b).count();
-    let mut parts: Vec<String> = vec!["..".to_string(); from.len() - common];
-    parts.extend(
-        to[common..]
-            .iter()
-            .map(|c| c.as_os_str().to_string_lossy().into_owned()),
-    );
-    parts.join("/")
 }
 
 fn escape(s: &str) -> String {

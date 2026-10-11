@@ -23,13 +23,13 @@ docv migrate-guide --config ../trial/docv.yaml --root .   # リポジトリに d
 
 ## 2. 出すもの
 
-| 順 | 見出し | 中身 |
-|---|---|---|
-| 1 | 設定 | docv.yaml の有無。なければ `docv init` を案内する |
-| 2 | 管理外のファイル | ディレクトリごとの件数と、ファイルの一覧 |
-| 3 | docs の案 | 管理外のディレクトリの名前から種類を推測し、docv.yaml の docs に足す項目を YAML で出す |
-| 4 | ルールに沿っていないファイル | 管理対象のファイルごとに、満たしていないルールを並べる。ルールごとの件数も出す。docv.yaml で使うと決めた書式の規則、整形、textlint の結果も含む |
-| 5 | 次にやること | 1〜4 の結果から、やる順に並べる。整形が必要なファイルがあれば、ほかを直す前に `docv fmt` をすすめる（整形の差分と内容の差分を混ぜないため） |
+| 順 | 見出し                       | 中身                                                                                                                                            |
+| -- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1  | 設定                         | docv.yaml の有無。なければ `docv init` を案内する                                                                                               |
+| 2  | 管理外のファイル             | ディレクトリごとの件数と、ファイルの一覧                                                                                                        |
+| 3  | docs の案                    | 管理外のディレクトリの名前から種類を推測し、docv.yaml の docs に足す項目を YAML で出す                                                          |
+| 4  | ルールに沿っていないファイル | 管理対象のファイルごとに、満たしていないルールを並べる。ルールごとの件数も出す。docv.yaml で使うと決めた書式の規則、整形、textlint の結果も含む |
+| 5  | 次にやること                 | 1〜4 の結果から、やる順に並べる。整形が必要なファイルがあれば、ほかを直す前に `docv fix` をすすめる（整形の差分と内容の差分を混ぜないため）     |
 
 ---
 
@@ -37,16 +37,16 @@ docv migrate-guide --config ../trial/docv.yaml --root .   # リポジトリに d
 
 ディレクトリ名（大文字と小文字は区別しない）に次の語が含まれていれば、その種類を案として出す。
 
-| 語 | 種類 |
-|---|---|
-| spec、specification、architecture、design | spec |
+| 語                                         | 種類      |
+| ------------------------------------------ | --------- |
+| spec、specification、architecture、design  | spec      |
 | operation、command、manual、setup、runbook | operation |
-| cost、price、pricing | cost |
-| rule、guideline、coding、convention | rule |
-| plan、task、todo | plan |
-| proposal、rfc、draft | proposal |
-| fixme、question | fixme |
-| archive、history、deprecated | archive |
+| cost、price、pricing                       | cost      |
+| rule、guideline、coding、convention        | rule      |
+| plan、task、todo                           | plan      |
+| proposal、rfc、draft                       | proposal  |
+| fixme、question                            | fixme     |
+| archive、history、deprecated               | archive   |
 
 - generated を含むディレクトリは、種類を推測せず、ignore に足す案を出す
 - ルートの README.md は、overview の案を出す

@@ -20,13 +20,13 @@ docv の作り、リリースの仕組み、利用者の入れ方。コマンド
 
 ## 2. 対象のプラットフォーム
 
-| OS | アーキテクチャ | target |
-|---|---|---|
-| macOS | arm64 | aarch64-apple-darwin |
-| macOS | x86_64 | x86_64-apple-darwin |
-| Linux | x86_64 | x86_64-unknown-linux-musl |
-| Linux | arm64 | aarch64-unknown-linux-musl |
-| Windows | x86_64 | x86_64-pc-windows-msvc |
+| OS      | アーキテクチャ | target                     |
+| ------- | -------------- | -------------------------- |
+| macOS   | arm64          | aarch64-apple-darwin       |
+| macOS   | x86_64         | x86_64-apple-darwin        |
+| Linux   | x86_64         | x86_64-unknown-linux-musl  |
+| Linux   | arm64          | aarch64-unknown-linux-musl |
+| Windows | x86_64         | x86_64-pc-windows-msvc     |
 
 ---
 
@@ -43,9 +43,9 @@ docv の作り、リリースの仕組み、利用者の入れ方。コマンド
 
 ```sh
 # macOS（arm64）の例
-curl -L https://github.com/<owner>/docv/releases/download/v1.0.0/docv-1.0.0-aarch64-apple-darwin.tar.gz | tar xz
+curl -L https://github.com/suzuki-hoge/docv/releases/download/v1.0.0/docv-1.0.0-aarch64-apple-darwin.tar.gz | tar xz
 mv docv /usr/local/bin/
 ```
 
 - ブラウザでダウンロードしたバイナリは、macOS の Gatekeeper に止められることがある。curl で取れば止められないので、手順は curl で書く
-- Rust の環境がある人は、`cargo install --git https://github.com/<owner>/docv` でも入れられる
+- Rust の環境がある人は、`cargo install --git https://github.com/suzuki-hoge/docv` でも入れられる

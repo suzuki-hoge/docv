@@ -26,6 +26,7 @@ docs:
 
 ignore:
   - templates/**
+  - assets/**
   - CLAUDE.md
   - tmp/**
 

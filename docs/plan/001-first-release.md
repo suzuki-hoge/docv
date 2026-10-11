@@ -12,25 +12,13 @@ spec/ の設計をもとに CLI を作り、試作の HTML を見て中身を決
 ## 1. HTML の試作
 
 - [ ] 生成したものを見て画面とセクションを決め、spec/build.md に書き、fixme/open.md の 1 章を消す
-- [ ] 過去の言い回しの既定の語を見直す（fixme/open.md の 8 章）
+- [ ] 過去の言い回しの既定の語を見直す（fixme/open.md の 7 章）
 
 ---
 
-## 2. 残りのコマンド
+## 2. 仕上げ
 
-- [ ] check の書式の規則（lint.style）
-- [ ] check の textlint（組み込みと持ち込み）。プリセットを両リポジトリにかけ、既定で切るルールを決める（fixme/open.md の 12 章）
-- [ ] fmt（dprint-plugin-markdown を埋め込み、fixme/open.md の 11 章を確かめる）
-- [ ] index
-- [ ] desc（ルールファイルを書いて埋め込む）
-- [ ] migrate-guide
-- [ ] init、new（テンプレを埋め込む）
-- [ ] retire
-
----
-
-## 3. 仕上げ
-
+- [ ] textlint のプリセットを docs にかけ、docv の既定で切るルールを決める（fixme/open.md の 9 章）
 - [ ] JPG
 - [ ] docv.yaml のスキーマをまとめて見直す
 - [ ] build の出力を README からリンクする

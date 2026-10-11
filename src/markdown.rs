@@ -1,5 +1,6 @@
 //! Markdown のファイルを、frontmatter と、check が見る要素（見出し、リンク、地の文、タスク）に分ける。
 
+use std::ops::Range;
 use std::path::{Component, Path, PathBuf};
 
 use pulldown_cmark::{Event, HeadingLevel, Options, Parser, Tag, TagEnd};
@@ -86,6 +87,8 @@ pub struct Heading {
 pub struct Link {
     pub dest: String,
     pub line: usize,
+    /// 本文の中での、リンク全体（`[文字](先)`）の位置。
+    pub span: Range<usize>,
 }
 
 /// コードブロックとインラインコードと見出しの外にある地の文。
@@ -105,14 +108,32 @@ pub struct Outline {
     pub done_tasks: Vec<usize>,
 }
 
+/// 本文の中の位置から、ファイルの何行目かを引く。
+pub struct LineIndex {
+    starts: Vec<usize>,
+    first_line: usize,
+}
+
+impl LineIndex {
+    pub fn new(document: &Document) -> Self {
+        let starts = std::iter::once(0)
+            .chain(document.body.match_indices('\n').map(|(i, _)| i + 1))
+            .collect();
+        LineIndex {
+            starts,
+            first_line: document.body_start_line,
+        }
+    }
+
+    pub fn line(&self, offset: usize) -> usize {
+        self.first_line + self.starts.partition_point(|&s| s <= offset) - 1
+    }
+}
+
 pub fn outline(document: &Document) -> Outline {
     let body = &document.body;
-    let line_starts: Vec<usize> = std::iter::once(0)
-        .chain(body.match_indices('\n').map(|(i, _)| i + 1))
-        .collect();
-    let line_of = |offset: usize| {
-        document.body_start_line + line_starts.partition_point(|&s| s <= offset) - 1
-    };
+    let index = LineIndex::new(document);
+    let line_of = |offset: usize| index.line(offset);
 
     let mut outline = Outline::default();
     let mut heading: Option<Heading> = None;
@@ -141,6 +162,7 @@ pub fn outline(document: &Document) -> Outline {
                 outline.links.push(Link {
                     dest: dest_url.to_string(),
                     line: line_of(range.start),
+                    span: range.clone(),
                 });
             }
             Event::Text(text) if !in_code_block => match heading.as_mut() {
@@ -197,6 +219,28 @@ pub fn resolve_link(base: &Path, dest: &str) -> Option<(PathBuf, Option<String>)
         }
     }
     Some((normalized, fragment))
+}
+
+/// パスを `/` 区切りの文字列にする。
+pub fn slash_path(path: &Path) -> String {
+    path.components()
+        .map(|c| c.as_os_str().to_string_lossy().into_owned())
+        .collect::<Vec<_>>()
+        .join("/")
+}
+
+/// from_dir から to への相対パス。どちらも絶対パスか、どちらもルートからの相対パス。区切りは `/`。
+pub fn relative_path(from_dir: &Path, to: &Path) -> String {
+    let from: Vec<Component> = from_dir.components().collect();
+    let to: Vec<Component> = to.components().collect();
+    let common = from.iter().zip(&to).take_while(|(a, b)| a == b).count();
+    let mut parts: Vec<String> = vec!["..".to_string(); from.len() - common];
+    parts.extend(
+        to[common..]
+            .iter()
+            .map(|c| c.as_os_str().to_string_lossy().into_owned()),
+    );
+    parts.join("/")
 }
 
 fn percent_decode(s: &str) -> String {

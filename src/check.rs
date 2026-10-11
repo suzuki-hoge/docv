@@ -1,5 +1,6 @@
 //! docv check のルール。docs/spec/check.md。
 
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 
@@ -8,8 +9,11 @@ use serde_yaml_ng::Value;
 
 use crate::config::CheckLevel;
 use crate::diagnostic::{Diagnostic, Level};
+use crate::format;
 use crate::kind::{Kind, Time};
 use crate::markdown::{self, Document, Outline};
+use crate::style::{self, Style};
+use crate::textlint::Textlint;
 use crate::workspace::{Class, DocFile, Project};
 
 pub const PAST_WORDING: &[&str] = &[
@@ -40,33 +44,52 @@ pub const PAST_HEADING: &[&str] = &[
     "今後の予定",
 ];
 
+#[derive(Debug, Clone, Copy)]
+pub struct Options {
+    /// lint.textlint.enabled が true のときに textlint をかけるか。--no-textlint で false になる。
+    pub textlint: bool,
+}
+
 /// 管理対象のファイルを確かめる。targets が空ならすべて、そうでなければそのパス（ルートからの相対パス）だけ。
-pub fn run(project: &Project, targets: &[String]) -> Result<Vec<Diagnostic>> {
+pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Vec<Diagnostic>> {
     let words = Words::new(project);
+    let managed = managed_paths(project)?;
     let mut diagnostics = Vec::new();
-    for file in project.files()? {
-        let Class::Managed(index) = file.class else {
-            continue;
-        };
-        if !targets.is_empty() && !targets.contains(&file.path) {
-            continue;
-        }
-        let level = project.check_level_of(index);
-        if level == CheckLevel::Off || project.kind_of(index).is_tmp() {
-            continue;
-        }
+    let mut levels = HashMap::new();
+    let mut textlint_files = Vec::new();
+    for (file, index) in project.targets(targets)? {
         let text = fs::read_to_string(project.root.join(&file.path))
             .with_context(|| format!("{} を読めない", file.path))?;
-        let mut found = check_file(project, &words, &file, index, &text);
-        if level == CheckLevel::Warn {
-            for d in &mut found {
-                d.level = Level::Warn;
-            }
+        diagnostics.extend(check_file(project, &words, &managed, &file, index, &text));
+        levels.insert(file.path.clone(), project.check_level_of(index));
+        if !project.kind_of(index).is_archive() {
+            textlint_files.push(file.path);
         }
-        diagnostics.extend(found);
+    }
+    if options.textlint
+        && let Some(textlint) = Textlint::new(project)
+    {
+        diagnostics.extend(textlint.lint(&textlint_files)?);
+    }
+    for d in &mut diagnostics {
+        if levels.get(&d.path) == Some(&CheckLevel::Warn) {
+            d.level = Level::Warn;
+        }
     }
     diagnostics.sort();
     Ok(diagnostics)
+}
+
+/// 管理対象のファイル（tmp を除く）のパス。link_text の規則で使う。
+fn managed_paths(project: &Project) -> Result<HashSet<String>> {
+    Ok(project
+        .files()?
+        .into_iter()
+        .filter_map(|file| match file.class {
+            Class::Managed(index) if !project.kind_of(index).is_tmp() => Some(file.path),
+            _ => None,
+        })
+        .collect())
 }
 
 struct Words {
@@ -100,11 +123,11 @@ struct Checker<'a> {
 }
 
 impl Checker<'_> {
-    fn push(&mut self, line: usize, rule: &'static str, level: Level, message: impl Into<String>) {
+    fn push(&mut self, line: usize, rule: &str, level: Level, message: impl Into<String>) {
         self.diagnostics.push(Diagnostic {
             path: self.file.path.clone(),
             line,
-            rule,
+            rule: rule.to_string(),
             level,
             message: message.into(),
         });
@@ -114,6 +137,7 @@ impl Checker<'_> {
 fn check_file(
     project: &Project,
     words: &Words,
+    managed: &HashSet<String>,
     file: &DocFile,
     index: usize,
     text: &str,
@@ -134,6 +158,28 @@ fn check_file(
     }
     if !cx.kind.is_archive() {
         check_links(&mut cx, &outline);
+    }
+
+    let entry = project.entry(index);
+    let mut style = Style::resolve(project.config.lint.style.as_ref(), entry.style.as_ref());
+    if cx.kind.is_archive() {
+        style = style.for_archive();
+    }
+    for found in style::check(&style, &file.path, &document, managed) {
+        cx.push(found.line, found.rule, Level::Error, found.message);
+    }
+
+    // 整形できないファイルは frontmatter-invalid が出ているので、ここでは出さない。
+    if project.config.format.enabled
+        && let Ok(formatted) = format::format(text)
+        && formatted != text
+    {
+        cx.push(
+            format::first_diff_line(text, &formatted),
+            "format-diff",
+            Level::Error,
+            "整形が必要。docv fix で整形する",
+        );
     }
     cx.diagnostics
 }
@@ -385,11 +431,7 @@ fn check_links(cx: &mut Checker, outline: &Outline) {
         let Some((target, _)) = markdown::resolve_link(&base, &link.dest) else {
             continue;
         };
-        let rel = target
-            .components()
-            .map(|c| c.as_os_str().to_string_lossy().into_owned())
-            .collect::<Vec<_>>()
-            .join("/");
+        let rel = markdown::slash_path(&target);
         if cx.project.is_tmp_path(&rel) {
             cx.push(
                 link.line,
@@ -423,6 +465,8 @@ mod tests {
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         fs::write(path, text).unwrap();
     }
+
+    const OPTIONS: Options = Options { textlint: true };
 
     const CONFIG: &str = "version: 1
 topics: [a]
@@ -459,7 +503,7 @@ lint:
             write(dir.path(), path, text);
         }
         let project = Project::open(&Locate::default(), dir.path()).unwrap();
-        run(&project, &[])
+        run(&project, &[], OPTIONS)
             .unwrap()
             .iter()
             .map(|d| d.to_string())
@@ -626,7 +670,7 @@ lint:
         write(dir.path(), "docs/spec/a.md", "# A\n");
         write(dir.path(), "docs/spec/b.md", "# B\n");
         let project = Project::open(&Locate::default(), dir.path()).unwrap();
-        let result = run(&project, &["docs/spec/b.md".to_string()]).unwrap();
+        let result = run(&project, &["docs/spec/b.md".to_string()], OPTIONS).unwrap();
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].path, "docs/spec/b.md");
     }

@@ -111,7 +111,32 @@ pub struct Lint {
     #[serde(default)]
     pub words: Words,
     pub style: Option<Value>,
-    pub textlint: Option<Value>,
+    #[serde(default)]
+    pub textlint: Textlint,
+}
+
+/// lint.textlint。docs/spec/textlint.md。
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct Textlint {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default)]
+    pub level: TextlintLevel,
+    #[serde(default)]
+    pub presets: Vec<String>,
+    #[serde(default)]
+    pub rules: BTreeMap<String, Value>,
+    #[serde(default)]
+    pub prh: Vec<String>,
+    pub config: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TextlintLevel {
+    #[default]
+    Warn,
+    Error,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -148,6 +173,13 @@ pub fn load(path: &Path) -> Result<Config> {
     let text =
         fs::read_to_string(path).with_context(|| format!("{} を読めない", path.display()))?;
     parse(&text).with_context(|| format!("{} が正しくない", path.display()))
+}
+
+impl Config {
+    /// docv.yaml がないときの設定。すべてのファイルが管理外になる。
+    pub fn unconfigured() -> Config {
+        parse("version: 1\ndocs: []\n").expect("空の設定は正しい")
+    }
 }
 
 pub fn parse(text: &str) -> Result<Config> {
@@ -245,6 +277,16 @@ fn validate_semantics(config: &Config) -> Result<()> {
         }
     }
 
+    let textlint = &config.lint.textlint;
+    for key in textlint.rules.keys() {
+        let preset = key.split_once('/').map_or(key.as_str(), |(p, _)| p);
+        if !textlint.presets.iter().any(|p| p == preset) {
+            errors.push(format!(
+                "/lint/textlint/rules/{key}: プリセット {preset} が presets にない"
+            ));
+        }
+    }
+
     report("設定が正しくない", errors)
 }
 
@@ -323,6 +365,19 @@ mod tests {
         )
         .unwrap();
         assert_eq!(config.kinds[0].time, Time::Future);
+    }
+
+    #[test]
+    fn rejects_textlint_rule_of_unused_preset() {
+        let error = error_of(
+            "version: 1\ndocs: []\nlint:\n  textlint:\n    presets: [ja-spacing]\n    rules:\n      jtf-style/x: false\n",
+        );
+        assert!(
+            error.contains(
+                "/lint/textlint/rules/jtf-style/x: プリセット jtf-style が presets にない"
+            ),
+            "{error}"
+        );
     }
 
     #[test]

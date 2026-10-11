@@ -21,7 +21,7 @@ impl fmt::Display for Level {
 pub struct Diagnostic {
     pub path: String,
     pub line: usize,
-    pub rule: &'static str,
+    pub rule: String,
     pub level: Level,
     pub message: String,
 }

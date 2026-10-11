@@ -1,8 +1,8 @@
 //! ルートと設定ファイルの探索、ファイルの分類。docs/spec/cli.md の 2 章。
 
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result, anyhow, bail};
 use globset::{GlobMatcher, GlobSet, GlobSetBuilder};
 use ignore::WalkBuilder;
 
@@ -20,6 +20,8 @@ pub struct Locate {
 pub struct Project {
     pub root: PathBuf,
     pub config_path: PathBuf,
+    /// docv.yaml を読んだか。migrate-guide だけが、docv.yaml がなくても動く。
+    pub configured: bool,
     pub config: Config,
     pub kinds: Kinds,
     docs: Vec<GlobMatcher>,
@@ -40,24 +42,47 @@ pub enum Class {
     Unmanaged,
 }
 
-impl Project {
-    pub fn open(locate: &Locate, cwd: &Path) -> Result<Self> {
-        let (config_path, root) = match (&locate.config, &locate.root) {
-            (Some(config), root) => (
+impl Locate {
+    /// 設定ファイルとルートの場所。--config も --root もなく、docv.yaml も見つからなければ None。
+    pub fn resolve(&self, cwd: &Path) -> Option<(PathBuf, PathBuf)> {
+        match (&self.config, &self.root) {
+            (Some(config), root) => Some((
                 cwd.join(config),
                 root.as_ref()
                     .map_or_else(|| cwd.to_path_buf(), |r| cwd.join(r)),
-            ),
-            (None, Some(root)) => (cwd.join(root).join(config::FILE_NAME), cwd.join(root)),
-            (None, None) => {
-                let root = find_root(cwd)?;
-                (root.join(config::FILE_NAME), root)
-            }
-        };
+            )),
+            (None, Some(root)) => Some((cwd.join(root).join(config::FILE_NAME), cwd.join(root))),
+            (None, None) => find_root(cwd).map(|root| (root.join(config::FILE_NAME), root)),
+        }
+    }
+}
+
+impl Project {
+    pub fn open(locate: &Locate, cwd: &Path) -> Result<Self> {
+        let (config_path, root) = locate.resolve(cwd).ok_or_else(|| {
+            anyhow!(
+                "{} が見つからない。docv init で作るか、--config で指定する",
+                config::FILE_NAME
+            )
+        })?;
+        let config = config::load(&config_path)?;
+        Self::new(config_path, &root, config, true)
+    }
+
+    /// docv.yaml がないときのプロジェクト。すべてのファイルが管理外になる。
+    pub fn unconfigured(root: &Path) -> Result<Self> {
+        Self::new(
+            root.join(config::FILE_NAME),
+            root,
+            Config::unconfigured(),
+            false,
+        )
+    }
+
+    fn new(config_path: PathBuf, root: &Path, config: Config, configured: bool) -> Result<Self> {
         let root = root
             .canonicalize()
             .with_context(|| format!("ルート {} が見つからない", root.display()))?;
-        let config = config::load(&config_path)?;
         let kinds = Kinds::new(&config.kinds);
         let docs = config
             .docs
@@ -75,6 +100,7 @@ impl Project {
         Ok(Project {
             root,
             config_path,
+            configured,
             config,
             kinds,
             docs,
@@ -101,18 +127,69 @@ impl Project {
                 continue;
             }
             let rel = relative(&self.root, path)?;
-            if is_under(&rel, &output_dir) || self.ignore.is_match(&rel) {
-                continue;
+            if let Some(class) = self.classify_with(&rel, &output_dir) {
+                files.push(DocFile { path: rel, class });
             }
-            let class = self
-                .docs
-                .iter()
-                .position(|m| m.is_match(&rel))
-                .map_or(Class::Unmanaged, Class::Managed);
-            files.push(DocFile { path: rel, class });
         }
         files.sort_by(|a, b| a.path.cmp(&b.path));
         Ok(files)
+    }
+
+    /// ルートからの相対パスを分類する。output.dir の中と ignore に当てはまるものは None。
+    /// .gitignore は見ない。ファイルがあるかどうかも見ない。
+    pub fn classify(&self, rel: &str) -> Option<Class> {
+        self.classify_with(rel, &normalize_dir(&self.config.output.dir))
+    }
+
+    fn classify_with(&self, rel: &str, output_dir: &str) -> Option<Class> {
+        if is_under(rel, output_dir) || self.ignore.is_match(rel) {
+            return None;
+        }
+        Some(
+            self.docs
+                .iter()
+                .position(|m| m.is_match(rel))
+                .map_or(Class::Unmanaged, Class::Managed),
+        )
+    }
+
+    /// check と fix の対象。管理対象のうち、check: off と tmp を除いたもの。
+    /// targets が空ならすべて、そうでなければそのパス（ルートからの相対パス）だけ。
+    pub fn targets(&self, targets: &[String]) -> Result<Vec<(DocFile, usize)>> {
+        Ok(self
+            .files()?
+            .into_iter()
+            .filter_map(|file| match file.class {
+                Class::Managed(index) => Some((file, index)),
+                Class::Unmanaged => None,
+            })
+            .filter(|(file, _)| targets.is_empty() || targets.contains(&file.path))
+            .filter(|(_, index)| {
+                self.check_level_of(*index) != CheckLevel::Off && !self.kind_of(*index).is_tmp()
+            })
+            .collect())
+    }
+
+    /// コマンドラインのパスを、ルートからの相対パスにする。まだないファイルのパスも扱える。
+    pub fn relative_path(&self, cwd: &Path, path: &Path) -> Result<String> {
+        let mut normalized = PathBuf::new();
+        for component in cwd.join(path).components() {
+            match component {
+                Component::ParentDir => {
+                    normalized.pop();
+                }
+                Component::CurDir => {}
+                other => normalized.push(other),
+            }
+        }
+        let resolved = normalized
+            .ancestors()
+            .find_map(|dir| {
+                let rest = normalized.strip_prefix(dir).ok()?;
+                dir.canonicalize().ok().map(|dir| dir.join(rest))
+            })
+            .unwrap_or(normalized);
+        relative(&self.root, &resolved)
     }
 
     pub fn entry(&self, index: usize) -> &DocEntry {
@@ -147,22 +224,16 @@ impl Project {
     }
 }
 
-fn find_root(cwd: &Path) -> Result<PathBuf> {
-    for dir in cwd.ancestors() {
-        if dir.join(config::FILE_NAME).is_file() {
-            return Ok(dir.to_path_buf());
-        }
-    }
-    bail!(
-        "{} が見つからない。docv init で作るか、--config で指定する",
-        config::FILE_NAME
-    )
+fn find_root(cwd: &Path) -> Option<PathBuf> {
+    cwd.ancestors()
+        .find(|dir| dir.join(config::FILE_NAME).is_file())
+        .map(Path::to_path_buf)
 }
 
 fn relative(root: &Path, path: &Path) -> Result<String> {
-    let rel = path
-        .strip_prefix(root)
-        .with_context(|| format!("{} がルートの外にある", path.display()))?;
+    let Ok(rel) = path.strip_prefix(root) else {
+        bail!("{} がルートの外にある", path.display());
+    };
     let parts: Vec<String> = rel
         .components()
         .map(|c| c.as_os_str().to_string_lossy().into_owned())
@@ -267,6 +338,28 @@ ignore:
         let dir = tempfile::tempdir().unwrap();
         let error = Project::open(&Locate::default(), dir.path()).unwrap_err();
         assert!(error.to_string().contains("docv.yaml が見つからない"));
+    }
+
+    #[test]
+    fn resolves_paths_of_new_files() {
+        let dir = tempfile::tempdir().unwrap();
+        write(dir.path(), "docv.yaml", CONFIG);
+        write(dir.path(), "docs/spec/a.md", "# a\n");
+        let project = Project::open(&Locate::default(), dir.path()).unwrap();
+        let docs = dir.path().join("docs");
+        assert_eq!(
+            project
+                .relative_path(&docs, Path::new("spec/../plan/new.md"))
+                .unwrap(),
+            "docs/plan/new.md"
+        );
+        assert!(
+            project
+                .relative_path(&docs, Path::new("../../x.md"))
+                .is_err()
+        );
+        assert_eq!(project.classify("tmp/x.md"), None);
+        assert_eq!(project.classify("docs/x.md"), Some(Class::Managed(2)));
     }
 
     #[test]
