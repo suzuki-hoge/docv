@@ -52,7 +52,7 @@ pub fn run(project: &Project, targets: &[String]) -> Result<Vec<Diagnostic>> {
             continue;
         }
         let level = project.check_level_of(index);
-        if level == CheckLevel::Off {
+        if level == CheckLevel::Off || project.kind_of(index).is_tmp() {
             continue;
         }
         let text = fs::read_to_string(project.root.join(&file.path))
@@ -385,7 +385,22 @@ fn check_links(cx: &mut Checker, outline: &Outline) {
         let Some((target, _)) = markdown::resolve_link(&base, &link.dest) else {
             continue;
         };
-        if !root.join(&target).exists() {
+        let rel = target
+            .components()
+            .map(|c| c.as_os_str().to_string_lossy().into_owned())
+            .collect::<Vec<_>>()
+            .join("/");
+        if cx.project.is_tmp_path(&rel) {
+            cx.push(
+                link.line,
+                "link-to-tmp",
+                Level::Error,
+                format!(
+                    "tmp のファイル {} にリンクしている。tmp はいつ消えるか分からないので、リンクしない",
+                    link.dest
+                ),
+            );
+        } else if !root.join(&target).exists() {
             cx.push(
                 link.line,
                 "link-broken",
@@ -429,6 +444,8 @@ docs:
   - path: docs/off/*.md
     kind: spec
     check: off
+  - path: docs/tmp/**/*.md
+    kind: tmp
 lint:
   words:
     add: [いずれ]
@@ -580,6 +597,24 @@ lint:
             [
                 "docs/loose/l.md:1: warn question-missing question がない。このファイルが答える問いを 1 文で書く",
                 "docs/spec/a.md:6: error link-broken リンク先 missing.md がない",
+            ]
+        );
+    }
+
+    #[test]
+    fn reports_links_to_tmp_and_skips_tmp_files() {
+        let result = check(&[
+            (
+                "docs/spec/a.md",
+                "---\nquestion: q\n---\n# A\n\n[memo](../tmp/memo.md) [gone](../tmp/gone.md)\n",
+            ),
+            ("docs/tmp/memo.md", "以前は TODO [x](missing.md)\n"),
+        ]);
+        assert_eq!(
+            result,
+            [
+                "docs/spec/a.md:6: error link-to-tmp tmp のファイル ../tmp/gone.md にリンクしている。tmp はいつ消えるか分からないので、リンクしない",
+                "docs/spec/a.md:6: error link-to-tmp tmp のファイル ../tmp/memo.md にリンクしている。tmp はいつ消えるか分からないので、リンクしない",
             ]
         );
     }

@@ -36,10 +36,11 @@ docs:
     check: warn
   - path: docs/archive/**/*.md
     kind: archive
+  - path: docs/tmp/**/*.md
+    kind: tmp
 
 ignore:
   - CLAUDE.md
-  - tmp/**
 
 archive:
   dir: docs/archive
@@ -145,6 +146,7 @@ docs/
   proposal/
   fixme/
   archive/
+  tmp/
 ```
 
 配置は自由に決めてよい。既存のディレクトリに合わせて docs を書けばよい。

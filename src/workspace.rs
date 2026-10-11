@@ -125,6 +125,14 @@ impl Project {
             .expect("docs の種類は設定の検証で確かめてある")
     }
 
+    /// ルートからの相対パスが tmp の項目に当てはまるか。ファイルがあるかどうかは見ない。
+    pub fn is_tmp_path(&self, rel: &str) -> bool {
+        self.docs
+            .iter()
+            .position(|m| m.is_match(rel))
+            .is_some_and(|index| self.kind_of(index).is_tmp())
+    }
+
     pub fn check_level_of(&self, index: usize) -> CheckLevel {
         self.entry(index).check
     }

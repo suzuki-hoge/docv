@@ -133,7 +133,7 @@
       "pattern": "^[a-z][a-z0-9-]*$"
     },
     "builtinKind": {
-      "enum": ["overview", "spec", "operation", "cost", "rule", "plan", "proposal", "fixme", "archive"]
+      "enum": ["overview", "spec", "operation", "cost", "rule", "plan", "proposal", "fixme", "archive", "tmp"]
     },
     "docEntry": {
       "type": "object",

@@ -26,6 +26,7 @@ docs/plan/009-impl.md:1: error status-invalid status は todo か doing
 ```
 
 - error が 1 件以上あれば、終了コード 1 で終わる
+- tmp のファイルは確かめない（[spec/kind.md](kind.md) の 5 章）
 
 ---
 
@@ -81,6 +82,7 @@ docs/plan/009-impl.md:1: error status-invalid status は todo か doing
 | ID | 強さ | 内容 |
 |---|---|---|
 | link-broken | error | ルートの中を指す相対リンクの先にファイルがない。archive のファイルは確かめない |
+| link-to-tmp | error | tmp のファイルを指すリンクがある。tmp はいつ消えるか分からないため。tmp を指すリンクには link-broken を出さない |
 
 アンカー（`#` 以降）は確かめない。
 

@@ -48,7 +48,7 @@ docv migrate-guide --config ../trial/docv.yaml --root .   # リポジトリに d
 | fixme、question | fixme |
 | archive、history、deprecated | archive |
 
-- tmp、temp、generated を含むディレクトリは、種類を推測せず、ignore に足す案を出す
+- generated を含むディレクトリは、種類を推測せず、ignore に足す案を出す
 - ルートの README.md は、overview の案を出す
 - どれにも当てはまらないディレクトリは、案を出さずに管理外のまま残す
 

@@ -4,13 +4,16 @@ use serde::Deserialize;
 
 use crate::config::CustomKind;
 
-/// 種類の時間。並び順は HTML とインデックスで見せる順（現在、未来、過去）。
+/// 種類の時間。並び順は HTML とインデックスで見せる順（現在、未来、過去）。tmp だけが時間を持たない。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Time {
     Present,
     Future,
     Past,
+    /// tmp。docv.yaml の kinds では使えない。
+    #[serde(skip)]
+    Untimed,
 }
 
 impl Time {
@@ -19,6 +22,7 @@ impl Time {
             Time::Present => "現在",
             Time::Future => "未来",
             Time::Past => "過去",
+            Time::Untimed => "時間なし",
         }
     }
 }
@@ -86,6 +90,12 @@ pub const BUILTIN: &[Builtin] = &[
         time: Time::Past,
         required_sections: &[],
     },
+    Builtin {
+        id: "tmp",
+        label: "tmp",
+        time: Time::Untimed,
+        required_sections: &[],
+    },
 ];
 
 pub fn is_builtin(id: &str) -> bool {
@@ -107,6 +117,11 @@ impl Kind {
 
     pub fn is_plan(&self) -> bool {
         self.id == "plan"
+    }
+
+    /// tmp は検査も整形もせず、HTML とインデックスにも出さない。
+    pub fn is_tmp(&self) -> bool {
+        self.id == "tmp"
     }
 }
 

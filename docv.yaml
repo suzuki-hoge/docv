@@ -21,6 +21,8 @@ docs:
     kind: fixme
   - path: docs/archive/**/*.md
     kind: archive
+  - path: docs/tmp/**/*.md
+    kind: tmp
 
 ignore:
   - templates/**

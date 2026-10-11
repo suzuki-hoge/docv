@@ -37,6 +37,7 @@ pub fn run(project: &Project, out: &Path) -> Result<()> {
     let mut unmanaged = Vec::new();
     for file in &files {
         match file.class {
+            Class::Managed(index) if project.kind_of(index).is_tmp() => {}
             Class::Managed(index) => pages.push(read_page(project, &file.path, index)?),
             Class::Unmanaged => unmanaged.push(file.path.clone()),
         }
@@ -339,6 +340,7 @@ fn badges(page: &Page) -> String {
         Time::Present => "present",
         Time::Future => "future",
         Time::Past => "past",
+        Time::Untimed => "untimed",
     };
     let mut s = format!(
         "<span class=\"time time-{time_class}\">{}</span><span class=\"kind\">{}</span>",
@@ -419,7 +421,7 @@ mod tests {
         write_file(
             dir.path(),
             "docv.yaml",
-            "version: 1\ntitle: demo\ntopics: [t]\ndocs:\n  - path: README.md\n    kind: overview\n    question: 何か\n  - path: docs/spec/*.md\n    kind: spec\n  - path: docs/archive/**/*.md\n    kind: archive\n",
+            "version: 1\ntitle: demo\ntopics: [t]\ndocs:\n  - path: README.md\n    kind: overview\n    question: 何か\n  - path: docs/spec/*.md\n    kind: spec\n  - path: docs/archive/**/*.md\n    kind: archive\n  - path: docs/tmp/**/*.md\n    kind: tmp\n",
         );
         for (path, text) in files {
             write_file(dir.path(), path, text);
@@ -444,6 +446,7 @@ mod tests {
                 "---\nquestion: q\nsource: s\n---\n# 経緯\n",
             ),
             ("notes.md", "# Notes\n"),
+            ("docs/tmp/memo.md", "# Memo\n"),
         ]);
         let out = dir.path().join("docv");
         run(&project, &out).unwrap();
@@ -473,6 +476,8 @@ mod tests {
         assert!(present < past && past < other, "{index}");
         assert!(index.contains("<span class=\"topic\">t</span>"), "{index}");
         assert!(index.contains("href=\"../notes.md\""), "{index}");
+        assert!(!index.contains("tmp/"), "{index}");
+        assert!(!out.join("docs/tmp").exists());
 
         run(&project, &out).unwrap();
         assert_eq!(fs::read_to_string(out.join("index.html")).unwrap(), index);
