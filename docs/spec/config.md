@@ -1,11 +1,12 @@
 ---
-question: docv.yaml には何を書き、各項目は何を意味するか
-topics: [設定]
+mission: docv.yaml には何を書き、各項目はどう解釈され、check と fix の道具をどう使うか
+version: 0.1
+tags: [仕様, 設定]
 ---
 
 # 設定ファイル（docv.yaml）
 
-リポジトリのルートに置く設定ファイル。型は [schema/docv.schema.json](../../schema/docv.schema.json) が正本で、ここではそれぞれの項目の意味を書く。
+リポジトリのルートに置く設定ファイル。型は [schema/docv.schema.json](../../schema/docv.schema.json) が正本。1 章は項目の一覧、2 章以降は一覧に書ききれない解釈の決まりと、docv.yaml で使うと決めたときだけ動く道具（書式の規則、textlint、整形）。
 
 ---
 
@@ -17,143 +18,243 @@ version: 1
 title: shop-app
 repository:
   url: https://github.com/<owner>/shop-app
-  branch: main
-
-topics: [注文, 在庫, 決済, 認証]
 
 docs:
-  - path: README.md
-    kind: overview
-    question: shop-app は何で、どこから見ればいいか
-  - path: docs/design/*.md
-    kind: spec
-  - path: docs/manual/*.md
-    kind: operation
-  - path: docs/pricing/*.md
-    kind: cost
-  - path: docs/plan/*.md
-    kind: plan
-    check: warn
-  - path: docs/archive/**/*.md
-    kind: archive
-  - path: docs/tmp/**/*.md
-    kind: tmp
-
+  - docs/**/*.md
 ignore:
+  - docs/tmp/**
   - CLAUDE.md
 
-archive:
-  dir: docs/archive
+tags: [仕様, 手順, 計画, 未決, 注文, 在庫, 決済]
 
-output:
+slots:
   dir: docv
-  commit: true
-  jpg: false
+output:
+  dir: docv/build
 
 lint:
+  tags:
+    仕様: [no-past-wording]
+    手順: [no-past-wording]
+    計画: [no-done-task]
   style:
     bold: deny
-    dollar: deny
   textlint:
     enabled: true
     presets: [ja-technical-writing]
-
 format:
   enabled: true
 ```
 
+| 項目           | 必須 | 既定         | 意味                                                                                                            |
+| -------------- | ---- | ------------ | --------------------------------------------------------------------------------------------------------------- |
+| version        | 必須 |              | 設定ファイルの形式の版                                                                                          |
+| title          |      | ルートの名前 | HTML に出すプロジェクト名                                                                                       |
+| repository.url |      |              | GitHub のリポジトリの URL。HTML の中のファイルへのリンクを GitHub に向ける                                      |
+| docs           | 必須 |              | 管理対象の Markdown の glob の配列                                                                              |
+| ignore         |      |              | 管理対象にも管理外にもしないファイルの glob の配列                                                              |
+| tags           |      |              | タグの一覧。書いたときだけ、frontmatter の tags をこの中に限る                                                  |
+| slots.dir      |      | docv         | 枠のファイルを置くディレクトリ                                                                                  |
+| output.dir     |      | docv/build   | docv build-html と docv build-image の出力先                                                                    |
+| output.commit  |      | true         | 出力を git で管理するか（8 章）                                                                                 |
+| lint.tags      |      |              | タグごとに、そのタグを持つファイルにかけるルール（[rule/docs/guideline.md](../rule/docs/guideline.md) の 4 章） |
+| lint.style     |      |              | 太字、章番号などの書式の規則（5 章）                                                                            |
+| lint.words     |      |              | 過去の言い回しとして警告する語の足し引き（add、remove）                                                         |
+| lint.textlint  |      |              | textlint を使うか、どのプリセットとルールを使うか（6 章）                                                       |
+| format.enabled |      | false        | check と new を整形と連動させるか（7 章）                                                                       |
+| overrides      |      |              | パスごとに、道具の設定を上書きする（3 章）                                                                      |
+
 ---
 
-## 2. 項目
+## 2. 書くことと書かないこと
 
-| 項目                  | 必須 | 既定値                 | 意味                                                                                                         |
-| --------------------- | ---- | ---------------------- | ------------------------------------------------------------------------------------------------------------ |
-| version               | 必須 | —                      | 設定ファイルの形式の版。今は 1                                                                               |
-| title                 | 任意 | ルートのディレクトリ名 | HTML とインデックスに出すプロジェクト名                                                                      |
-| repository.url        | 任意 | —                      | GitHub のリポジトリの URL。HTML で、管理対象でないファイルへのリンクを GitHub の URL にするために使う        |
-| repository.branch     | 任意 | main                   | 上のリンクで使うブランチ                                                                                     |
-| topics                | 任意 | なし                   | 話題の一覧。frontmatter の topics にはここにある話題だけを書ける                                             |
-| docs                  | 必須 | —                      | どのファイルをどの種類として管理するか（3 章）                                                               |
-| ignore                | 任意 | なし                   | 管理対象にも管理外にもしないファイルの glob                                                                  |
-| kinds                 | 任意 | なし                   | 独自の種類（4 章）                                                                                           |
-| templates             | 任意 | なし                   | 種類ごとのテンプレの差し替え。種類の ID をキーに、テンプレのファイルのパスを書く                             |
-| archive.dir           | 任意 | docs/archive           | `docv retire` が archive を書くディレクトリ                                                                  |
-| output.dir            | 任意 | docv                   | `docv build` の出力先                                                                                        |
-| output.commit         | 任意 | true                   | 出力を git で管理するか（[spec/build.md](build.md)）                                                         |
-| output.jpg            | 任意 | false                  | HTML に加えて JPG を作るか（[spec/build.md](build.md)）                                                      |
-| lint.words.add        | 任意 | なし                   | 過去の言い回しとして警告する語を足す（[spec/check.md](check.md)）                                            |
-| lint.words.remove     | 任意 | なし                   | 既定の語から外す                                                                                             |
-| lint.style            | 任意 | なし                   | 使う書式の規則と、その値（[spec/style.md](style.md)）                                                        |
-| lint.textlint.enabled | 任意 | false                  | textlint を使うか（[spec/textlint.md](textlint.md)）                                                         |
-| lint.textlint.level   | 任意 | warn                   | textlint の結果の強さ。warn / error                                                                          |
-| lint.textlint.presets | 任意 | なし                   | 組み込みの使い方で使うプリセット                                                                             |
-| lint.textlint.rules   | 任意 | なし                   | 組み込みの使い方で、ルールごとに使わない・オプションを変える。presets に書いたプリセットのルールだけを書ける |
-| lint.textlint.prh     | 任意 | なし                   | 表記ゆれの辞書のパス                                                                                         |
-| lint.textlint.config  | 任意 | なし                   | 持ち込みの使い方で使う、textlint の設定ファイルのパス。presets・rules・prh とは同時に書けない                |
-| format.enabled        | 任意 | false                  | check、new、retire を整形と連動させるか（[spec/fix.md](fix.md)）                                             |
+- docv.yaml には、ツールの設定（lint、整形、出力）と、プロジェクト全体で共有する語彙（管理対象の範囲、タグの一覧、枠の置き場所）だけを書く
+- ファイルごとの設定（問い、タグ）は、そのファイルの frontmatter に書く（[rule/docs/guideline.md](../rule/docs/guideline.md) の 3 章）
 
-- パスと glob はすべてルートからの相対パスで書く
-- ignore に当てはまるファイルは、check、index、HTML、migrate-guide のどれにも出さない
+---
+
+## 3. 管理対象と管理外
+
+- docs に当てはまる .md のファイルが管理対象になる。check、fix、HTML の対象になる
+- docs と ignore のどちらにも当てはまらない .md のファイルは管理外になる。中身は見ず、migrate-guide に数だけを出す
+- ignore に当てはまるファイルは、check、HTML、migrate-guide のどれにも出さない
 - .gitignore に書かれたファイルと、output.dir の中は、ignore に書かなくても常に除く
+- パスと glob は、すべてルートからの相対パスで書く。`*` は `/` をまたがず、`**` はまたぐ
 
----
+### パスごとの上書き（overrides）
 
-## 3. docs
-
-| 項目     | 必須 | 既定値 | 意味                                                                                                                          |
-| -------- | ---- | ------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| path     | 必須 | —      | 対象のファイルの glob。.md のファイルだけが対象になる                                                                         |
-| kind     | 必須 | —      | 種類の ID。組み込みの種類か、kinds で足した種類                                                                               |
-| check    | 任意 | error  | error / warn / off。warn にすると、このファイルの error を warn に下げる。off にすると check しない（index と HTML には出る） |
-| question | 任意 | —      | frontmatter の question の代わり。path が 1 ファイルだけを指すときに書ける                                                    |
-| topics   | 任意 | —      | frontmatter の topics の代わり。question と同じ条件                                                                           |
-| style    | 任意 | —      | この項目のファイルにだけ効く lint.style の上書き。false を書くと、その規則を使わない（[spec/style.md](style.md) の 4 章）     |
-
-- 上から順に見て、最初に当てはまった項目を使う
-- どの項目にも当てはまらない .md のファイルは管理外になる
-
----
-
-## 4. kinds
+管理対象のまま、一部のパスだけ道具の設定を変える。docv が一切扱わない ignore とは違い、リンク切れの check や HTML には残る。
 
 ```yaml
-kinds:
-  - id: research
-    label: 調査
-    time: future
+overrides:
+  - paths: [docs/tmp/**]
+    textlint: false       # textlint をかけない
+    style: false          # 書式の規則をかけない
+    format: false         # fix で整形しない、format-diff を出さない
+    mission: optional     # frontmatter（mission と version）を求めない
 ```
 
-| 項目  | 必須 | 意味                                                                    |
-| ----- | ---- | ----------------------------------------------------------------------- |
-| id    | 必須 | 種類の ID。小文字の英数字とハイフン。組み込みの種類と同じ ID は使えない |
-| label | 任意 | HTML に出す表示名。省略すると id                                        |
-| time  | 必須 | future / present / past                                                 |
+- 上書きできるのは、道具の設定（textlint、書式の規則、整形、frontmatter を求めるか）だけ。ファイルごとの中身の設定は frontmatter に書く
+- 書かなかった項目は、上書きしない。1 つのファイルに複数の overrides が当たれば、後に書いたものが優先する
 
 ---
 
-## 5. 推奨する配置
+## 4. タグとルール
+
+- tags を書いたときだけ、frontmatter の tags をこの中に限る。書かなければ、どんなタグでも付けられる
+- lint.tags のキーには、タグを書く。tags を書いたときは、tags にあるタグだけを書ける
+- lint.tags の値には、ルールの配列を書く。使えるルールは [rule/docs/guideline.md](../rule/docs/guideline.md) の 4 章
+
+---
+
+## 5. 書式の規則（lint.style）
+
+太字や HTML タグを使ってよいかなど、プロジェクトごとに決める Markdown の書式を、`docv check` で機械的に確かめるための規則。
+
+- 書式はプロジェクトが決める。docv は規則を用意するだけで、既定ではどの規則も使わない
+- docv.yaml に書いた規則だけを、管理対象のファイルで確かめる。規則に合わない書き方は error にする
+- コードブロックとインラインコードの中は見ない
+- docv のバイナリだけで動く。Node.js などはいらない
+- どの規則も、値に false を書くと使わない。overrides で style を false にしたパスには、かけない
+
+| キー              | 値                         | ルール ID               | 確かめること                                                                                |
+| ----------------- | -------------------------- | ----------------------- | ------------------------------------------------------------------------------------------- |
+| bold              | deny                       | style-bold              | 太字（`**`、`__`）を使っていない                                                            |
+| italic            | deny                       | style-italic            | 斜体（`*`、`_`）を使っていない                                                              |
+| html              | 使ってよいタグの配列       | style-html              | 配列にない HTML タグを使っていない。`[]` ならすべての HTML タグを禁止する                   |
+| dollar            | deny                       | style-dollar            | コードの外の 1 行に `$` が 2 つ以上ない。GitHub は `$` で挟んだ部分を数式として表示するため |
+| heading_number    | require                    | style-heading-number    | h2 の見出しが `1. ` のような章番号で始まり、1 から順に並んでいる                            |
+| section_separator | require                    | style-section-separator | 2 つ目以降の h2 の直前に `---` がある                                                       |
+| link_text         | `{ base: <ディレクトリ> }` | style-link-text         | 管理対象のファイルへのリンクの表示文字が、そのファイルのパスになっている                    |
+| image_alt         | require                    | style-image-alt         | 画像に代替テキストがある                                                                    |
+
+```yaml
+lint:
+  style:
+    bold: deny
+    html: [details, summary]
+    dollar: deny
+    heading_number: require
+    section_separator: require
+    link_text: { base: docs }
+```
+
+<details>
+<summary>link_text のパス</summary>
+
+- リンク元が base の中にあるときは、表示文字を base からのパスにする
+- リンク元が base の外にあるとき（README.md など）は、表示文字をルートからのパスにする
+- 表示文字は、パスと完全に一致していなければならない。ファイル名だけでは、どのディレクトリのファイルか分からないため
+
+| base | リンク元                   | リンク先                    | 表示文字               |
+| ---- | -------------------------- | --------------------------- | ---------------------- |
+| docs | docs/spec/config.md        | docs/spec/slot.md           | spec/slot.md           |
+| docs | docs/rule/writing-style.md | docs/rule/docs/guideline.md | rule/docs/guideline.md |
+| docs | README.md                  | docs/spec/slot.md           | docs/spec/slot.md      |
+
+</details>
+
+---
+
+## 6. textlint（lint.textlint）
+
+文章の校正に textlint を使う仕組み。
+
+- 既定では使わない。enabled を true にしたときだけ、`docv check` が管理対象のファイルに textlint をかけ、`docv fix` が自動修正できるところを直す
+- textlint は Node.js で動くので、使うときだけ Node.js（npx）が必要になる。docv のバイナリには textlint を入れない。enabled が true なのに Node.js が見つからないときは、終了コード 2 で終わる
+- 結果は、ほかのルールと同じ形で出す。ルール ID は `textlint/<textlint のルール ID>`（例: textlint/ja-technical-writing/sentence-length）。強さは level で決め、既定は warn
+- overrides で textlint を false にしたパスには、かけない。`--no-textlint` で、textlint だけを飛ばせる
+
+| 使い方   | 書く項目            | ルールのパッケージ                                                                  | 向いている場合                |
+| -------- | ------------------- | ----------------------------------------------------------------------------------- | ----------------------------- |
+| 組み込み | presets、rules、prh | docv の版ごとに決めた版を、npx で取ってくる。プロジェクトに package.json はいらない | docv が用意したルールで足りる |
+| 持ち込み | config              | プロジェクトの node_modules に入っているものを使う                                  | 自分で選んだルールを使いたい  |
+
+presets・rules・prh と config は、同時には書けない。
+
+### 組み込み
+
+| presets に書く名前   | パッケージ                                | 中身                                                                   |
+| -------------------- | ----------------------------------------- | ---------------------------------------------------------------------- |
+| ja-technical-writing | textlint-rule-preset-ja-technical-writing | 技術文書向けの規則（一文の長さ、読点の数、助詞の重複、文末の句点など） |
+| ja-spacing           | textlint-rule-preset-ja-spacing           | 全角と半角の間のスペースなど                                           |
+| jtf-style            | textlint-rule-preset-jtf-style            | JTF 日本語標準スタイルガイド                                           |
+
+- rules: `<プリセット>/<ルール>` をキーにして、false（使わない）か、そのルールのオプションを書く
+- prh: 表記ゆれの辞書（prh の YAML）のパスの配列。textlint-rule-prh で確かめる。プロジェクトの用語をそろえるために使う
+
+```yaml
+lint:
+  textlint:
+    enabled: true
+    presets: [ja-technical-writing, ja-spacing]
+    rules:
+      ja-technical-writing/sentence-length: { max: 120 }
+      ja-technical-writing/no-exclamation-question-mark: false
+      ja-spacing/ja-space-between-half-and-full-width: { space: always }
+    prh: [docs/rule/prh.yml]
+```
+
+- docv は、textlint の設定ファイルを OS のキャッシュのディレクトリに作り、npx で textlint とプリセットを指定して実行する。リポジトリにはファイルを作らない
+- パッケージの版は docv の版ごとに固定する。同じ docv なら同じ結果になる
+- 初めて実行するときは npx がパッケージを取ってくるので、ネットワークが必要
+
+### 持ち込み
+
+- config に、textlint の設定ファイルのパス（ルートからの相対パス）を書く
+- docv はルートで `npx textlint --config <config> --format json <ファイル...>` を実行する。`docv fix` は `--format json` の代わりに `--fix` を付ける
+- ルールのパッケージは、利用者が package.json で入れておく
+
+---
+
+## 7. 整形との連動（format.enabled）
+
+整形の形は docv が決め、設定では変えない。設定で決めるのは、check を整形と連動させるかだけ。
+
+| コマンド     | format.enabled が true のときの動き                               |
+| ------------ | ----------------------------------------------------------------- |
+| `docv check` | 整形が必要なファイルを、ルール ID format-diff の error として出す |
+
+- format-diff には、整形した結果と最初に違う行を出す
+- false でも、`docv fix` を直接実行すれば整形できる
+- overrides で format を false にしたパスでは、fix で整形せず、format-diff も出さない
+
+---
+
+## 8. 出力を git で管理するか（output.commit）
+
+| output.commit | 動き                                              | 使い方                                                 |
+| ------------- | ------------------------------------------------- | ------------------------------------------------------ |
+| true          | 何もしない。出力をコミットするのは利用者          | README からリンクする、GitHub Pages でホスティングする |
+| false         | output.dir に、`*` だけを書いた .gitignore を置く | 手元で見るだけにする                                   |
+
+リポジトリのルートの .gitignore には触らない。
+
+---
+
+## 9. 推奨する配置
 
 新しく始めるプロジェクトでは、次の配置をすすめる。`docv init` は、この配置を前提にした docv.yaml を作る。
 
 ```
-README.md              # overview
-docs/
-  spec/
-  operation/
-  cost/
-  rule/
-  plan/
-  proposal/
-  fixme/
-  archive/
-  tmp/
+README.md        # 管理外。枠の include で章を埋め込める
+docs/            # プロジェクトが自由に書くファイル（原本）
+  *.md           # 分類はディレクトリではなくタグで行う
+  tmp/           # メモを置く。overrides で textlint などを外すか、ignore に入れる
+docv/            # docv の規格のファイル（枠）
+  service/       # サービス仕様。ほかに system/、guide/、operation/
+    service.md
+  adr/           # ADR
+  build/         # docv build-html と docv build-image の出力
 ```
+
+- docs/ と docv/ を分けるのは、プロジェクトが自由に決めるものと、docv が形を決めるものを、置き場所で見分けられるようにするため
 
 配置は自由に決めてよい。既存のディレクトリに合わせて docs を書けばよい。
 
 ---
 
-## 6. スキーマの参照
+## 10. スキーマの参照
 
 - docv.yaml の先頭に、yaml-language-server の書式でスキーマの URL を書くと、エディタで補完と検証が効く
 - URL には docv の版を含める。`docv init` は、実行した CLI の版の URL を書く

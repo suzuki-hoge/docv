@@ -1,4 +1,4 @@
-//! docv desc。フレームワークのルールファイルを出す。docs/spec/cli.md の 4 章。
+//! docv desc。フレームワークのルールファイルを出す。docv/service/manual.yaml の docv desc。
 
 /// AI Agent 向けのルールファイル。バイナリに埋め込むので、CLI の版と内容が一致する。
 pub const RULES: &str = include_str!("../assets/desc.md");
@@ -9,13 +9,7 @@ mod tests {
 
     #[test]
     fn describes_commands_for_ai_agents() {
-        for command in [
-            "docv index",
-            "docv check",
-            "docv new",
-            "docv retire",
-            "docv fix",
-        ] {
+        for command in ["docv check", "docv add", "docv fix"] {
             assert!(RULES.contains(command), "{command}");
         }
     }

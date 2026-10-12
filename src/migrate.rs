@@ -1,35 +1,39 @@
-//! docv migrate-guide。後から docv を入れるときのガイドを出す。docs/spec/migrate-guide.md。
+//! docv migrate-guide。後から docv を入れるときのガイドを出す。docv/service/manual.yaml の docv migrate-guide。
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
+use std::fs;
 
 use anyhow::Result;
 
 use crate::check::{self, Options};
 use crate::diagnostic::Diagnostic;
+use crate::markdown;
+use crate::slot;
+use crate::version::{self, Version};
 use crate::workspace::{Class, Project};
 
-/// ディレクトリ名に含まれる語と、推測する種類。上から順に見る。
+/// ディレクトリ名に含まれる語と、推測するタグ。上から順に見る。
 const GUESSES: &[(&[&str], &str)] = &[
-    (&["specification", "spec", "architecture", "design"], "spec"),
+    (&["specification", "spec", "architecture", "design"], "仕様"),
     (
         &["operation", "command", "manual", "setup", "runbook"],
-        "operation",
+        "手順",
     ),
-    (&["pricing", "price", "cost"], "cost"),
-    (&["guideline", "coding", "convention", "rule"], "rule"),
-    (&["plan", "task", "todo"], "plan"),
-    (&["proposal", "rfc", "draft"], "proposal"),
-    (&["fixme", "question"], "fixme"),
-    (&["archive", "history", "deprecated"], "archive"),
+    (&["pricing", "price", "cost"], "費用"),
+    (&["guideline", "coding", "convention", "rule"], "規約"),
 ];
 
-/// docv.yaml に足す案。
-#[derive(Debug, PartialEq, Eq)]
-enum Suggestion {
-    Doc { path: String, kind: &'static str },
-    Ignore(String),
-}
+/// README の見出しに含まれる語と、埋め込める枠。
+const SLOT_HEADINGS: &[(&[&str], &str)] = &[
+    (&["install", "インストール", "入れ方"], "install"),
+    (
+        &["setup", "development", "contributing", "環境構築", "開発"],
+        "setup",
+    ),
+    (&["usage", "使い方", "コマンド"], "manual"),
+    (&["environment", "env", "環境変数"], "env"),
+];
 
 pub fn render(project: &Project, options: Options) -> Result<String> {
     let files = project.files()?;
@@ -38,7 +42,6 @@ pub fn render(project: &Project, options: Options) -> Result<String> {
         .filter(|f| f.class == Class::Unmanaged)
         .map(|f| f.path.as_str())
         .collect();
-    let suggestions = suggest(&unmanaged);
     let diagnostics = if project.configured {
         check::run(project, &[], options)?
     } else {
@@ -56,12 +59,9 @@ pub fn render(project: &Project, options: Options) -> Result<String> {
     let _ = writeln!(out, "\n## 2. 管理外のファイル（{} 件）", unmanaged.len());
     let mut dirs: BTreeMap<String, usize> = BTreeMap::new();
     for path in &unmanaged {
-        let dir = path.rsplit_once('/').map_or("./", |(dir, _)| dir);
-        let dir = if dir == "./" {
-            dir.to_string()
-        } else {
-            format!("{dir}/")
-        };
+        let dir = path
+            .rsplit_once('/')
+            .map_or("./".to_string(), |(dir, _)| format!("{dir}/"));
         *dirs.entry(dir).or_default() += 1;
     }
     let width = dirs.keys().map(|d| d.chars().count()).max().unwrap_or(0);
@@ -69,46 +69,41 @@ pub fn render(project: &Project, options: Options) -> Result<String> {
         let pad = width - dir.chars().count();
         let _ = writeln!(out, "{dir}{}  {count} 件", " ".repeat(pad));
     }
-    if !unmanaged.is_empty() {
-        out.push('\n');
-    }
-    for path in &unmanaged {
-        let _ = writeln!(out, "- {path}");
-    }
 
-    out.push_str("\n## 3. docs の案\n");
-    let docs: Vec<&Suggestion> = suggestions
-        .iter()
-        .filter(|s| matches!(s, Suggestion::Doc { .. }))
-        .collect();
-    let ignore: Vec<&Suggestion> = suggestions
-        .iter()
-        .filter(|s| matches!(s, Suggestion::Ignore(_)))
-        .collect();
-    if suggestions.is_empty() {
+    out.push_str("\n## 3. タグの案\n");
+    let tags = guess_tags(&unmanaged);
+    if tags.is_empty() {
         out.push_str("（なし）\n");
     }
-    if !docs.is_empty() {
-        out.push_str("docs:\n");
-        for s in docs {
-            if let Suggestion::Doc { path, kind } = s {
-                let _ = writeln!(out, "  - path: {path}\n    kind: {kind}");
-                if kind == &"overview" {
-                    out.push_str("    question: （書く）\n");
-                }
-            }
-        }
-    }
-    if !ignore.is_empty() {
-        out.push_str("ignore:\n");
-        for s in ignore {
-            if let Suggestion::Ignore(path) = s {
-                let _ = writeln!(out, "  - {path}");
-            }
-        }
+    for (dir, tag) in &tags {
+        let _ = writeln!(out, "- {dir}/ のファイル: tags: [{tag}]");
     }
 
-    out.push_str("\n## 4. ルールに沿っていないファイル\n");
+    out.push_str("\n## 4. 枠\n");
+    let present: Vec<&str> = slot::load(project)?.iter().map(|s| s.def.id).collect();
+    let readme = readme_headings(project);
+    for def in slot::DEFS {
+        if present.contains(&def.id) {
+            let _ = writeln!(out, "- [x] {}（{}）", def.label, def.file_name());
+            continue;
+        }
+        let _ = write!(
+            out,
+            "- [ ] {}（{}）: {}",
+            def.label,
+            def.file_name(),
+            def.question
+        );
+        if let Some((_, heading)) = readme.iter().find(|(id, _)| *id == def.id) {
+            let _ = write!(
+                out,
+                "。include: [README.md#{heading}] で README の章を埋め込める"
+            );
+        }
+        out.push('\n');
+    }
+
+    out.push_str("\n## 5. ルールに沿っていないファイル\n");
     if !project.configured {
         out.push_str("（docv.yaml がないため、なし）\n");
     } else if diagnostics.is_empty() {
@@ -117,14 +112,75 @@ pub fn render(project: &Project, options: Options) -> Result<String> {
         render_diagnostics(&mut out, &diagnostics);
     }
 
-    out.push_str("\n## 5. 次にやること\n");
-    for (i, step) in next_steps(project.configured, &suggestions, &diagnostics)
+    out.push_str("\n## 6. frontmatter の版\n");
+    let versions = file_versions(project)?;
+    let current = version::current();
+    let older = render_versions(&mut out, &versions, current);
+
+    out.push_str("\n## 7. 次にやること\n");
+    for (i, step) in next_steps(project, &present, &diagnostics, older)
         .iter()
         .enumerate()
     {
         let _ = writeln!(out, "{}. {step}", i + 1);
     }
     Ok(out)
+}
+
+/// 管理対象のファイルの frontmatter の version。書いていないファイルは None。
+fn file_versions(project: &Project) -> Result<Vec<(String, Option<Version>)>> {
+    let mut versions = Vec::new();
+    for path in project.managed()? {
+        let text = fs::read_to_string(project.root.join(&path)).unwrap_or_default();
+        let version = markdown::split(&text)
+            .frontmatter
+            .and_then(|fm| serde_yaml_ng::from_str::<serde_yaml_ng::Value>(&fm.yaml).ok())
+            .and_then(|v| v.get("version").and_then(Version::parse));
+        versions.push((path, version));
+    }
+    Ok(versions)
+}
+
+/// 版ごとのファイルの数と、いちばん古い版からこの CLI の版までの手順を、1 版ずつ出す。
+/// CLI は「1 つ前の版から」の手順だけを持ち、古いファイルには手順をつないで示す。古い版のファイルがあれば true。
+fn render_versions(
+    out: &mut String,
+    versions: &[(String, Option<Version>)],
+    current: Version,
+) -> bool {
+    let _ = writeln!(out, "この docv の版: {current}");
+    let mut counts: BTreeMap<Option<Version>, usize> = BTreeMap::new();
+    for (_, v) in versions {
+        *counts.entry(*v).or_default() += 1;
+    }
+    for (v, count) in &counts {
+        let label = v.map_or("version なし".to_string(), |v| v.to_string());
+        let _ = writeln!(out, "- {label}: {count} ファイル");
+    }
+    let Some(oldest) = counts
+        .keys()
+        .flatten()
+        .copied()
+        .filter(|v| *v < current)
+        .min()
+    else {
+        out.push_str("（古い版のファイルはない）\n");
+        return false;
+    };
+    let steps = version::path_from(oldest);
+    if steps.is_empty() {
+        let _ = writeln!(
+            out,
+            "\n{oldest} → {current}: 直すことはない。version を {current} に上げる"
+        );
+    }
+    for m in steps {
+        let _ = writeln!(out, "\n{} → {}", m.from, m.to);
+        for step in m.steps {
+            let _ = writeln!(out, "- {step}");
+        }
+    }
+    true
 }
 
 fn render_diagnostics(out: &mut String, diagnostics: &[Diagnostic]) {
@@ -149,19 +205,28 @@ fn render_diagnostics(out: &mut String, diagnostics: &[Diagnostic]) {
 }
 
 fn next_steps(
-    configured: bool,
-    suggestions: &[Suggestion],
+    project: &Project,
+    present: &[&str],
     diagnostics: &[Diagnostic],
+    older: bool,
 ) -> Vec<String> {
-    if !configured {
-        return vec![
-            "docv init で docv.yaml を作り、3 の案を docs に足す".to_string(),
-            "もう一度 docv migrate-guide を実行し、4 に出たファイルを直す".to_string(),
-        ];
-    }
     let mut steps = Vec::new();
-    if !suggestions.is_empty() {
-        steps.push("3 の案を docv.yaml に足し、もう一度 docv migrate-guide を実行する".to_string());
+    if !project.configured {
+        steps.push(
+            "docv init で docv.yaml を作り、docs に管理するファイルの glob を書く".to_string(),
+        );
+    }
+    if present.len() < slot::DEFS.len() {
+        steps.push(
+            "4 の枠のうち、このプロジェクトに当てはまるものを docv add <slot> で作る（docv add --list で一覧を出す）"
+                .to_string(),
+        );
+    }
+    if older {
+        steps.push(format!(
+            "6 の手順を古い版から順にあて、frontmatter の version を {} にする",
+            version::current()
+        ));
     }
     if diagnostics.iter().any(|d| d.rule == "format-diff") {
         steps.push(
@@ -171,7 +236,7 @@ fn next_steps(
     }
     if diagnostics.iter().any(|d| d.rule != "format-diff") {
         steps.push(
-            "4 に出たファイルを直す。この出力と docv desc を AI Agent に渡して直させてもよい"
+            "5 に出たファイルを直す。この出力と docv desc を AI Agent に渡して直させてもよい"
                 .to_string(),
         );
     }
@@ -181,58 +246,48 @@ fn next_steps(
     steps
 }
 
-/// 管理外のファイルの場所から、docs と ignore に足す案を作る。
-fn suggest(unmanaged: &[&str]) -> Vec<Suggestion> {
-    let mut suggestions = Vec::new();
-    if unmanaged.contains(&"README.md") {
-        suggestions.push(Suggestion::Doc {
-            path: "README.md".to_string(),
-            kind: "overview",
-        });
-    }
-    // 推測できたディレクトリと、その下の深いところにファイルがあるか。
-    let mut dirs: BTreeMap<String, (Option<&'static str>, bool)> = BTreeMap::new();
+/// 管理外のファイルのディレクトリ名から、タグを推測する。
+fn guess_tags(unmanaged: &[&str]) -> BTreeMap<String, &'static str> {
+    let mut tags = BTreeMap::new();
     for path in unmanaged {
         let parts: Vec<&str> = path.split('/').collect();
         let dir_parts = &parts[..parts.len() - 1];
         for (i, name) in dir_parts.iter().enumerate() {
             let name = name.to_lowercase();
-            let guess = if name.contains("generated") {
-                Some(None)
-            } else {
-                GUESSES
-                    .iter()
-                    .find(|(words, _)| words.iter().any(|w| name.contains(w)))
-                    .map(|(_, kind)| Some(*kind))
-            };
-            if let Some(kind) = guess {
-                let dir = dir_parts[..=i].join("/");
-                let nested = i + 1 < dir_parts.len();
-                let entry = dirs.entry(dir).or_insert((kind, false));
-                entry.1 |= nested;
+            if let Some((_, tag)) = GUESSES
+                .iter()
+                .find(|(words, _)| words.iter().any(|w| name.contains(w)))
+            {
+                tags.insert(dir_parts[..=i].join("/"), *tag);
                 break;
             }
         }
     }
-    for (dir, (kind, nested)) in dirs {
-        suggestions.push(match kind {
-            None => Suggestion::Ignore(format!("{dir}/**")),
-            Some(kind) => Suggestion::Doc {
-                path: if nested || kind == "archive" {
-                    format!("{dir}/**/*.md")
-                } else {
-                    format!("{dir}/*.md")
-                },
-                kind,
-            },
-        });
+    tags
+}
+
+/// README の h2 のうち、枠に埋め込めそうなもの。(枠の ID, 見出し)
+fn readme_headings(project: &Project) -> Vec<(&'static str, String)> {
+    let Ok(text) = fs::read_to_string(project.root.join("README.md")) else {
+        return Vec::new();
+    };
+    let outline = markdown::outline(&markdown::split(&text));
+    let mut found = Vec::new();
+    for heading in outline.headings.iter().filter(|h| h.level == 2) {
+        let lower = heading.text.to_lowercase();
+        if let Some((_, id)) = SLOT_HEADINGS
+            .iter()
+            .find(|(words, _)| words.iter().any(|w| lower.contains(w)))
+            && !found.iter().any(|(f, _)| f == id)
+        {
+            found.push((*id, slot::strip_number(&heading.text).to_string()));
+        }
     }
-    suggestions
+    found
 }
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
     use std::path::Path;
 
     use super::*;
@@ -247,30 +302,21 @@ mod tests {
     const OPTIONS: Options = Options { textlint: false };
 
     #[test]
-    fn guesses_kinds_from_directories() {
-        let suggestions = suggest(&[
+    fn guesses_tags_from_directories() {
+        let tags = guess_tags(&[
             "README.md",
             "docs/Design/a.md",
             "docs/design/sub/b.md",
             "docs/manual/c.md",
-            "docs/archive/spec/d.md",
-            "docs/generated/e.md",
             "docs/misc/f.md",
-            "notes.md",
         ]);
-        let doc = |path: &str, kind| Suggestion::Doc {
-            path: path.to_string(),
-            kind,
-        };
+        let tags: Vec<(&str, &str)> = tags.iter().map(|(d, t)| (d.as_str(), *t)).collect();
         assert_eq!(
-            suggestions,
+            tags,
             [
-                doc("README.md", "overview"),
-                doc("docs/Design/*.md", "spec"),
-                doc("docs/archive/**/*.md", "archive"),
-                doc("docs/design/**/*.md", "spec"),
-                Suggestion::Ignore("docs/generated/**".to_string()),
-                doc("docs/manual/*.md", "operation"),
+                ("docs/Design", "仕様"),
+                ("docs/design", "仕様"),
+                ("docs/manual", "手順"),
             ]
         );
     }
@@ -279,44 +325,34 @@ mod tests {
     fn guides_without_config() {
         let dir = tempfile::tempdir().unwrap();
         let root = dir.path();
-        write(root, "README.md", "# R\n");
+        write(root, "README.md", "# R\n\n## Installation\n\n手順\n");
         write(root, "docs/design/a.md", "# A\n");
-        write(root, "docs/design/b.md", "# B\n");
         write(root, "docs/plan/c.md", "# C\n");
         let project = Project::unconfigured(root).unwrap();
-        assert_eq!(
-            render(&project, OPTIONS).unwrap(),
-            "## 1. 設定
+        let out = render(&project, OPTIONS).unwrap();
+        assert!(
+            out.starts_with(
+                "## 1. 設定
 docv.yaml: なし。docv init で作る
 
-## 2. 管理外のファイル（4 件）
+## 2. 管理外のファイル（3 件）
 ./            1 件
-docs/design/  2 件
+docs/design/  1 件
 docs/plan/    1 件
 
-- README.md
-- docs/design/a.md
-- docs/design/b.md
-- docs/plan/c.md
+## 3. タグの案
+- docs/design/ のファイル: tags: [仕様]
 
-## 3. docs の案
-docs:
-  - path: README.md
-    kind: overview
-    question: （書く）
-  - path: docs/design/*.md
-    kind: spec
-  - path: docs/plan/*.md
-    kind: plan
-
-## 4. ルールに沿っていないファイル
-（docv.yaml がないため、なし）
-
-## 5. 次にやること
-1. docv init で docv.yaml を作り、3 の案を docs に足す
-2. もう一度 docv migrate-guide を実行し、4 に出たファイルを直す
-"
+## 4. 枠
+- [ ] インストール（service/install.yaml）"
+            ),
+            "{out}"
         );
+        assert!(
+            out.contains("- [ ] インストール（service/install.yaml）: 利用者はどう入れるか。include: [README.md#Installation] で README の章を埋め込める\n"),
+            "{out}"
+        );
+        assert!(out.contains("## 7. 次にやること\n1. docv init で"), "{out}");
     }
 
     #[test]
@@ -326,19 +362,45 @@ docs:
         write(
             root,
             "docv.yaml",
-            "version: 1\ndocs:\n  - path: docs/spec/*.md\n    kind: spec\nformat:\n  enabled: true\n",
+            "version: 1\ndocs: [docs/spec/*.md]\nformat:\n  enabled: true\n",
         );
         write(root, "docs/spec/a.md", "# A\n* x\n");
+        write(root, "docv/service/service.md", "# サービス仕様\n");
         let project = Project::open(&Locate::default(), root).unwrap();
         let out = render(&project, OPTIONS).unwrap();
         assert!(
-            out.contains("## 4. ルールに沿っていないファイル\nformat-diff       1 件\nquestion-missing  1 件\n\ndocs/spec/a.md\n  1: error question-missing"),
+            out.contains("- [x] サービス仕様（service/service.md）\n"),
             "{out}"
         );
         assert!(
-            out.contains("## 5. 次にやること\n1. ほかを直す前に docv fix で整形し"),
+            out.contains("## 5. ルールに沿っていないファイル\nformat-diff      1 件\nmission-missing  1 件\nversion-missing  1 件\n\ndocs/spec/a.md\n  1: error mission-missing"),
             "{out}"
         );
-        assert!(out.contains("\n2. 4 に出たファイルを直す"), "{out}");
+        assert!(
+            out.contains("\n2. ほかを直す前に docv fix で整形し"),
+            "{out}"
+        );
+    }
+
+    #[test]
+    fn guides_from_old_frontmatter_versions() {
+        let current = version::current();
+        let mut out = String::new();
+        let old = Version {
+            major: current.major,
+            minor: current.minor.saturating_sub(1),
+        };
+        let versions = vec![
+            ("docs/a.md".to_string(), Some(current)),
+            ("docs/b.md".to_string(), None),
+        ];
+        assert!(!render_versions(&mut out, &versions, current));
+        assert!(out.contains("（古い版のファイルはない）"), "{out}");
+        if old < current {
+            let mut out = String::new();
+            let versions = vec![("docs/a.md".to_string(), Some(old))];
+            assert!(render_versions(&mut out, &versions, current));
+            assert!(out.contains(&format!("{old} → {current}")), "{out}");
+        }
     }
 }

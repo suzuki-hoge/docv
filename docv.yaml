@@ -2,43 +2,30 @@
 version: 1
 title: docv
 
-topics: [ルール, 設定, CLI, 出力, 配布]
-
 docs:
-  - path: README.md
-    kind: overview
-    question: docv は何で、どこから見ればいいか
-    style:
-      heading_number: false
-      section_separator: false
-  - path: docs/spec/*.md
-    kind: spec
-  - path: docs/rule/*.md
-    kind: rule
-  - path: docs/plan/*.md
-    kind: plan
-  - path: docs/fixme/*.md
-    kind: fixme
-  - path: docs/archive/**/*.md
-    kind: archive
-  - path: docs/tmp/**/*.md
-    kind: tmp
+  - docs/**/*.md
 
 ignore:
+  - docs/tmp/**
+  - docs/plan/**
   - templates/**
   - assets/**
   - CLAUDE.md
   - tmp/**
 
-archive:
-  dir: docs/archive
+tags: [仕様, 規約, 未決, ルール, 設定, 出力]
+
+slots:
+  dir: docv
 
 output:
-  dir: docv
-  commit: true
-  jpg: false
+  dir: tmp/html
+  commit: false
 
 lint:
+  tags:
+    仕様: [no-past-wording]
+    規約: [no-past-wording]
   style:
     bold: deny
     dollar: deny
@@ -51,6 +38,9 @@ lint:
     rules:
       ja-technical-writing/no-exclamation-question-mark: false
       ja-spacing/ja-space-between-half-and-full-width: { space: always }
+      ja-spacing/ja-space-around-code: { before: true, after: true }
+      ja-spacing/ja-space-around-link: { before: true, after: true }
+      ja-spacing/ja-no-space-around-slash: false
 
 format:
   enabled: true

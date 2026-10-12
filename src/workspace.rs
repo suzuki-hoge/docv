@@ -1,19 +1,18 @@
-//! ルートと設定ファイルの探索、ファイルの分類。docs/spec/cli.md の 2 章。
+//! ルートと設定ファイルの探索、ファイルの分類。docv/system/system.md の「処理の流れ」と「ファイルの分類」。
 
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 
-use anyhow::{Context, Result, anyhow, bail};
-use globset::{GlobMatcher, GlobSet, GlobSetBuilder};
+use anyhow::{Context, Result, bail};
+use globset::{GlobSet, GlobSetBuilder};
 use ignore::WalkBuilder;
 
-use crate::config::{self, CheckLevel, Config, DocEntry};
-use crate::kind::{Kind, Kinds};
+use crate::config::{self, Config};
 
-/// コマンドラインで指定された、設定ファイルとルートの場所。
+/// コマンドラインで指定された設定ファイル。ルートは常にカレントディレクトリ。
+/// config は、テストのための非公開のオプション（--config）でだけ指定する。
 #[derive(Debug, Clone, Default)]
 pub struct Locate {
     pub config: Option<PathBuf>,
-    pub root: Option<PathBuf>,
 }
 
 #[derive(Debug)]
@@ -23,8 +22,7 @@ pub struct Project {
     /// docv.yaml を読んだか。migrate-guide だけが、docv.yaml がなくても動く。
     pub configured: bool,
     pub config: Config,
-    pub kinds: Kinds,
-    docs: Vec<GlobMatcher>,
+    docs: GlobSet,
     ignore: GlobSet,
 }
 
@@ -35,38 +33,43 @@ pub struct DocFile {
     pub class: Class,
 }
 
+/// overrides を当てた、ファイルごとの道具の設定。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Settings {
+    pub textlint: bool,
+    pub style: bool,
+    pub format: bool,
+    /// frontmatter（mission と version）を必須にするか。
+    pub mission_required: bool,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Class {
-    /// docv.yaml の docs の何番目の項目に当てはまったか。
-    Managed(usize),
+    Managed,
     Unmanaged,
 }
 
 impl Locate {
-    /// 設定ファイルとルートの場所。--config も --root もなく、docv.yaml も見つからなければ None。
-    pub fn resolve(&self, cwd: &Path) -> Option<(PathBuf, PathBuf)> {
-        match (&self.config, &self.root) {
-            (Some(config), root) => Some((
-                cwd.join(config),
-                root.as_ref()
-                    .map_or_else(|| cwd.to_path_buf(), |r| cwd.join(r)),
-            )),
-            (None, Some(root)) => Some((cwd.join(root).join(config::FILE_NAME), cwd.join(root))),
-            (None, None) => find_root(cwd).map(|root| (root.join(config::FILE_NAME), root)),
-        }
+    /// 設定ファイルの場所。--config がなければ、ルート（カレントディレクトリ）の docv.yaml。
+    pub fn config_path(&self, root: &Path) -> PathBuf {
+        self.config
+            .as_ref()
+            .map_or_else(|| root.join(config::FILE_NAME), |c| root.join(c))
     }
 }
 
 impl Project {
-    pub fn open(locate: &Locate, cwd: &Path) -> Result<Self> {
-        let (config_path, root) = locate.resolve(cwd).ok_or_else(|| {
-            anyhow!(
-                "{} が見つからない。docv init で作るか、--config で指定する",
-                config::FILE_NAME
-            )
-        })?;
+    /// root はカレントディレクトリ。docv は docv.yaml のある場所で実行する。
+    pub fn open(locate: &Locate, root: &Path) -> Result<Self> {
+        let config_path = locate.config_path(root);
+        if !config_path.is_file() {
+            bail!(
+                "{} が見つからない。docv.yaml のあるディレクトリで実行するか、docv init で作る",
+                config_path.display()
+            );
+        }
         let config = config::load(&config_path)?;
-        Self::new(config_path, &root, config, true)
+        Self::new(config_path, root, config, true)
     }
 
     /// docv.yaml がないときのプロジェクト。すべてのファイルが管理外になる。
@@ -83,28 +86,13 @@ impl Project {
         let root = root
             .canonicalize()
             .with_context(|| format!("ルート {} が見つからない", root.display()))?;
-        let kinds = Kinds::new(&config.kinds);
-        let docs = config
-            .docs
-            .iter()
-            .map(|entry| config::glob(&entry.path))
-            .collect::<Result<_>>()?;
-        let mut ignore = GlobSetBuilder::new();
-        for pattern in &config.ignore {
-            ignore.add(
-                globset::GlobBuilder::new(pattern)
-                    .literal_separator(true)
-                    .build()?,
-            );
-        }
         Ok(Project {
             root,
             config_path,
             configured,
+            docs: glob_set(&config.docs)?,
+            ignore: glob_set(&config.ignore)?,
             config,
-            kinds,
-            docs,
-            ignore: ignore.build()?,
         })
     }
 
@@ -141,77 +129,81 @@ impl Project {
         self.classify_with(rel, &normalize_dir(&self.config.output.dir))
     }
 
+    /// 枠のディレクトリの中の Markdown は、枠として読むので、原本にも管理外にもしない。
     fn classify_with(&self, rel: &str, output_dir: &str) -> Option<Class> {
-        if is_under(rel, output_dir) || self.ignore.is_match(rel) {
+        if is_under(rel, output_dir)
+            || is_under(rel, &self.slots_dir())
+            || self.ignore.is_match(rel)
+        {
             return None;
         }
-        Some(
-            self.docs
-                .iter()
-                .position(|m| m.is_match(rel))
-                .map_or(Class::Unmanaged, Class::Managed),
-        )
+        Some(if self.docs.is_match(rel) {
+            Class::Managed
+        } else {
+            Class::Unmanaged
+        })
     }
 
-    /// check と fix の対象。管理対象のうち、check: off と tmp を除いたもの。
-    /// targets が空ならすべて、そうでなければそのパス（ルートからの相対パス）だけ。
-    pub fn targets(&self, targets: &[String]) -> Result<Vec<(DocFile, usize)>> {
+    /// 管理対象のファイルのパス。
+    pub fn managed(&self) -> Result<Vec<String>> {
         Ok(self
             .files()?
             .into_iter()
-            .filter_map(|file| match file.class {
-                Class::Managed(index) => Some((file, index)),
-                Class::Unmanaged => None,
-            })
-            .filter(|(file, _)| targets.is_empty() || targets.contains(&file.path))
-            .filter(|(_, index)| {
-                self.check_level_of(*index) != CheckLevel::Off && !self.kind_of(*index).is_tmp()
-            })
+            .filter(|file| file.class == Class::Managed)
+            .map(|file| file.path)
             .collect())
     }
 
-    /// コマンドラインのパスを、ルートからの相対パスにする。まだないファイルのパスも扱える。
-    pub fn relative_path(&self, cwd: &Path, path: &Path) -> Result<String> {
-        let mut normalized = PathBuf::new();
-        for component in cwd.join(path).components() {
-            match component {
-                Component::ParentDir => {
-                    normalized.pop();
-                }
-                Component::CurDir => {}
-                other => normalized.push(other),
+    /// check と fix の対象の管理対象のファイル。targets が空ならすべて、そうでなければそのパス（ルートからの相対パス）だけ。
+    pub fn targets(&self, targets: &[String]) -> Result<Vec<String>> {
+        Ok(self
+            .managed()?
+            .into_iter()
+            .filter(|path| targets.is_empty() || targets.contains(path))
+            .collect())
+    }
+
+    /// overrides を当てた、そのファイルへの道具の設定。後に書いた overrides が優先する。
+    pub fn settings_of(&self, rel: &str) -> Settings {
+        let mut settings = Settings {
+            textlint: true,
+            style: true,
+            format: true,
+            mission_required: true,
+        };
+        for o in &self.config.overrides {
+            let hit = o
+                .paths
+                .iter()
+                .filter_map(|p| config::glob(p).ok())
+                .any(|g| g.is_match(rel));
+            if !hit {
+                continue;
+            }
+            if let Some(v) = o.textlint {
+                settings.textlint = v;
+            }
+            if let Some(v) = o.style {
+                settings.style = v;
+            }
+            if let Some(v) = o.format {
+                settings.format = v;
+            }
+            if let Some(v) = o.mission {
+                settings.mission_required = v == config::Requirement::Required;
             }
         }
-        let resolved = normalized
-            .ancestors()
-            .find_map(|dir| {
-                let rest = normalized.strip_prefix(dir).ok()?;
-                dir.canonicalize().ok().map(|dir| dir.join(rest))
-            })
-            .unwrap_or(normalized);
-        relative(&self.root, &resolved)
+        settings
     }
 
-    pub fn entry(&self, index: usize) -> &DocEntry {
-        &self.config.docs[index]
+    /// 枠のディレクトリ（ルートからの相対パス）。
+    pub fn slots_dir(&self) -> String {
+        normalize_dir(&self.config.slots.dir)
     }
 
-    pub fn kind_of(&self, index: usize) -> &Kind {
-        self.kinds
-            .get(&self.entry(index).kind)
-            .expect("docs の種類は設定の検証で確かめてある")
-    }
-
-    /// ルートからの相対パスが tmp の項目に当てはまるか。ファイルがあるかどうかは見ない。
-    pub fn is_tmp_path(&self, rel: &str) -> bool {
-        self.docs
-            .iter()
-            .position(|m| m.is_match(rel))
-            .is_some_and(|index| self.kind_of(index).is_tmp())
-    }
-
-    pub fn check_level_of(&self, index: usize) -> CheckLevel {
-        self.entry(index).check
+    /// build-html と build-image の出力先。
+    pub fn out_dir(&self) -> PathBuf {
+        self.root.join(&self.config.output.dir)
     }
 
     pub fn title(&self) -> String {
@@ -224,10 +216,16 @@ impl Project {
     }
 }
 
-fn find_root(cwd: &Path) -> Option<PathBuf> {
-    cwd.ancestors()
-        .find(|dir| dir.join(config::FILE_NAME).is_file())
-        .map(Path::to_path_buf)
+fn glob_set(patterns: &[String]) -> Result<GlobSet> {
+    let mut set = GlobSetBuilder::new();
+    for pattern in patterns {
+        set.add(
+            globset::GlobBuilder::new(pattern)
+                .literal_separator(true)
+                .build()?,
+        );
+    }
+    Ok(set.build()?)
 }
 
 fn relative(root: &Path, path: &Path) -> Result<String> {
@@ -268,13 +266,8 @@ mod tests {
 
     const CONFIG: &str = "version: 1
 docs:
-  - path: README.md
-    kind: overview
-    question: q
-  - path: docs/spec/*.md
-    kind: spec
-  - path: docs/**/*.md
-    kind: fixme
+  - README.md
+  - docs/**/*.md
 ignore:
   - tmp/**
 ";
@@ -293,25 +286,39 @@ ignore:
             "notes.md",
             "secret.md",
             "tmp/work.md",
-            "docv/index.md",
+            "docv/build/index.md",
         ] {
             write(root, path, "# x\n");
         }
 
-        let project = Project::open(&Locate::default(), &root.join("docs")).unwrap();
+        let project = Project::open(&Locate::default(), root).unwrap();
         let files = project.files().unwrap();
         let summary: Vec<(&str, Class)> =
             files.iter().map(|f| (f.path.as_str(), f.class)).collect();
         assert_eq!(
             summary,
             [
-                ("README.md", Class::Managed(0)),
-                ("docs/spec/a.md", Class::Managed(1)),
-                ("docs/spec/sub/b.md", Class::Managed(2)),
+                ("README.md", Class::Managed),
+                ("docs/spec/a.md", Class::Managed),
+                ("docs/spec/sub/b.md", Class::Managed),
                 ("notes.md", Class::Unmanaged),
             ]
         );
-        assert_eq!(project.kind_of(2).id, "fixme");
+    }
+
+    #[test]
+    fn applies_overrides_in_order() {
+        let dir = tempfile::tempdir().unwrap();
+        write(
+            dir.path(),
+            "docv.yaml",
+            "version: 1\ndocs: [docs/**/*.md]\noverrides:\n  - paths: [docs/tmp/**]\n    textlint: false\n    mission: optional\n  - paths: [docs/tmp/keep.md]\n    textlint: true\n",
+        );
+        let project = Project::open(&Locate::default(), dir.path()).unwrap();
+        let memo = project.settings_of("docs/tmp/memo.md");
+        assert!(!memo.textlint && !memo.mission_required && memo.style && memo.format);
+        assert!(project.settings_of("docs/tmp/keep.md").textlint);
+        assert!(project.settings_of("docs/spec/a.md").mission_required);
     }
 
     #[test]
@@ -323,9 +330,8 @@ ignore:
 
         let locate = Locate {
             config: Some(config_dir.path().join("trial.yaml")),
-            root: Some(root_dir.path().to_path_buf()),
         };
-        let project = Project::open(&locate, Path::new("/")).unwrap();
+        let project = Project::open(&locate, root_dir.path()).unwrap();
         assert_eq!(project.files().unwrap().len(), 1);
         assert_eq!(
             project.title(),
@@ -341,25 +347,12 @@ ignore:
     }
 
     #[test]
-    fn resolves_paths_of_new_files() {
+    fn classifies_paths() {
         let dir = tempfile::tempdir().unwrap();
         write(dir.path(), "docv.yaml", CONFIG);
-        write(dir.path(), "docs/spec/a.md", "# a\n");
         let project = Project::open(&Locate::default(), dir.path()).unwrap();
-        let docs = dir.path().join("docs");
-        assert_eq!(
-            project
-                .relative_path(&docs, Path::new("spec/../plan/new.md"))
-                .unwrap(),
-            "docs/plan/new.md"
-        );
-        assert!(
-            project
-                .relative_path(&docs, Path::new("../../x.md"))
-                .is_err()
-        );
         assert_eq!(project.classify("tmp/x.md"), None);
-        assert_eq!(project.classify("docs/x.md"), Some(Class::Managed(2)));
+        assert_eq!(project.classify("docs/x.md"), Some(Class::Managed));
     }
 
     #[test]

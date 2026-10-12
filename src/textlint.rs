@@ -1,4 +1,4 @@
-//! textlint を npx で実行する。docs/spec/textlint.md。
+//! textlint を npx で実行する。docs/spec/config.md の 6 章。
 
 use std::collections::hash_map::DefaultHasher;
 use std::fs;

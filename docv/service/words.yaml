@@ -1,0 +1,27 @@
+groups:
+  - name: ファイルの種類
+    items:
+      - ja: 原本
+        desc: AI Agent が読み書きし、詳細を記録する Markdown。docs/ に、プロジェクトが自由に書く。docv.yaml の docs に当てはまるファイル
+      - ja: 枠
+        en: Slot
+        desc: どのプロジェクトにもある問いに、決まった形で答える docv の規格のファイル。docv/ に `<まとまり>/<ID>.<拡張子>` の名前で置く。16 の枠がある
+      - en: ADR
+        desc: 決めたこと 1 つを、背景、選ばなかった案と一緒に残す記録。docv/adr/ に 1 つの Markdown で置き、決めた後は書き換えない
+  - name: ファイルの分類
+    items:
+      - ja: 管理対象
+        desc: docv.yaml の docs に当てはまる Markdown。frontmatter に mission と version が要り、check の対象になる
+      - ja: 管理外
+        desc: docs にも ignore にも当てはまらない Markdown。docv は中身を見ない
+  - name: 書き方
+    items:
+      - ja: ミッション
+        en: Mission
+        desc: 原本のファイルが答えること。frontmatter に 1 文で書き、中身をその答えだけにする
+      - ja: タグ
+        en: Tags
+        desc: 原本に付ける分類。1 つのファイルに任意の数を付けられ、タグにルールを付けられる
+      - ja: 埋め込み
+        en: Include
+        desc: 枠に、既にある Markdown のファイルや章を埋め込む指定。枠の項目の名前は include。原本を 1 か所に保ったまま枠に載せられる

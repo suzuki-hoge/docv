@@ -1,0 +1,49 @@
+requirements:
+  - name: Node.js
+    purpose: textlint を使うときだけ要る。`docv check --no-textlint` なら要らない
+    url: https://nodejs.org/
+  - name: Google Chrome
+    purpose: JPG を作るときだけ要る
+steps:
+  - id: binary
+    name: バイナリを取る
+    items:
+      - os: windows
+        markdown: |
+          GitHub Release から `docv-1.0.0-x86_64-pc-windows-msvc.zip` を取り、展開した docv.exe を PATH の通った場所に置く。
+      - os: macos
+        markdown: |
+          GitHub Release からバイナリを取り、パスの通った場所に置く。arm64 の例。
+
+          ```sh
+          curl -L https://github.com/suzuki-hoge/docv/releases/download/v1.0.0/docv-1.0.0-aarch64-apple-darwin.tar.gz | tar xz
+          mv docv /usr/local/bin/
+          ```
+
+          ブラウザでダウンロードしたバイナリは、macOS の Gatekeeper に止められることがある。curl で取れば止められない。
+      - os: linux
+        markdown: |
+          GitHub Release からバイナリを取り、パスの通った場所に置く。x86_64 の例。
+
+          ```sh
+          curl -L https://github.com/suzuki-hoge/docv/releases/download/v1.0.0/docv-1.0.0-x86_64-unknown-linux-musl.tar.gz | tar xz
+          mv docv /usr/local/bin/
+          ```
+  - id: cargo
+    name: ソースから入れる（Rust の環境があるとき）
+    items:
+      markdown: |
+        ```sh
+        cargo install --git https://github.com/suzuki-hoge/docv
+        ```
+  - id: local
+    name: 手元のソースから入れる（Rust の環境があるとき）
+    items:
+      markdown: |
+        クローンしたリポジトリや、手を入れている作業中のソースから入れる。リポジトリのルートで実行する。
+
+        ```sh
+        cargo install --path .
+        ```
+
+        `~/.cargo/bin/docv` に入る。ソースを変えたら、もう一度実行すると入れ直せる。

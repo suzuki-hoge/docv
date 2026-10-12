@@ -1,63 +1,54 @@
 # docv
 
-プロジェクトのドキュメントを、AI Agent が読み書きする Markdown と、人間が見る HTML の 2 つの形で扱うためのフレームワーク。ドキュメントのルールと、そのルールを前提にした CLI からなる。
+プロジェクトのドキュメントを、AI Agent が読み書きする Markdown（原本）と、人間が全体像を掴む HTML の 2 つの形で扱うためのフレームワーク。ドキュメントのルールと、そのルールを前提にした CLI からなる。
 
 ```
-詳細ドキュメント（Markdown + frontmatter）  ← 唯一のデータソース
-   ├─ AI Agent: docv index でファイルの一覧と問いを知り、必要なファイルだけ読む
-   └─ 人間: docv build が生成する HTML（任意で JPG）を見る
+枠（YAML、docv/）      ── 枠ごとのページ ──────▶ HTML（と、その JPG）
+原本（Markdown、docs/） ── 問いとタグのツリー ──▶ プロジェクト詳細.html
+                        └─ mission ─────────────▶ AI Agent
 ```
 
-- ドキュメントを時間で 未来 / 現在 / 過去 に分ける。現在のドキュメントには最新の状態だけを書き、経緯は過去のドキュメントへ移す
-- ファイルごとに答える問いを宣言し、その範囲を超えて書き足さない
-- インデックスと HTML は、CLI が LLM を使わずに作る。同じ入力からは毎回同じものができる
-- docv.yaml で指定したファイルだけを管理する。ルールに沿わないファイルも置ける
-- すべてローカルで完結する
+- インストール、サービス仕様、利用マニュアルのように、どのプロジェクトにもある問いは「枠」に、決まった形で書く。HTML には、規格の順にすべての枠が並び、置いていない枠はグレーになる
+- 原本は、ファイルごとに答える問いを宣言し、その範囲を超えて書き足さない。分類はタグで行い、タグにルールを付けられる
+- 図や API の定義は外の道具で作り、枠からリンクするか埋め込む
+- HTML は、CLI が LLM を使わずに作る。同じ入力からは毎回同じものができる。すべてローカルで完結する
 
 ## 使い方
 
 ```sh
-docv init            # docv.yaml を作る
-docv migrate-guide   # 既存のドキュメントのうち、管理外のものとルールに沿っていないものを見る
-docv fix             # 空行や表の余白を整形し、textlint で直せるところを直す
-docv check           # ルールに沿っているかを確かめる
-docv build           # HTML を作る
+docv init                          # docv.yaml を作る
+docv migrate-guide                 # 既存のドキュメントに、タグと枠の案と、直すところを出す
+docv add --list                    # 作れる枠の一覧を出す
+docv add service                   # 枠を決まったパスに作る
+docv fix                           # 空行や表の余白を整形し、textlint で直せるところを直す
+docv check                         # ルールに沿っているかを確かめる
+docv build-html                    # HTML を作る
+docv build-image                   # 枠のページを JPG にする
 ```
 
 AI Agent には、CLAUDE.md などに次のように書いて伝える。
 
 ```
-- セッションの最初に `docv desc` と `docv index` を実行し、ドキュメントのルールと一覧を把握すること
+- セッションの最初に `docv desc` を実行し、ドキュメントのルールを把握すること
 ```
+
+このリポジトリのサービス仕様、利用マニュアル、開発者向けガイドなどは、枠（[docv/](docv)）に書いてある。`docv build-html` で HTML（tmp/html/）にして見られる。
 
 ## ドキュメント
 
-### 考え方とルール
+### docv の規格
 
-- [docs/spec/concept.md](docs/spec/concept.md) — docv は何を解決し、どんな原則でルールと CLI を決めているか
-- [docs/spec/kind.md](docs/spec/kind.md) — 組み込みの種類にはどんなものがあり、それぞれ何をどんな大きさで書くか
-- [docs/spec/frontmatter.md](docs/spec/frontmatter.md) — 管理対象のファイルの frontmatter には何を書くか
-- [docs/spec/writing.md](docs/spec/writing.md) — docv で管理するドキュメントを、人間と AI Agent はどう読み書きするか
-- [docs/spec/config.md](docs/spec/config.md) — docv.yaml には何を書き、各項目は何を意味するか
-
-### CLI
-
-- [docs/spec/cli.md](docs/spec/cli.md) — docv の CLI にはどんなコマンドがあり、共通してどう動くか
-- [docs/spec/check.md](docs/spec/check.md) — docv check は何を確かめ、どう報告するか
-- [docs/spec/retire.md](docs/spec/retire.md) — docv retire は何を、どこへ、どんな形で移すか
-- [docs/spec/style.md](docs/spec/style.md) — docv check は、Markdown の書き方のどんな規則を静的に確かめられるか
-- [docs/spec/textlint.md](docs/spec/textlint.md) — docv check は textlint をどう使い、利用者はルールをどこまで決められるか
-- [docs/spec/fix.md](docs/spec/fix.md) — docv fix は Markdown をどう整形・修正し、エディタの自動整形とどう付き合うか
-- [docs/spec/build.md](docs/spec/build.md) — docv build は何を生成し、その出力をどう扱うか
-- [docs/spec/migrate-guide.md](docs/spec/migrate-guide.md) — 既存のプロジェクトに後から docv を入れるとき、docv migrate-guide は何を示すか
-- [docs/spec/distribution.md](docs/spec/distribution.md) — docv は何で作られ、どう配られ、利用者はどう入れるか
+- [docs/rule/docs/guideline.md](docs/rule/docs/guideline.md) — 原本には何をどう書き、frontmatter とタグをどう付け、check は何を確かめるか
+- [docs/spec/slot.md](docs/spec/slot.md) — 枠にはどんなものがあり、それぞれのファイルに何をどんな形で書き、HTML でどう見せるか
+- [docs/spec/adr.md](docs/spec/adr.md) — ADR には何をどんな形で書き、HTML でどう見せるか
+- [docs/spec/config.md](docs/spec/config.md) — docv.yaml には何を書き、各項目はどう解釈され、check と fix の道具をどう使うか
 
 ### このリポジトリの規約
 
 - [docs/rule/writing-style.md](docs/rule/writing-style.md) — このリポジトリのドキュメントは、どんな書式で書くか
 
-### 未来と過去
+### これからと経緯
 
 - [docs/fixme/open.md](docs/fixme/open.md) — docv の設計で、まだ決まっていないことは何か
 - [docs/plan/](docs/plan) — やると決めたタスク
-- [docs/archive/](docs/archive) — 外した内容と、外した理由
+- [docv/adr/](docv/adr) — 決めた経緯（ADR）

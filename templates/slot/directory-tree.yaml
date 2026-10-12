@@ -1,0 +1,6 @@
+# ディレクトリ: どこに何があるか
+# path がなくなったら、check が知らせる。
+
+entries:
+  - path: src/
+    description: 何があるか

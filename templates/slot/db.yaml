@@ -1,0 +1,5 @@
+# DB 仕様書: どんなデータを、どこにどう保存しているか
+# 定義は外の道具で作り、ref で指す。ページは作らず、index.html のカードから直接リンクする。
+# 説明を書きたいときは、system/db.yaml の代わりに system/db.md を置く。
+
+ref: db/schema.sql

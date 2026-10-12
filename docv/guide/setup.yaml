@@ -1,0 +1,24 @@
+requirements:
+  - name: Rust
+    version: stable（2024 edition が使えるもの）
+    purpose: ビルドとテスト
+    url: https://rustup.rs/
+  - name: Node.js
+    purpose: textlint を含めた docv check を試すとき
+steps:
+  - id: build
+    name: ビルドする
+    items:
+      markdown: |
+        ```sh
+        cargo build --release
+        ```
+  - id: try
+    name: このリポジトリのドキュメントで試す
+    items:
+      markdown: |
+        ```sh
+        ./target/release/docv check --no-textlint
+        ```
+
+        このリポジトリのドキュメントは docv 自身で管理している。コードを変えたら、ここで動きを確かめる。

@@ -1,4 +1,4 @@
-//! check の結果の 1 件。出力の形は docs/spec/check.md の 1 章。
+//! check の結果の 1 件。出力の形は docv/service/manual.yaml の docv check。
 
 use std::fmt;
 

@@ -1,0 +1,27 @@
+entries:
+  - path: docv.yaml
+    description: このリポジトリの docv の設定
+  - path: src/
+    description: CLI のソースコード。コマンドごとにファイルを分ける
+  - path: templates/
+    description: docv add が yaml の枠に書くサンプル。バイナリに埋め込む
+  - path: templates/slot/
+    description: 枠のテンプレ
+  - path: assets/
+    description: HTML の CSS、docv desc が出すルールファイル。バイナリに埋め込む
+  - path: schema/
+    description: docv.yaml の JSON Schema。公開して、エディタの補完に使う
+  - path: docs/
+    description: このリポジトリのドキュメント。docv 自身で管理する
+  - path: docv/
+    description: このリポジトリの枠のファイル
+  - path: docv/adr/
+    description: 決めた経緯（ADR）
+  - path: docs/spec/
+    description: docv の規格の詳細（枠、ADR、docv.yaml）。docv desc のルールファイルの元
+  - path: docs/rule/
+    description: このリポジトリのドキュメントの書式
+  - path: docs/rule/docs/guideline.md
+    description: 原本の書き方。docv desc のルールファイルの元
+  - path: docs/fixme/
+    description: まだ決まっていないこと

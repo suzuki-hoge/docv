@@ -1,4 +1,6 @@
 //! docv.yaml の読み込みと検証。項目の意味は docs/spec/config.md。
+//!
+//! docv.yaml にはツールの設定と、プロジェクト全体で共有する語彙だけを書く。ファイルごとの設定は frontmatter に書く。
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -9,33 +11,55 @@ use globset::{GlobBuilder, GlobMatcher};
 use serde::Deserialize;
 use serde_json::Value;
 
-use crate::kind::{self, Time};
-
 pub const FILE_NAME: &str = "docv.yaml";
 pub const SCHEMA: &str = include_str!("../schema/docv.schema.json");
+
+/// タグに付けられるルール。docs/rule/docs/guideline.md の 4 章。
+pub const TAG_RULES: &[&str] = &["no-past-wording", "no-done-task"];
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub version: u32,
     pub title: Option<String>,
     pub repository: Option<Repository>,
-    #[serde(default)]
-    pub topics: Vec<String>,
-    pub docs: Vec<DocEntry>,
+    /// 管理対象のファイルの glob。
+    pub docs: Vec<String>,
     #[serde(default)]
     pub ignore: Vec<String>,
+    /// タグの一覧。書いたときだけ、frontmatter の tags をこの中に限る。
+    pub tags: Option<Vec<String>>,
     #[serde(default)]
-    pub kinds: Vec<CustomKind>,
-    #[serde(default)]
-    pub templates: BTreeMap<String, String>,
-    #[serde(default)]
-    pub archive: Archive,
+    pub slots: Slots,
     #[serde(default)]
     pub output: Output,
     #[serde(default)]
     pub lint: Lint,
     #[serde(default)]
     pub format: Format,
+    /// パスごとに、道具の設定を上書きする。後に書いたものが優先する。
+    #[serde(default)]
+    pub overrides: Vec<Override>,
+}
+
+/// overrides の 1 つ。paths に当てはまるファイルだけ、書いた項目を上書きする。docs/spec/config.md。
+#[derive(Debug, Clone, Deserialize)]
+pub struct Override {
+    pub paths: Vec<String>,
+    /// textlint をかけるか。
+    pub textlint: Option<bool>,
+    /// 書式の規則（lint.style）をかけるか。
+    pub style: Option<bool>,
+    /// 整形するか。
+    pub format: Option<bool>,
+    /// frontmatter（mission と version）を必須にするか。
+    pub mission: Option<Requirement>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Requirement {
+    Required,
+    Optional,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -46,42 +70,15 @@ pub struct Repository {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct DocEntry {
-    pub path: String,
-    pub kind: String,
-    #[serde(default)]
-    pub check: CheckLevel,
-    pub question: Option<String>,
-    pub topics: Option<Vec<String>>,
-    pub style: Option<Value>,
-}
-
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum CheckLevel {
-    #[default]
-    Error,
-    Warn,
-    Off,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct CustomKind {
-    pub id: String,
-    pub label: Option<String>,
-    pub time: Time,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct Archive {
-    #[serde(default = "default_archive_dir")]
+pub struct Slots {
+    #[serde(default = "default_slots_dir")]
     pub dir: String,
 }
 
-impl Default for Archive {
+impl Default for Slots {
     fn default() -> Self {
-        Archive {
-            dir: default_archive_dir(),
+        Slots {
+            dir: default_slots_dir(),
         }
     }
 }
@@ -92,8 +89,6 @@ pub struct Output {
     pub dir: String,
     #[serde(default = "default_true")]
     pub commit: bool,
-    #[serde(default)]
-    pub jpg: bool,
 }
 
 impl Default for Output {
@@ -101,7 +96,6 @@ impl Default for Output {
         Output {
             dir: default_output_dir(),
             commit: true,
-            jpg: false,
         }
     }
 }
@@ -111,11 +105,14 @@ pub struct Lint {
     #[serde(default)]
     pub words: Words,
     pub style: Option<Value>,
+    /// タグごとに、そのタグを持つファイルにかけるルール。
+    #[serde(default)]
+    pub tags: BTreeMap<String, Vec<String>>,
     #[serde(default)]
     pub textlint: Textlint,
 }
 
-/// lint.textlint。docs/spec/textlint.md。
+/// lint.textlint。docs/spec/config.md の 6 章。
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct Textlint {
     #[serde(default)]
@@ -157,12 +154,12 @@ fn default_branch() -> String {
     "main".to_string()
 }
 
-fn default_archive_dir() -> String {
-    "docs/archive".to_string()
+fn default_slots_dir() -> String {
+    "docv".to_string()
 }
 
 fn default_output_dir() -> String {
-    "docv".to_string()
+    "docv/build".to_string()
 }
 
 fn default_true() -> bool {
@@ -180,6 +177,14 @@ impl Config {
     pub fn unconfigured() -> Config {
         parse("version: 1\ndocs: []\n").expect("空の設定は正しい")
     }
+
+    /// タグにかけるルール。
+    pub fn rules_of<'a>(&'a self, tags: &'a [String]) -> impl Iterator<Item = &'a str> + 'a {
+        tags.iter()
+            .filter_map(|tag| self.lint.tags.get(tag))
+            .flatten()
+            .map(String::as_str)
+    }
 }
 
 pub fn parse(text: &str) -> Result<Config> {
@@ -196,10 +201,6 @@ pub fn glob(pattern: &str) -> Result<GlobMatcher> {
         .literal_separator(true)
         .build()?
         .compile_matcher())
-}
-
-fn is_glob(pattern: &str) -> bool {
-    pattern.contains(['*', '?', '[', '{'])
 }
 
 fn validate_schema(value: &Value) -> Result<()> {
@@ -225,55 +226,39 @@ fn validate_schema(value: &Value) -> Result<()> {
 fn validate_semantics(config: &Config) -> Result<()> {
     let mut errors = Vec::new();
 
-    let mut kind_ids: Vec<&str> = kind::BUILTIN.iter().map(|k| k.id).collect();
-    for (i, k) in config.kinds.iter().enumerate() {
-        if kind_ids.contains(&k.id.as_str()) {
-            errors.push(format!("/kinds/{i}/id: 種類 {} はすでにある", k.id));
-        } else {
-            kind_ids.push(&k.id);
+    for (i, pattern) in config.docs.iter().enumerate() {
+        if let Err(e) = glob(pattern) {
+            errors.push(format!("/docs/{i}: glob として読めない: {e}"));
         }
     }
-
-    for (i, entry) in config.docs.iter().enumerate() {
-        if !kind_ids.contains(&entry.kind.as_str()) {
-            errors.push(format!(
-                "/docs/{i}/kind: 種類 {} は定義されていない",
-                entry.kind
-            ));
-        }
-        if let Err(e) = glob(&entry.path) {
-            errors.push(format!("/docs/{i}/path: glob として読めない: {e}"));
-        }
-        if is_glob(&entry.path) {
-            for key in [
-                ("question", entry.question.is_some()),
-                ("topics", entry.topics.is_some()),
-            ]
-            .into_iter()
-            .filter(|(_, present)| *present)
-            .map(|(key, _)| key)
-            {
-                errors.push(format!(
-                    "/docs/{i}/{key}: path が 1 ファイルだけを指すときにだけ書ける"
-                ));
-            }
-        }
-        for topic in entry.topics.iter().flatten() {
-            if !config.topics.contains(topic) {
-                errors.push(format!("/docs/{i}/topics: 話題 {topic} は topics にない"));
-            }
-        }
-    }
-
     for (i, pattern) in config.ignore.iter().enumerate() {
         if let Err(e) = glob(pattern) {
             errors.push(format!("/ignore/{i}: glob として読めない: {e}"));
         }
     }
+    for (i, o) in config.overrides.iter().enumerate() {
+        for (j, pattern) in o.paths.iter().enumerate() {
+            if let Err(e) = glob(pattern) {
+                errors.push(format!(
+                    "/overrides/{i}/paths/{j}: glob として読めない: {e}"
+                ));
+            }
+        }
+    }
 
-    for id in config.templates.keys() {
-        if !kind_ids.contains(&id.as_str()) {
-            errors.push(format!("/templates/{id}: 種類 {id} は定義されていない"));
+    for (tag, rules) in &config.lint.tags {
+        if let Some(tags) = &config.tags
+            && !tags.contains(tag)
+        {
+            errors.push(format!("/lint/tags/{tag}: タグ {tag} は tags にない"));
+        }
+        for rule in rules {
+            if !TAG_RULES.contains(&rule.as_str()) {
+                errors.push(format!(
+                    "/lint/tags/{tag}: ルール {rule} はない。使えるのは {}",
+                    TAG_RULES.join("、")
+                ));
+            }
         }
     }
 
@@ -311,25 +296,17 @@ mod tests {
     #[test]
     fn fills_defaults() {
         let config = parse("version: 1\ndocs: []\n").unwrap();
-        assert_eq!(config.archive.dir, "docs/archive");
-        assert_eq!(config.output.dir, "docv");
+        assert_eq!(config.slots.dir, "docv");
+        assert_eq!(config.output.dir, "docv/build");
         assert!(config.output.commit);
-        assert!(!config.output.jpg);
         assert!(!config.format.enabled);
+        assert!(config.tags.is_none());
     }
 
     #[test]
     fn reads_this_repository_config() {
         let config = parse(include_str!("../docv.yaml")).unwrap();
         assert_eq!(config.title.as_deref(), Some("docv"));
-        assert_eq!(config.docs[0].check, CheckLevel::Error);
-    }
-
-    #[test]
-    fn reads_off_as_check_level() {
-        let config =
-            parse("version: 1\ndocs:\n  - path: a.md\n    kind: spec\n    check: off\n").unwrap();
-        assert_eq!(config.docs[0].check, CheckLevel::Off);
     }
 
     #[test]
@@ -340,31 +317,26 @@ mod tests {
     }
 
     #[test]
-    fn rejects_undefined_kind_and_question_on_glob() {
+    fn rejects_unknown_tag_and_rule() {
         let error = error_of(
-            "version: 1\ntopics: [a]\ndocs:\n  - path: docs/*.md\n    kind: research\n    question: q\n    topics: [b]\n",
+            "version: 1\ndocs: []\ntags: [仕様]\nlint:\n  tags:\n    計画: [no-done-task]\n",
         );
         assert!(
-            error.contains("/docs/0/kind: 種類 research は定義されていない"),
+            error.contains("/lint/tags/計画: タグ 計画 は tags にない"),
             "{error}"
         );
-        assert!(
-            error.contains("/docs/0/question: path が 1 ファイルだけを指すときにだけ書ける"),
-            "{error}"
-        );
-        assert!(
-            error.contains("/docs/0/topics: 話題 b は topics にない"),
-            "{error}"
-        );
+        let error = error_of("version: 1\ndocs: []\nlint:\n  tags:\n    仕様: [no-such-rule]\n");
+        assert!(error.contains("/lint/tags/仕様/0"), "{error}");
     }
 
     #[test]
-    fn accepts_custom_kind() {
+    fn collects_rules_of_tags() {
         let config = parse(
-            "version: 1\nkinds:\n  - id: research\n    time: future\ndocs:\n  - path: docs/research/*.md\n    kind: research\ntemplates:\n  research: t.md\n",
+            "version: 1\ndocs: []\nlint:\n  tags:\n    仕様: [no-past-wording]\n    計画: [no-done-task]\n",
         )
         .unwrap();
-        assert_eq!(config.kinds[0].time, Time::Future);
+        let tags = ["計画".to_string(), "その他".to_string()];
+        assert_eq!(config.rules_of(&tags).collect::<Vec<_>>(), ["no-done-task"]);
     }
 
     #[test]
@@ -378,6 +350,17 @@ mod tests {
             ),
             "{error}"
         );
+    }
+
+    #[test]
+    fn reads_overrides() {
+        let config = parse(
+            "version: 1\ndocs: []\noverrides:\n  - paths: [docs/tmp/**]\n    textlint: false\n    mission: optional\n",
+        )
+        .unwrap();
+        assert_eq!(config.overrides[0].textlint, Some(false));
+        assert_eq!(config.overrides[0].mission, Some(Requirement::Optional));
+        assert_eq!(config.overrides[0].style, None);
     }
 
     #[test]

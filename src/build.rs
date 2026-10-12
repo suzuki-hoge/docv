@@ -1,104 +1,235 @@
-//! docv build。人間向けの HTML を生成する。docs/spec/build.md。
+//! docv build-html と docv build-image。人間向けの HTML と、枠のページの JPG を生成する。docv/service/service.md の「HTML の構成」、docv/system/system.md の「HTML の作り」。
+//!
+//! トップは 3 ページに分け、サイドバーで行き来する。
+//! index.html（プロジェクト概要）に docv の規格のファイル（枠）のページへのカード、ADR.html に決定のつながりの図、
+//! プロジェクト詳細.html にプロジェクトが自由に書いたファイル（原本）のツリーを置く。
+//! 枠は 1 つずつ独立したページにし、`<まとまり>/<枠>.html` に置く。
+//! 画像にしても読めるように、折りたたみは使わない。OS ごとの手順のタブは、印刷の表示（JPG）ではすべて並べる。
 
+use std::cell::RefCell;
+use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
-use pulldown_cmark::{CowStr, Event, Parser, Tag, html};
+use pulldown_cmark::{CowStr, Event, HeadingLevel, Parser, Tag, TagEnd, html};
 
-use crate::kind::{Kind, Time};
-use crate::markdown::{self, Document, relative_path};
+use crate::adr::{self, Adr};
+use crate::jpg;
+use crate::markdown::{self, relative_path};
 use crate::meta;
-use crate::workspace::{Class, Project};
+use crate::slot::{self, Content, DEFS, Group, Slot};
+use crate::workspace::Project;
 
 const STYLE: &str = include_str!("../assets/style.css");
 
 /// docv が作った出力先であることを示すファイル。これがない出力先は消さない。
 const MARKER: &str = ".docv";
-const MARKER_TEXT: &str = "docv build の出力。このディレクトリは docv build のたびに作り直す。\n";
+const MARKER_TEXT: &str = "docv build-html と docv build-image の出力。このディレクトリは docv build-html のたびに作り直す。\n";
 
-/// 管理対象のファイル 1 つから作るページ。
-struct Page {
-    source: String,
-    /// 出力先からの相対パス。
-    page: String,
-    title: String,
-    question: Option<String>,
-    topics: Vec<String>,
-    status: Option<String>,
-    kind: Kind,
-    document: Document,
+/// トップの 3 ページ。サイドバーに、この順で並べる。
+const PAGE: &str = "index.html";
+const ADR_PAGE: &str = "ADR.html";
+const DETAIL_PAGE: &str = "プロジェクト詳細.html";
+
+/// サイドバーの項目。描いているページがどれに属するかを示すのにも使う。
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Nav {
+    Overview,
+    Adr,
+    Detail,
 }
 
-pub fn run(project: &Project, out: &Path) -> Result<()> {
-    let files = project.files()?;
-    let mut pages = Vec::new();
-    let mut unmanaged = Vec::new();
-    for file in &files {
-        match file.class {
-            Class::Managed(index) if project.kind_of(index).is_tmp() => {}
-            Class::Managed(index) => pages.push(read_page(project, &file.path, index)?),
-            Class::Unmanaged => unmanaged.push(file.path.clone()),
+impl Nav {
+    fn label(self) -> &'static str {
+        match self {
+            Nav::Overview => "プロジェクト概要",
+            Nav::Adr => "ADR",
+            Nav::Detail => "プロジェクト詳細",
         }
     }
 
-    let out = prepare_out(out)?;
+    fn path(self) -> &'static str {
+        match self {
+            Nav::Overview => PAGE,
+            Nav::Adr => ADR_PAGE,
+            Nav::Detail => DETAIL_PAGE,
+        }
+    }
+}
+
+/// 原本のページを置くディレクトリ（出力先からの相対パス）。原本のパスの .md を .html にして、この下に置く。
+const DETAIL_DIR: &str = "プロジェクト詳細";
+
+/// ADR のページを置くディレクトリ（出力先からの相対パス）。決定 1 つを 1 ページにし、`ADR/<まとまり>/<題>.html` に置く。
+const ADR_DIR: &str = "ADR";
+
+/// 決定のページで、カーソルキーの ← と → を、前後の決定のカードへのリンクにする。
+/// 入力欄にいるときと、修飾キーを押しているときは、ブラウザの動きのままにする。
+const ADR_KEYS: &str = "document.addEventListener('keydown',function(e){if(e.altKey||e.ctrlKey||e.metaKey||e.shiftKey||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))return;var side={ArrowLeft:'prev',ArrowRight:'next'}[e.key];var a=side&&document.querySelector('.adr-nav .'+side+' a');if(a)location.href=a.href;});";
+
+/// プロジェクト詳細のタグのトグル。選んだタグのどれかを持つ原本の行と、その上のディレクトリの行だけを出す。
+/// すべて選んでいるときに押したタグは、そのタグだけを選ぶ。それ以外のときは押したタグを切り替え、1 つも残らなければすべて選び直す。
+/// 絞り込んでも列の幅が変わらないように、すべての行を出した状態のファイルとタグの列の幅で固定する。
+const TAG_FILTER: &str = "(function(){var tb=document.querySelector('table.docs');var hs=tb.tHead.rows[0].cells;var w0=hs[0].offsetWidth,w2=hs[2].offsetWidth;hs[0].style.width=w0+'px';hs[2].style.width=w2+'px';tb.style.tableLayout='fixed';var bs=[].slice.call(document.querySelectorAll('.tag-filter button'));var files=[].slice.call(document.querySelectorAll('table.docs tr[data-path]'));var dirs=[].slice.call(document.querySelectorAll('table.docs tr[data-dir]'));function apply(){var on=bs.filter(function(b){return b.getAttribute('aria-pressed')==='true';}).map(function(b){return b.getAttribute('data-tag');});var all=on.length===bs.length;files.forEach(function(r){var t=JSON.parse(r.getAttribute('data-tags'));r.hidden=!all&&!t.some(function(x){return on.indexOf(x)>=0;});});dirs.forEach(function(d){var p=d.getAttribute('data-dir')+'/';d.hidden=!files.some(function(r){return !r.hidden&&r.getAttribute('data-path').indexOf(p)===0;});});}function pressed(b){return b.getAttribute('aria-pressed')==='true';}function set(b,on){b.setAttribute('aria-pressed',on?'true':'false');}bs.forEach(function(b){b.addEventListener('click',function(){if(bs.every(pressed)){bs.forEach(function(x){set(x,x===b);});}else{set(b,!pressed(b));if(!bs.some(pressed)){bs.forEach(function(x){set(x,true);});}}apply();});});})();";
+
+/// タグの色の数。CSS の `.tag.c0`〜`.tag.c7`。
+const TAG_COLORS: usize = 8;
+
+/// 管理対象のファイル 1 つ。HTML ではツリーの 1 行になる。
+struct Page {
+    source: String,
+    title: String,
+    mission: Option<String>,
+    tags: Vec<String>,
+    /// frontmatter を除いた本文。
+    body: String,
+}
+
+/// JPG を置くディレクトリ（出力先からの相対パス）。build-image だけが書き、build-html は残す。
+pub const JPG_DIR: &str = "jpg";
+
+/// docv build-html。出力先の中を、jpg/ を除いて作り直す。
+pub fn html(project: &Project, out: &Path) -> Result<()> {
+    let out = prepare_out(out, true)?;
+    render(project, &out)?;
+    finish_out(project, &out)
+}
+
+/// docv build-image。枠のページを一時的なディレクトリに作り、出力先の jpg/ に JPG だけを書く。
+/// 枠のページごとに 1 枚。見つけやすいように、まとまりと枠の表示名をパスにする。
+/// Markdown から作るページ（md の枠、ADR、原本）は、GitHub で md をそのまま見られるので JPG にしない。
+pub fn image(project: &Project, out: &Path) -> Result<()> {
+    let out = prepare_out(out, false)?;
+    let work = std::env::temp_dir().join(format!("docv-html-{}", std::process::id()));
+    if work.exists() {
+        fs::remove_dir_all(&work).with_context(|| format!("{} を消せない", work.display()))?;
+    }
+    fs::create_dir_all(&work).with_context(|| format!("{} を作れない", work.display()))?;
+    let result = (|| {
+        let work = work.canonicalize()?;
+        let slots = render(project, &work)?;
+        let shots: Vec<(String, String)> = slots
+            .iter()
+            .filter(|s| has_page(s) && !matches!(s.content, Content::Markdown(_)))
+            .map(|s| (page_path(s), jpg_path(s)))
+            .collect();
+        let jpg = out.join(JPG_DIR);
+        if jpg.exists() {
+            fs::remove_dir_all(&jpg).with_context(|| format!("{} を消せない", jpg.display()))?;
+        }
+        jpg::capture(&work, &out, &shots)
+    })();
+    let _ = fs::remove_dir_all(&work);
+    result?;
+    finish_out(project, &out)
+}
+
+/// out にすべてのページを書き、読み込んだ枠を返す。
+fn render(project: &Project, out: &Path) -> Result<Vec<Slot>> {
+    let mut pages = Vec::new();
+    for path in project.managed()? {
+        pages.push(read_page(project, &path)?);
+    }
+    let slots = slot::load(project)?;
+    let adrs = adr::load(project)?;
+
     let site = Site {
         project,
-        out: &out,
+        out,
+        dir: RefCell::new(out.to_path_buf()),
         pages: &pages,
+        slots: &slots,
+        adrs: &adrs,
     };
-
-    write(&out.join("assets/style.css"), STYLE)?;
-    for page in &pages {
-        write(&out.join(&page.page), &site.render_page(page))?;
+    write(&out.join(PAGE), &site.render_index())?;
+    if !adrs.is_empty() {
+        write(&out.join(ADR_PAGE), &site.render_adr_index())?;
     }
-    write(&out.join("index.html"), &site.render_index(&unmanaged))?;
+    write(&out.join(DETAIL_PAGE), &site.render_detail())?;
+    for slot in slots.iter().filter(|s| has_page(s)) {
+        write(&out.join(page_path(slot)), &site.render_slot(slot))?;
+    }
+    for a in &adrs {
+        write(&out.join(adr_page(a)), &site.render_adr(a))?;
+    }
+    for page in &pages {
+        write(&out.join(doc_page(&page.source)), &site.render_doc(page))?;
+    }
+    Ok(slots)
+}
+
+/// 出力先に、.gitignore（output.commit が false のとき）と、docv が作ったことを示す目印を置く。
+fn finish_out(project: &Project, out: &Path) -> Result<()> {
     if !project.config.output.commit {
         write(&out.join(".gitignore"), "*\n")?;
     }
-    write(&out.join(MARKER), MARKER_TEXT)?;
-    Ok(())
+    write(&out.join(MARKER), MARKER_TEXT)
 }
 
-fn read_page(project: &Project, path: &str, index: usize) -> Result<Page> {
+/// 枠のページを作るか。外の定義へのリンク（ref）だけの枠は、ページを作らず、index.html から直接リンクする。
+fn has_page(slot: &Slot) -> bool {
+    !matches!(slot.content, Content::Ref(_))
+}
+
+/// 枠のページの、出力先からの相対パス。`サービス仕様/利用マニュアル.html`。
+fn page_path(slot: &Slot) -> String {
+    format!("{}/{}.html", slot.def.group.label(), slot.def.label)
+}
+
+/// 枠の JPG の、出力先からの相対パス。`jpg/サービス仕様/利用マニュアル.jpg`。
+fn jpg_path(slot: &Slot) -> String {
+    format!("jpg/{}/{}.jpg", slot.def.group.label(), slot.def.label)
+}
+
+fn read_page(project: &Project, path: &str) -> Result<Page> {
     let text = fs::read_to_string(project.root.join(path))
         .with_context(|| format!("{path} を読めない"))?;
     let document = markdown::split(&text);
-    let meta = meta::read(
-        project.entry(index),
-        &document,
-        &markdown::outline(&document),
-    );
+    let meta = meta::read(&document, &markdown::outline(&document));
     Ok(Page {
         source: path.to_string(),
-        page: page_path(path),
         title: meta.title.unwrap_or_else(|| path.to_string()),
-        question: meta.question,
-        topics: meta.topics,
-        status: meta.status,
-        kind: project.kind_of(index).clone(),
-        document,
+        mission: meta.mission,
+        tags: meta.tags,
+        body: document.body.clone(),
     })
 }
 
-fn page_path(source: &str) -> String {
-    let stem = source.strip_suffix(".md").unwrap_or(source);
-    format!("{stem}.html")
+/// 原本のページの、出力先からの相対パス。`プロジェクト詳細/docs/order.html`。
+fn doc_page(source: &str) -> String {
+    format!(
+        "{DETAIL_DIR}/{}.html",
+        source.strip_suffix(".md").unwrap_or(source)
+    )
 }
 
-/// 出力先を空にして作る。docv が作ったものでない、空でないディレクトリは消さない。
-fn prepare_out(out: &Path) -> Result<PathBuf> {
+/// 出力先を用意する。clear なら、jpg/ を除いて中を消す。
+/// docv が作った目印のない、空でないディレクトリには書かずにエラーにする。
+fn prepare_out(out: &Path, clear: bool) -> Result<PathBuf> {
     if out.exists() {
         let is_empty = fs::read_dir(out)?.next().is_none();
         if !is_empty && !out.join(MARKER).is_file() {
             bail!(
-                "出力先 {} は docv build が作ったディレクトリではないので消せない",
+                "出力先 {} は docv が作ったディレクトリではないので書けない",
                 out.display()
             );
         }
-        fs::remove_dir_all(out).with_context(|| format!("{} を消せない", out.display()))?;
+        if clear {
+            for entry in fs::read_dir(out)? {
+                let path = entry?.path();
+                if path.file_name().is_some_and(|n| n == JPG_DIR) {
+                    continue;
+                }
+                let removed = if path.is_dir() {
+                    fs::remove_dir_all(&path)
+                } else {
+                    fs::remove_file(&path)
+                };
+                removed.with_context(|| format!("{} を消せない", path.display()))?;
+            }
+        }
     }
     fs::create_dir_all(out).with_context(|| format!("{} を作れない", out.display()))?;
     Ok(out.canonicalize()?)
@@ -114,18 +245,886 @@ fn write(path: &Path, text: &str) -> Result<()> {
 struct Site<'a> {
     project: &'a Project,
     out: &'a Path,
+    /// 描いているページのディレクトリ。リンクの起点。
+    dir: RefCell<PathBuf>,
     pages: &'a [Page],
+    slots: &'a [Slot],
+    adrs: &'a [Adr],
 }
 
 impl Site<'_> {
-    fn render_page(&self, page: &Page) -> String {
-        let dir = parent(&page.page);
+    /// index.html（プロジェクト概要）。枠のページへのカード。
+    fn render_index(&self) -> String {
+        *self.dir.borrow_mut() = self.out.to_path_buf();
+        let mut out = String::new();
+        self.index(&mut out);
+        self.page(&escape(&self.project.title()), Nav::Overview, &out)
+    }
+
+    /// ADR.html。決定のつながりの図。
+    fn render_adr_index(&self) -> String {
+        *self.dir.borrow_mut() = self.out.to_path_buf();
+        let mut out = String::new();
+        self.adr_lanes(&mut out);
+        self.page(
+            &format!("ADR - {}", escape(&self.project.title())),
+            Nav::Adr,
+            &out,
+        )
+    }
+
+    /// プロジェクト詳細.html。原本のツリー。
+    fn render_detail(&self) -> String {
+        *self.dir.borrow_mut() = self.out.to_path_buf();
+        let mut out = String::new();
+        self.docs(&mut out);
+        self.page(
+            &format!(
+                "{} - {}",
+                Nav::Detail.label(),
+                escape(&self.project.title())
+            ),
+            Nav::Detail,
+            &out,
+        )
+    }
+
+    /// 原本 1 つのページ。原本を Markdown のまま HTML にする。
+    fn render_doc(&self, page: &Page) -> String {
+        let path = doc_page(&page.source);
+        let dir = Path::new(&path).parent().unwrap_or(Path::new(""));
+        *self.dir.borrow_mut() = self.out.join(dir);
         let base = Path::new(&page.source)
             .parent()
             .unwrap_or(Path::new(""))
             .to_path_buf();
-        let parser =
-            Parser::new_ext(&page.document.body, markdown::OPTIONS).map(|event| match event {
+        let (html, toc) = self.markdown_with_toc(&page.body, &base, true, 2);
+        let body = format!(
+            "<section class=\"doc\">\n<h1>{}</h1>\n{html}</section>\n",
+            escape(&page.title)
+        );
+        // 右のサイドバーに、h2 と h3 の目次を置く。
+        let mut aside = String::new();
+        let items: Vec<&(usize, String, String)> = toc.iter().filter(|(l, ..)| *l <= 3).collect();
+        if !items.is_empty() {
+            aside.push_str("<nav class=\"outline\">\n<p class=\"outline-title\">目次</p>\n<ul>\n");
+            for (level, id, text) in items {
+                let _ = writeln!(
+                    aside,
+                    "<li class=\"h{level}\"><a href=\"#{}\">{}</a></li>",
+                    escape(id),
+                    escape(text)
+                );
+            }
+            aside.push_str("</ul>\n</nav>\n");
+        }
+        self.page_with(
+            &format!(
+                "{} - {} - {}",
+                escape(&page.title),
+                Nav::Detail.label(),
+                escape(&self.project.title())
+            ),
+            Nav::Detail,
+            &body,
+            &aside,
+        )
+    }
+
+    /// HTML の全体。左にトップの 3 ページへのサイドバーを置く。印刷の表示（JPG）では出さない。
+    fn page(&self, title: &str, current: Nav, body: &str) -> String {
+        self.page_with(title, current, body, "")
+    }
+
+    /// page に、右のサイドバー（aside）を足したもの。
+    fn page_with(&self, title: &str, current: Nav, body: &str, aside: &str) -> String {
+        let mut nav = format!(
+            "<nav class=\"sidebar\">\n<p class=\"project\">{}</p>\n<ul>\n",
+            escape(&self.project.title())
+        );
+        for item in [Nav::Overview, Nav::Adr, Nav::Detail] {
+            if item == Nav::Adr && self.adrs.is_empty() {
+                continue;
+            }
+            let href = encode_path(&relative_path(
+                &self.dir.borrow(),
+                &self.out.join(item.path()),
+            ));
+            let _ = writeln!(
+                nav,
+                "<li><a href=\"{href}\"{}>{}</a></li>",
+                if item == current {
+                    " aria-current=\"page\""
+                } else {
+                    ""
+                },
+                item.label()
+            );
+        }
+        nav.push_str("</ul>\n</nav>\n");
+        page(title, &nav, body, aside)
+    }
+
+    /// 枠のページ。
+    fn render_slot(&self, slot: &Slot) -> String {
+        *self.dir.borrow_mut() = self.out.join(slot.def.group.label());
+        let mut out = String::new();
+        self.slot(&mut out, slot);
+        self.page(
+            &format!("{} - {}", slot.def.label, escape(&self.project.title())),
+            Nav::Overview,
+            &out,
+        )
+    }
+
+    /// 枠のページへのカード。まとまりごとに、すべての枠をカードで横に並べる。
+    /// ファイルのない枠は、リンクにせずグレーで出す。
+    fn index(&self, out: &mut String) {
+        if self.slots.is_empty() {
+            let _ = writeln!(
+                out,
+                "<p class=\"note\">枠のファイルがない。{} に枠のファイルを置くと、カードから開ける。</p>",
+                escape(&self.project.slots_dir())
+            );
+        }
+        for group in Group::ALL {
+            let _ = writeln!(
+                out,
+                "<h2 class=\"group\">{}</h2>\n<div class=\"cards\">",
+                group.label()
+            );
+            for def in DEFS.iter().filter(|d| d.group == group) {
+                let Some(slot) = self.slots.iter().find(|s| s.def.id == def.id) else {
+                    let _ = writeln!(
+                        out,
+                        "<span class=\"card missing\">{}{}</span>",
+                        icon(def.id),
+                        def.label
+                    );
+                    continue;
+                };
+                let href = match &slot.content {
+                    Content::Ref(c) => escape(&self.href(&c.target)),
+                    _ => encode_path(&page_path(slot)),
+                };
+                let _ = writeln!(
+                    out,
+                    "<a class=\"card\" href=\"{href}\">{}{}</a>",
+                    icon(def.id),
+                    def.label
+                );
+            }
+            let _ = writeln!(out, "</div>");
+        }
+    }
+
+    /// ADR の図。まとまりごとに h2 を置き、決定のつながりを過去から未来へ、左から右に箱と矢印で並べる。
+    /// 箱は、その決定のページへのリンク。
+    fn adr_lanes(&self, out: &mut String) {
+        for group in adr::groups(self.adrs) {
+            let members: Vec<&Adr> = self.adrs.iter().filter(|a| a.group() == group).collect();
+            let _ = writeln!(
+                out,
+                "<h2 class=\"group\">{}</h2>\n<div class=\"lanes\">",
+                escape(group)
+            );
+            for lane in adr::lanes(&members) {
+                let boxes: Vec<String> = lane.iter().map(|a| self.adr_box(a)).collect();
+                let _ = writeln!(
+                    out,
+                    "<div class=\"lane\">{}</div>",
+                    boxes.join("<span class=\"arrow\">→</span>")
+                );
+            }
+            let _ = writeln!(out, "</div>");
+        }
+    }
+
+    /// 決定 1 つのページ。
+    fn render_adr(&self, a: &Adr) -> String {
+        *self.dir.borrow_mut() = self.out.join(ADR_DIR).join(file_name(a.group()));
+        let mut out = String::new();
+        let _ = writeln!(out, "<section class=\"slot\">");
+        self.adr_detail(&mut out, a);
+        let _ = writeln!(out, "</section>");
+        self.page(
+            &format!(
+                "{} - ADR - {}",
+                escape(&a.record.title),
+                escape(&self.project.title())
+            ),
+            Nav::Adr,
+            &out,
+        )
+    }
+
+    /// 決定のページへのリンク。描いているページのディレクトリからの相対パス。
+    fn adr_href(&self, a: &Adr) -> String {
+        let to = self.out.join(adr_page(a));
+        encode_path(&relative_path(&self.dir.borrow(), &to))
+    }
+
+    fn adr_box(&self, a: &Adr) -> String {
+        format!(
+            "<a class=\"adr-box{}\" href=\"{}\">{}</a>",
+            if a.superseded_by.is_empty() {
+                ""
+            } else {
+                " superseded"
+            },
+            self.adr_href(a),
+            escape(&a.record.title)
+        )
+    }
+
+    fn adr_detail(&self, out: &mut String, a: &Adr) {
+        let r = &a.record;
+        let _ = writeln!(out, "<h1>{}{}</h1>", icon("adr"), escape(&r.title));
+        // 本文は、h1（題）を除き、いちばん浅い見出しを h2 にして出す。
+        let base = Path::new(&a.path)
+            .parent()
+            .unwrap_or(Path::new(""))
+            .to_path_buf();
+        let _ = writeln!(out, "{}", self.markdown(&r.body, &base, true, 2));
+        // ページの下に、打ち消した過去の決定を ← の左、打ち消された先の新しい決定を → の右に、カードで出す。
+        // カーソルキーの ← と → で、それぞれの先頭のカードのページへ移る。
+        let boxes = |ids: &[String]| -> String {
+            ids.iter()
+                .filter_map(|id| self.adrs.iter().find(|x| &x.record.id == id))
+                .map(|x| self.adr_box(x))
+                .collect()
+        };
+        let (prev, next) = (boxes(&r.supersedes), boxes(&a.superseded_by));
+        if prev.is_empty() && next.is_empty() {
+            return;
+        }
+        let side = |class: &str, html: &str, arrow_first: bool| -> String {
+            if html.is_empty() {
+                return format!("<div class=\"{class}\"></div>");
+            }
+            let arrow = format!(
+                "<span class=\"arrow\">{}</span>",
+                if arrow_first { "←" } else { "→" }
+            );
+            if arrow_first {
+                format!("<div class=\"{class}\">{arrow}{html}</div>")
+            } else {
+                format!("<div class=\"{class}\">{html}{arrow}</div>")
+            }
+        };
+        let _ = writeln!(
+            out,
+            "<nav class=\"adr-nav\">{}{}</nav>\n<script>{ADR_KEYS}</script>",
+            side("prev", &prev, true),
+            side("next", &next, false)
+        );
+    }
+
+    fn slot(&self, out: &mut String, slot: &Slot) {
+        let _ = writeln!(
+            out,
+            "<section class=\"slot\" id=\"{}\">\n<h1>{}{}</h1>",
+            slot.def.id,
+            icon(slot.def.id),
+            slot.def.label
+        );
+        out.push_str(&self.slot_body(slot));
+        let _ = writeln!(out, "</section>");
+    }
+
+    /// 枠ごとの形の中身。
+    fn slot_body(&self, slot: &Slot) -> String {
+        let mut body = String::new();
+        let out = &mut body;
+        match &slot.content {
+            Content::Procedure(c) => {
+                self.tools(out, "前提とされるもの", &c.requirements);
+                if slot.def.id == "develop" {
+                    self.step_sections(out, slot.def.id, &c.steps);
+                } else {
+                    self.steps(out, slot.def.id, &c.steps);
+                }
+            }
+            Content::Commands(c) => self.commands(out, &c.commands),
+            Content::Words(c) => self.words(out, &c.groups),
+            Content::Stack(c) => self.stack(out, &c.stack),
+            // ページを作らない（has_page）。
+            Content::Ref(_) => {}
+            Content::Layout(c) => self.layout(out, &c.entries),
+            Content::Env(c) => self.envs(out, &c.envs),
+            Content::Cost(c) => {
+                let _ = writeln!(out, "<h2>使っているもの</h2>");
+                self.cost(out, &c.accepted_items);
+                let _ = writeln!(out, "<h2>費用を理由にやっていないこと</h2>");
+                self.cost(out, &c.rejected_items);
+            }
+            Content::Markdown(text) => {
+                let base = Path::new(&slot.path)
+                    .parent()
+                    .unwrap_or(Path::new(""))
+                    .to_path_buf();
+                let _ = writeln!(out, "{}", self.markdown(text, &base, true, 2));
+            }
+        }
+        self.extra(out, slot);
+        body
+    }
+
+    /// 枠の body と include。
+    fn extra(&self, out: &mut String, slot: &Slot) {
+        let (body, include) = slot.content.body_and_include();
+        if let Some(body) = body {
+            let _ = writeln!(out, "{}", self.markdown(body, Path::new(""), false, 2));
+        }
+        for target in include {
+            let Ok(included) = slot::resolve_include(self.project, target) else {
+                continue;
+            };
+            let base = Path::new(&included.source)
+                .parent()
+                .unwrap_or(Path::new(""))
+                .to_path_buf();
+            let html = self.markdown(&included.markdown, &base, false, 2);
+            let fragment = included
+                .heading
+                .as_deref()
+                .map(|h| format!("#{}", slug(h)))
+                .unwrap_or_default();
+            let _ = writeln!(
+                out,
+                "<div class=\"included\">{html}<p class=\"from\">出典: <a href=\"{}\">{}</a></p></div>",
+                escape(&self.link(&included.source, &fragment, false)),
+                escape(target)
+            );
+        }
+    }
+
+    fn tools(&self, out: &mut String, title: &str, tools: &[slot::Tool]) {
+        if tools.is_empty() {
+            return;
+        }
+        let _ = writeln!(out, "<h2>{title}</h2>");
+        self.tool_table(out, tools);
+    }
+
+    fn tool_table(&self, out: &mut String, tools: &[slot::Tool]) {
+        let _ = writeln!(
+            out,
+            "<table>\n<thead><tr><th>名前</th><th>版</th><th>何に使うか</th></tr></thead>\n<tbody>"
+        );
+        for t in tools {
+            let _ = writeln!(
+                out,
+                "<tr><td>{}</td><td>{}</td><td>{}</td></tr>",
+                name_link(&t.name, t.url.as_deref()),
+                escape(t.version.as_deref().unwrap_or("")),
+                self.inline_opt(t.purpose.as_deref())
+            );
+        }
+        let _ = writeln!(out, "</tbody>\n</table>");
+    }
+
+    /// 手順。番号を付けて上から並べる。
+    fn steps(&self, out: &mut String, slot_id: &str, steps: &[slot::Step]) {
+        if steps.is_empty() {
+            return;
+        }
+        let _ = writeln!(out, "<h2>手順</h2>\n<ol class=\"steps\">");
+        for step in steps {
+            let _ = write!(out, "<li><p class=\"step-name\">{}</p>", escape(&step.name));
+            self.step_items(out, slot_id, step);
+            let _ = writeln!(out, "</li>");
+        }
+        let _ = writeln!(out, "</ol>");
+    }
+
+    /// 順番のない項目（開発コマンド）。先頭に目次を置き、項目ごとに h2 にする。番号は付けない。
+    fn step_sections(&self, out: &mut String, slot_id: &str, steps: &[slot::Step]) {
+        if steps.is_empty() {
+            return;
+        }
+        let _ = writeln!(out, "<ul class=\"toc\">");
+        for step in steps {
+            let _ = writeln!(
+                out,
+                "<li><a href=\"#{}\">{}</a></li>",
+                slug(&step.id),
+                escape(&step.name)
+            );
+        }
+        let _ = writeln!(out, "</ul>");
+        for step in steps {
+            let _ = writeln!(
+                out,
+                "<h2 id=\"{}\">{}</h2>",
+                slug(&step.id),
+                escape(&step.name)
+            );
+            self.step_items(out, slot_id, step);
+        }
+    }
+
+    /// 手順の中身。items が複数あれば os ごとのタブにし、1 つならタブにしない。
+    fn step_items(&self, out: &mut String, slot_id: &str, step: &slot::Step) {
+        if let [item] = step.items.as_slice() {
+            let _ = write!(out, "{}", self.step_markdown(item));
+            return;
+        }
+        if step.items.is_empty() {
+            return;
+        }
+        let name = format!("tab-{slot_id}-{}", slug(&step.id));
+        let _ = write!(out, "<div class=\"tabs\">");
+        for (i, item) in step.items.iter().enumerate() {
+            let _ = write!(
+                out,
+                "<input type=\"radio\" name=\"{name}\" id=\"{name}-{i}\"{}><label for=\"{name}-{i}\">{}</label>",
+                if i == 0 { " checked" } else { "" },
+                escape(&os_label(item.os.as_deref().unwrap_or("")))
+            );
+        }
+        // 印刷の表示（JPG）ではタブを隠して中身を並べるので、どの OS の中身かを中にも書く。
+        for item in &step.items {
+            let _ = write!(
+                out,
+                "<div class=\"panel\"><p class=\"panel-os\">{}</p>{}</div>",
+                escape(&os_label(item.os.as_deref().unwrap_or(""))),
+                self.step_markdown(item)
+            );
+        }
+        let _ = write!(out, "</div>");
+    }
+
+    fn step_markdown(&self, item: &slot::StepItem) -> String {
+        item.markdown
+            .as_deref()
+            .map(|m| self.md(m))
+            .unwrap_or_default()
+    }
+
+    /// コマンド。先頭に「コマンド | 説明」の表を置き、コマンドごとに h2（左にコマンド、右に説明）、details、オプションの順に出す。
+    fn commands(&self, out: &mut String, commands: &[slot::Command]) {
+        if commands.is_empty() {
+            return;
+        }
+        let line = |c: &slot::Command| match &c.args {
+            Some(args) => format!("{} {args}", c.command),
+            None => c.command.clone(),
+        };
+        let _ = writeln!(
+            out,
+            "<table class=\"toc\">\n<thead><tr><th>コマンド</th><th>説明</th></tr></thead>\n<tbody>"
+        );
+        for c in commands {
+            let _ = writeln!(
+                out,
+                "<tr><td><a href=\"#{}\">{}</a></td><td>{}</td></tr>",
+                slug(&c.command),
+                escape(&line(c)),
+                self.inline(&c.description)
+            );
+        }
+        let _ = writeln!(out, "</tbody>\n</table>");
+        for c in commands {
+            let _ = writeln!(
+                out,
+                "<h2 class=\"command\" id=\"{}\"><span>{}</span><span class=\"desc\">{}</span></h2>",
+                slug(&c.command),
+                escape(&line(c)),
+                self.inline(&c.description)
+            );
+            if let Some(details) = &c.details {
+                let _ = writeln!(out, "<div class=\"details\">{}</div>", self.md(details));
+            }
+            self.options(out, &c.options);
+        }
+    }
+
+    /// 用語集。まとまりごとに h2 と「日本語 | 英語 | 意味」の表。
+    fn words(&self, out: &mut String, groups: &[slot::WordGroup]) {
+        for group in groups {
+            let _ = writeln!(
+                out,
+                "<h2>{}</h2>\n<table class=\"words\">\n<thead><tr><th>日本語</th><th>英語</th><th>意味</th></tr></thead>\n<tbody>",
+                escape(&group.name)
+            );
+            for w in &group.items {
+                let _ = writeln!(
+                    out,
+                    "<tr><td>{}</td><td>{}</td><td>{}</td></tr>",
+                    escape(w.ja.as_deref().unwrap_or("")),
+                    escape(w.en.as_deref().unwrap_or("")),
+                    self.inline(&w.desc)
+                );
+            }
+            let _ = writeln!(out, "</tbody>\n</table>");
+        }
+    }
+
+    fn options(&self, out: &mut String, options: &[slot::CommandOption]) {
+        if options.is_empty() {
+            return;
+        }
+        let _ = writeln!(
+            out,
+            "<table>\n<thead><tr><th>オプション</th><th>意味</th><th>既定</th></tr></thead>\n<tbody>"
+        );
+        for o in options {
+            let _ = writeln!(
+                out,
+                "<tr><td><code>{}</code></td><td>{}</td><td>{}</td></tr>",
+                escape(&o.name),
+                self.inline(&o.description),
+                code_of(o.default.as_ref())
+            );
+        }
+        let _ = writeln!(out, "</tbody>\n</table>");
+    }
+
+    fn stack(&self, out: &mut String, groups: &[slot::StackGroup]) {
+        for group in groups {
+            let _ = writeln!(out, "<h2>{}</h2>", escape(&group.group));
+            if let Some(image) = &group.image {
+                let _ = writeln!(
+                    out,
+                    "<p><img src=\"{}\" alt=\"\"></p>",
+                    escape(&self.link(image, "", true))
+                );
+            }
+            if !group.items.is_empty() {
+                self.tool_table(out, &group.items);
+            }
+        }
+    }
+
+    fn layout(&self, out: &mut String, entries: &[slot::LayoutEntry]) {
+        if entries.is_empty() {
+            return;
+        }
+        let _ = writeln!(
+            out,
+            "<table>\n<thead><tr><th>パス</th><th>説明</th></tr></thead>\n<tbody>"
+        );
+        for entry in entries {
+            let trimmed = entry.path.trim_end_matches('/');
+            let depth = trimmed.matches('/').count();
+            let name = trimmed.rsplit('/').next().unwrap_or(trimmed);
+            let dir = slot::is_dir(self.project, &entry.path);
+            let _ = writeln!(
+                out,
+                "<tr><td style=\"padding-left:{}px\"><a href=\"{}\"><code>{}{}</code></a></td><td>{}</td></tr>",
+                10 + depth * 20,
+                escape(&self.link(trimmed, "", false)),
+                escape(name),
+                if dir { "/" } else { "" },
+                self.inline(&entry.description)
+            );
+        }
+        let _ = writeln!(out, "</tbody>\n</table>");
+    }
+
+    fn envs(&self, out: &mut String, envs: &[slot::EnvVar]) {
+        if envs.is_empty() {
+            return;
+        }
+        let _ = writeln!(
+            out,
+            "<table>\n<thead><tr><th>キー</th><th>意味</th><th>秘密</th><th>ローカルでの設定場所</th><th>ステージング・本番での設定場所</th></tr></thead>\n<tbody>"
+        );
+        for e in envs {
+            let _ = writeln!(
+                out,
+                "<tr><td><code>{}</code></td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>",
+                escape(&e.key),
+                self.inline(&e.desc),
+                if e.secret { "秘密" } else { "" },
+                self.inline_opt(e.local_from.as_deref()),
+                self.inline_opt(e.release_from.as_deref())
+            );
+        }
+        let _ = writeln!(out, "</tbody>\n</table>");
+    }
+
+    fn cost(&self, out: &mut String, items: &[slot::CostItem]) {
+        if items.is_empty() {
+            let _ = writeln!(out, "<p class=\"note\">なし</p>");
+            return;
+        }
+        let _ = writeln!(
+            out,
+            "<table>\n<thead><tr><th>項目</th><th>説明</th><th>月額</th><th>参考</th></tr></thead>\n<tbody>"
+        );
+        for item in items {
+            let reference = item
+                .reference
+                .as_deref()
+                .map(|r| format!("<a href=\"{}\">{}</a>", escape(&self.href(r)), escape(r)))
+                .unwrap_or_default();
+            let _ = writeln!(
+                out,
+                "<tr><td>{}</td><td>{}</td><td class=\"num\">{}</td><td>{reference}</td></tr>",
+                escape(&item.name),
+                self.inline_opt(item.desc.as_deref()),
+                escape(&item.monthly.as_ref().map(slot::scalar).unwrap_or_default())
+            );
+        }
+        let _ = writeln!(out, "</tbody>\n</table>");
+    }
+
+    // ---- 原本のツリー ----
+
+    fn docs(&self, out: &mut String) {
+        let _ = writeln!(out, "<h2 class=\"group\">ドキュメント</h2>");
+        if self.pages.is_empty() {
+            let _ = writeln!(out, "<p class=\"note\">管理対象のファイルがない。</p>");
+            return;
+        }
+        let mut root = Dir::default();
+        for page in self.pages {
+            root.insert(page);
+        }
+        // すべての原本が 1 つのディレクトリ（docs/ など）の中にあるときは、そのディレクトリの行を出さない。
+        let mut top = &root;
+        let mut path = String::new();
+        while top.files.is_empty() && top.dirs.len() == 1 {
+            let (name, dir) = top.dirs.iter().next().expect("ディレクトリが 1 つある");
+            path = if path.is_empty() {
+                name.clone()
+            } else {
+                format!("{path}/{name}")
+            };
+            top = dir;
+        }
+        self.tag_filter(out);
+        let _ = writeln!(
+            out,
+            "<table class=\"docs\">\n<thead><tr><th>ファイル</th><th>ミッション</th><th>タグ</th></tr></thead>\n<tbody>"
+        );
+        self.docs_tree(out, top, &path, 0);
+        let _ = writeln!(out, "</tbody>\n</table>");
+        // トグルの動きは、表の行を読み込んだ後に付ける。
+        if !self.tag_order().is_empty() {
+            let _ = writeln!(out, "<script>{TAG_FILTER}</script>");
+        }
+    }
+
+    /// 原本をディレクトリのツリーにして出す。ディレクトリの中は、ファイル、ディレクトリの順。
+    fn docs_tree(&self, out: &mut String, dir: &Dir, path: &str, depth: usize) {
+        for page in &dir.files {
+            let mission = escape(page.mission.as_deref().unwrap_or(""));
+            let _ = writeln!(
+                out,
+                "<tr data-path=\"{}\" data-tags=\"{}\"><td style=\"padding-left:{}px\"><a href=\"{}\">{}</a></td><td title=\"{mission}\">{mission}</td><td>{}</td></tr>",
+                escape(&page.source),
+                escape(&serde_json::to_string(&page.tags).unwrap_or_default()),
+                10 + depth * 20,
+                escape(&self.link(&page.source, "", false)),
+                escape(&page.title),
+                self.tags(page)
+            );
+        }
+        let dirs: Vec<(&String, &Dir, String)> = dir
+            .dirs
+            .iter()
+            .map(|(name, d)| {
+                let full = if path.is_empty() {
+                    name.clone()
+                } else {
+                    format!("{path}/{name}")
+                };
+                (name, d, full)
+            })
+            .collect();
+        for (name, d, full) in dirs {
+            let _ = writeln!(
+                out,
+                "<tr class=\"dir\" data-dir=\"{}\"><td colspan=\"3\"><div style=\"margin-left:{}px\">{}/</div></td></tr>",
+                escape(&full),
+                depth * 20,
+                escape(name)
+            );
+            self.docs_tree(out, d, &full, depth + 1);
+        }
+    }
+
+    /// 原本の並びで、タグが初めて出てきた順。タグの色とトグルの並びに使う。
+    fn tag_order(&self) -> Vec<&str> {
+        let mut order: Vec<&str> = Vec::new();
+        for tag in self.pages.iter().flat_map(|p| &p.tags) {
+            if !order.contains(&tag.as_str()) {
+                order.push(tag);
+            }
+        }
+        order
+    }
+
+    /// タグのトグル。押すと、選んだタグのどれかを持つ原本だけを表に出す。すべて選んでいるときは絞り込まない。
+    fn tag_filter(&self, out: &mut String) {
+        let order = self.tag_order();
+        if order.is_empty() {
+            return;
+        }
+        let _ = writeln!(out, "<div class=\"tag-filter\">");
+        for (i, tag) in order.iter().enumerate() {
+            let count = self
+                .pages
+                .iter()
+                .filter(|p| p.tags.iter().any(|t| t == tag))
+                .count();
+            let _ = writeln!(
+                out,
+                "<button type=\"button\" class=\"tag c{}\" data-tag=\"{}\" aria-pressed=\"true\">{}<span class=\"count\">{count}</span></button>",
+                i % TAG_COLORS,
+                escape(tag),
+                escape(tag)
+            );
+        }
+        let _ = writeln!(out, "</div>");
+    }
+
+    /// ページのタグ。タグごとに色を決める。色は 8 色で、原本の並びで初めて出てきた順に割り当て、足りなければ最初から使い直す。
+    fn tags(&self, page: &Page) -> String {
+        let order = self.tag_order();
+        let mut out = String::new();
+        for tag in &page.tags {
+            let color = order.iter().position(|t| t == tag).unwrap_or(0) % TAG_COLORS;
+            let _ = write!(out, "<span class=\"tag c{color}\">{}</span>", escape(tag));
+        }
+        out
+    }
+
+    // ---- Markdown ----
+
+    /// 枠の中の文字列（ルートを起点にした Markdown）を描く。h2 の下に置くので、見出しは h3 から。
+    fn md(&self, text: &str) -> String {
+        self.markdown(text, Path::new(""), false, 3)
+    }
+
+    /// 1 行の Markdown を描く。段落の `<p>` を外す。
+    fn inline(&self, text: &str) -> String {
+        strip_paragraph(&self.md(text))
+    }
+
+    fn inline_opt(&self, text: Option<&str>) -> String {
+        text.map(|t| self.inline(t)).unwrap_or_default()
+    }
+
+    /// Markdown を HTML にする。base はリンクの起点（ルートからの相対パス）。
+    /// drop_h1 なら、最初の h1 を除く（Markdown の枠。ページの h1 と重なるため）。
+    /// 見出しは、いちばん浅いものが top の段になるように付け直す。ページの中で h1 から h2、h3 と段を飛ばさないため。
+    /// `<details>` は開いた状態にする。画像にしても中身が読めるように。
+    fn markdown(&self, text: &str, base: &Path, drop_h1: bool, top: usize) -> String {
+        self.render_markdown(text, base, drop_h1, top, false).0
+    }
+
+    /// markdown と同じく HTML にし、見出しに GitHub と同じ形の id を付けて、見出しの一覧（段、id、文字）も返す。
+    fn markdown_with_toc(
+        &self,
+        text: &str,
+        base: &Path,
+        drop_h1: bool,
+        top: usize,
+    ) -> (String, Vec<(usize, String, String)>) {
+        self.render_markdown(text, base, drop_h1, top, true)
+    }
+
+    fn render_markdown(
+        &self,
+        text: &str,
+        base: &Path,
+        drop_h1: bool,
+        top: usize,
+        ids: bool,
+    ) -> (String, Vec<(usize, String, String)>) {
+        let parsed: Vec<Event> = Parser::new_ext(text, markdown::OPTIONS).collect();
+        let mut dropped_h1 = !drop_h1;
+        let mut skipping = false;
+        let mut kept = Vec::new();
+        for event in parsed {
+            match event {
+                Event::Start(Tag::Heading {
+                    level: HeadingLevel::H1,
+                    ..
+                }) if !dropped_h1 => skipping = true,
+                Event::End(TagEnd::Heading(HeadingLevel::H1)) if skipping => {
+                    skipping = false;
+                    dropped_h1 = true;
+                }
+                _ if skipping => {}
+                other => kept.push(other),
+            }
+        }
+        let shallowest = kept
+            .iter()
+            .filter_map(|e| match e {
+                Event::Start(Tag::Heading { level, .. }) => Some(*level as usize),
+                _ => None,
+            })
+            .min()
+            .unwrap_or(top);
+        let level_of = |level: HeadingLevel| {
+            HeadingLevel::try_from((level as usize + top - shallowest).clamp(1, 6))
+                .unwrap_or(HeadingLevel::H6)
+        };
+        // 見出しの文字。id と見出しの一覧に使う。
+        let mut texts: Vec<String> = Vec::new();
+        let mut in_heading = false;
+        for event in &kept {
+            match event {
+                Event::Start(Tag::Heading { .. }) => {
+                    in_heading = true;
+                    texts.push(String::new());
+                }
+                Event::End(TagEnd::Heading(_)) => in_heading = false,
+                Event::Text(t) | Event::Code(t) if in_heading => {
+                    if let Some(last) = texts.last_mut() {
+                        last.push_str(t);
+                    }
+                }
+                _ => {}
+            }
+        }
+        let mut toc = Vec::new();
+        let mut used: BTreeMap<String, usize> = BTreeMap::new();
+        let mut index = 0;
+        let mut events = Vec::new();
+        for event in kept {
+            let event = match event {
+                Event::Start(Tag::Heading {
+                    level,
+                    id,
+                    classes,
+                    attrs,
+                }) => {
+                    let text = texts.get(index).cloned().unwrap_or_default();
+                    index += 1;
+                    let id = match id {
+                        Some(id) => Some(id),
+                        None if ids => {
+                            // GitHub と同じく、同じ id が続けば -1、-2 を付ける。
+                            let base_id = slug(&text);
+                            let n = used.entry(base_id.clone()).or_insert(0);
+                            let unique = if *n == 0 {
+                                base_id
+                            } else {
+                                format!("{base_id}-{n}")
+                            };
+                            *n += 1;
+                            Some(CowStr::from(unique))
+                        }
+                        None => None,
+                    };
+                    if let Some(id) = &id {
+                        toc.push((level_of(level) as usize, id.to_string(), text));
+                    }
+                    Event::Start(Tag::Heading {
+                        level: level_of(level),
+                        id,
+                        classes,
+                        attrs,
+                    })
+                }
+                Event::End(TagEnd::Heading(level)) => Event::End(TagEnd::Heading(level_of(level))),
                 Event::Start(Tag::Link {
                     link_type,
                     dest_url,
@@ -133,7 +1132,7 @@ impl Site<'_> {
                     id,
                 }) => Event::Start(Tag::Link {
                     link_type,
-                    dest_url: self.rewrite(&base, &dir, &dest_url, false),
+                    dest_url: self.rewrite(base, &dest_url, false),
                     title,
                     id,
                 }),
@@ -144,209 +1143,255 @@ impl Site<'_> {
                     id,
                 }) => Event::Start(Tag::Image {
                     link_type,
-                    dest_url: self.rewrite(&base, &dir, &dest_url, true),
+                    dest_url: self.rewrite(base, &dest_url, true),
                     title,
                     id,
                 }),
+                Event::Html(html) if html.contains("<details>") => {
+                    Event::Html(CowStr::from(open_details(&html)))
+                }
+                Event::InlineHtml(html) if html.contains("<details>") => {
+                    Event::InlineHtml(CowStr::from(open_details(&html)))
+                }
                 other => other,
-            });
-        let mut body = String::new();
-        html::push_html(&mut body, parser);
-
-        let mut main = String::new();
-        let _ = writeln!(
-            main,
-            "<div class=\"meta\">{}<span class=\"path\">{}</span></div>",
-            badges(page),
-            escape(&page.source)
-        );
-        if let Some(q) = &page.question {
-            let _ = writeln!(main, "<p class=\"question\">{}</p>", escape(q));
-        }
-        let _ = writeln!(main, "<article class=\"doc\">\n{body}</article>");
-        self.layout(&page.title, &dir, &main)
-    }
-
-    fn render_index(&self, unmanaged: &[String]) -> String {
-        let mut main = String::new();
-        let _ = writeln!(main, "<h1>{}</h1>", escape(&self.project.title()));
-
-        let mut times: Vec<Time> = self.pages.iter().map(|p| p.kind.time).collect();
-        times.sort();
-        times.dedup();
-        for time in times {
-            let count = self.pages.iter().filter(|p| p.kind.time == time).count();
-            let (open, close) = if time == Time::Past {
-                (
-                    format!(
-                        "<details class=\"time-group\">\n<summary>{}（{count} 件）</summary>",
-                        time.label()
-                    ),
-                    "</details>",
-                )
-            } else {
-                (
-                    format!("<section class=\"time-group\">\n<h2>{}</h2>", time.label()),
-                    "</section>",
-                )
             };
-            let _ = writeln!(main, "{open}");
-            for kind in self.project.kinds.all().iter().filter(|k| k.time == time) {
-                let pages: Vec<&Page> =
-                    self.pages.iter().filter(|p| p.kind.id == kind.id).collect();
-                if pages.is_empty() {
-                    continue;
-                }
-                let _ = writeln!(
-                    main,
-                    "<section class=\"kind-group\">\n<h3>{} <span class=\"count\">{}</span></h3>\n<ul class=\"docs\">",
-                    escape(&kind.label),
-                    pages.len()
-                );
-                for page in pages {
-                    let _ = write!(
-                        main,
-                        "<li><a href=\"{}\">{}</a>",
-                        escape(&page.page),
-                        escape(&page.title)
-                    );
-                    if let Some(status) = &page.status {
-                        let _ = write!(main, " <span class=\"status\">{}</span>", escape(status));
-                    }
-                    for topic in &page.topics {
-                        let _ = write!(main, " <span class=\"topic\">{}</span>", escape(topic));
-                    }
-                    if let Some(q) = &page.question {
-                        let _ = write!(main, "<p class=\"question\">{}</p>", escape(q));
-                    }
-                    let _ = writeln!(main, "</li>");
-                }
-                let _ = writeln!(main, "</ul>\n</section>");
-            }
-            let _ = writeln!(main, "{close}");
+            events.push(event);
         }
-
-        if !unmanaged.is_empty() {
-            let _ = writeln!(
-                main,
-                "<section class=\"time-group\">\n<h2>その他</h2>\n<ul class=\"unmanaged\">"
-            );
-            for path in unmanaged {
-                let href = self.outside_link(path, "", false);
-                let _ = writeln!(
-                    main,
-                    "<li><a href=\"{}\">{}</a></li>",
-                    escape(&href),
-                    escape(path)
-                );
-            }
-            let _ = writeln!(main, "</ul>\n</section>");
-        }
-        self.layout(&self.project.title(), "", &main)
-    }
-
-    fn layout(&self, title: &str, dir: &str, main: &str) -> String {
-        let up = up_to_root(dir);
-        let project = escape(&self.project.title());
-        let heading = if title == self.project.title() {
-            project.clone()
-        } else {
-            format!("{} - {project}", escape(title))
-        };
-        format!(
-            "<!DOCTYPE html>
-<html lang=\"ja\">
-<head>
-<meta charset=\"utf-8\">
-<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">
-<title>{heading}</title>
-<link rel=\"stylesheet\" href=\"{up}assets/style.css\">
-</head>
-<body>
-<header class=\"site\"><a href=\"{up}index.html\">{project}</a></header>
-<main>
-{main}</main>
-</body>
-</html>
-"
-        )
+        let mut body = String::new();
+        html::push_html(&mut body, events.into_iter());
+        (body, toc)
     }
 
     /// Markdown のリンク先を、HTML から辿れるリンク先にする。
-    fn rewrite<'a>(
-        &self,
-        base: &Path,
-        page_dir: &str,
-        dest: &CowStr<'a>,
-        image: bool,
-    ) -> CowStr<'a> {
+    fn rewrite<'a>(&self, base: &Path, dest: &CowStr<'a>, image: bool) -> CowStr<'a> {
         let Some((target, fragment)) = markdown::resolve_link(base, dest) else {
             return dest.clone();
         };
         let target = markdown::slash_path(&target);
         let fragment = fragment.map(|f| format!("#{f}")).unwrap_or_default();
-        if let Some(page) = self.pages.iter().find(|p| p.source == target) {
-            let href = format!("{}{}{fragment}", up_to_root(page_dir), page.page);
-            return CowStr::from(href);
+        CowStr::from(self.link(&target, &fragment, image))
+    }
+
+    /// URL ならそのまま、ルートからのパスならリンクにする。
+    fn href(&self, target: &str) -> String {
+        if slot::is_url(target) {
+            target.to_string()
+        } else {
+            self.link(target, "", false)
         }
-        CowStr::from(self.outside_link_from(page_dir, &target, &fragment, image))
     }
 
-    fn outside_link(&self, target: &str, fragment: &str, image: bool) -> String {
-        self.outside_link_from("", target, fragment, image)
-    }
-
-    /// 管理対象でないファイルへのリンク。repository.url があれば GitHub に、なければ元のファイルに向ける。
-    fn outside_link_from(
-        &self,
-        page_dir: &str,
-        target: &str,
-        fragment: &str,
-        image: bool,
-    ) -> String {
+    /// ルートの中のファイルへのリンク。原本なら、その原本のページに向ける。
+    /// ほかのファイルは、repository.url があれば GitHub に、なければ出力先から辿れる相対パスにする。
+    fn link(&self, target: &str, fragment: &str, image: bool) -> String {
+        if !image && self.pages.iter().any(|p| p.source == target) {
+            let to = self.out.join(doc_page(target));
+            return format!(
+                "{}{fragment}",
+                encode_path(&relative_path(&self.dir.borrow(), &to))
+            );
+        }
         if let Some(repo) = &self.project.config.repository {
             let mode = if image { "raw" } else { "blob" };
             let url = repo.url.trim_end_matches('/');
             return format!("{url}/{mode}/{}/{target}{fragment}", repo.branch);
         }
-        let from = self.out.join(page_dir);
         let to = self.project.root.join(target);
-        format!("{}{fragment}", relative_path(&from, &to))
+        format!("{}{fragment}", relative_path(&self.dir.borrow(), &to))
     }
 }
 
-fn badges(page: &Page) -> String {
-    let time_class = match page.kind.time {
-        Time::Present => "present",
-        Time::Future => "future",
-        Time::Past => "past",
-        Time::Untimed => "untimed",
+/// 枠のアイコン。線で描いた 24 × 24 の SVG。外部の素材に頼らず、バイナリに持つ。
+fn icon(id: &str) -> String {
+    let shapes = match id {
+        // 下向きの矢印と受け皿
+        "install" => r#"<path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/>"#,
+        // 箱
+        "service" => {
+            r#"<path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M3 7l9 5 9-5"/><path d="M12 12v10"/>"#
+        }
+        // 開いた本
+        "manual" => {
+            r#"<path d="M3 5h6a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H3z"/><path d="M21 5h-6a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h7z"/>"#
+        }
+        // 背のある厚い本と A（辞書）
+        "words" => {
+            r#"<path d="M5 5a2 2 0 0 1 2-2h12v15H7a2 2 0 0 0-2 2z"/><path d="M5 20a2 2 0 0 0 2 2h12v-4"/><path d="M9.5 13l2.5-6 2.5 6"/><path d="M10.4 11h3.2"/>"#
+        }
+        // 重なった層
+        "stack" => {
+            r#"<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 12.5l9 5 9-5"/><path d="M3 17l9 5 9-5"/>"#
+        }
+        // 半導体のチップ
+        "system" => {
+            r#"<rect x="6" y="6" width="12" height="12" rx="1"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/>"#
+        }
+        // 行き来する 2 本の矢印（通信）
+        "api" => {
+            r#"<path d="M4 8h15"/><path d="M15 4l4 4-4 4"/><path d="M20 16H5"/><path d="M9 12l-4 4 4 4"/>"#
+        }
+        // 円柱
+        "db" => {
+            r#"<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>"#
+        }
+        // フォルダ
+        "directory-tree" => {
+            r#"<path d="M3 6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/>"#
+        }
+        // スパナ
+        "setup" => {
+            r#"<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>"#
+        }
+        // 錠
+        "env" => {
+            r#"<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><path d="M12 15v2"/>"#
+        }
+        // 端末
+        "develop" => {
+            r#"<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3"/><path d="M13 15h4"/>"#
+        }
+        // 雲
+        "infrastructure" => {
+            r#"<path d="M7 19a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 9.5a4.5 4.5 0 0 1-.5 9.5z"/>"#
+        }
+        // 上向きの矢印と台（環境へ上げる）
+        "deploy" => {
+            r#"<path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>"#
+        }
+        // 紙飛行機
+        "release" => r#"<path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/>"#,
+        // 円の中の円記号
+        "cost" => {
+            r#"<circle cx="12" cy="12" r="9"/><path d="M8 7l4 5 4-5"/><path d="M12 12v6"/><path d="M9 13.5h6M9 16.5h6"/>"#
+        }
+        // 旗（決定の記録）
+        "adr" => r#"<path d="M5 21V4"/><path d="M5 4h12l-2.5 4 2.5 4H5"/>"#,
+        _ => r#"<rect x="4" y="4" width="16" height="16" rx="2"/>"#,
     };
-    let mut s = format!(
-        "<span class=\"time time-{time_class}\">{}</span><span class=\"kind\">{}</span>",
-        page.kind.time.label(),
-        escape(&page.kind.label)
-    );
-    if let Some(status) = &page.status {
-        let _ = write!(s, "<span class=\"status\">{}</span>", escape(status));
-    }
-    for topic in &page.topics {
-        let _ = write!(s, "<span class=\"topic\">{}</span>", escape(topic));
-    }
-    s
+    format!(
+        "<svg class=\"icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\">{shapes}</svg>"
+    )
 }
 
-fn parent(path: &str) -> String {
-    path.rsplit_once('/')
-        .map_or_else(String::new, |(dir, _)| dir.to_string())
+/// HTML の全体。CSS は中に書く。
+fn page(title: &str, nav: &str, body: &str, aside: &str) -> String {
+    format!(
+        "<!DOCTYPE html>
+<html lang=\"ja\">
+<head>
+<meta charset=\"utf-8\">
+<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">
+<title>{title}</title>
+<style>
+{STYLE}</style>
+</head>
+<body>
+{nav}<main>
+{body}</main>
+{aside}</body>
+</html>
+"
+    )
 }
 
-/// 出力先の中のディレクトリから、出力先のルートへの相対パス（末尾に `/` が付く）。
-fn up_to_root(dir: &str) -> String {
-    if dir.is_empty() {
-        return String::new();
+/// リンクに書くパス。空白などを、URL で使える形にする。
+fn encode_path(path: &str) -> String {
+    let mut out = String::new();
+    for c in path.chars() {
+        match c {
+            ' ' => out.push_str("%20"),
+            '#' => out.push_str("%23"),
+            '?' => out.push_str("%3F"),
+            '%' => out.push_str("%25"),
+            _ => out.push(c),
+        }
     }
-    "../".repeat(dir.split('/').count())
+    out
+}
+
+/// 原本のツリーの、ディレクトリ 1 つ。
+#[derive(Default)]
+struct Dir<'a> {
+    files: Vec<&'a Page>,
+    dirs: BTreeMap<String, Dir<'a>>,
+}
+
+impl<'a> Dir<'a> {
+    fn insert(&mut self, page: &'a Page) {
+        let mut dir = self;
+        let mut parts: Vec<&str> = page.source.split('/').collect();
+        parts.pop();
+        for part in parts {
+            dir = dir.dirs.entry(part.to_string()).or_default();
+        }
+        dir.files.push(page);
+    }
+}
+
+/// 決定のページの、出力先からの相対パス。`ADR/<まとまり>/<題>.html`。
+fn adr_page(a: &Adr) -> String {
+    format!(
+        "{ADR_DIR}/{}/{}.html",
+        file_name(a.group()),
+        file_name(&a.record.title)
+    )
+}
+
+/// まとまりの名前を、ファイル名に使える形にする。
+fn file_name(name: &str) -> String {
+    name.replace(['/', '\\'], "-")
+}
+
+/// タブに出す OS の名前。
+fn os_label(os: &str) -> String {
+    match os {
+        "macos" => "macOS".to_string(),
+        "windows" => "Windows".to_string(),
+        "linux" => "Linux".to_string(),
+        other => other.to_string(),
+    }
+}
+
+fn name_link(name: &str, url: Option<&str>) -> String {
+    match url {
+        Some(url) => format!("<a href=\"{}\">{}</a>", escape(url), escape(name)),
+        None => escape(name),
+    }
+}
+
+/// `<details>` を開いた状態にする。
+fn open_details(html: &str) -> String {
+    html.replace("<details>", "<details open>")
+}
+
+fn code_of(value: Option<&serde_yaml_ng::Value>) -> String {
+    value
+        .map(|v| format!("<code>{}</code>", escape(&slot::scalar(v))))
+        .unwrap_or_default()
+}
+
+fn strip_paragraph(html: &str) -> String {
+    let trimmed = html.trim();
+    match trimmed
+        .strip_prefix("<p>")
+        .and_then(|s| s.strip_suffix("</p>"))
+    {
+        Some(inner) if !inner.contains("<p>") => inner.to_string(),
+        _ => trimmed.to_string(),
+    }
+}
+
+/// 見出しのアンカー。GitHub と同じく、小文字にし、文字と数字と `-` `_` だけを残し、空白を `-` にする。
+pub fn slug(text: &str) -> String {
+    text.trim()
+        .to_lowercase()
+        .chars()
+        .filter_map(|c| match c {
+            ' ' => Some('-'),
+            c if c.is_alphanumeric() || c == '-' || c == '_' => Some(c),
+            _ => None,
+        })
+        .collect()
 }
 
 fn escape(s: &str) -> String {
@@ -380,7 +1425,7 @@ mod tests {
         write_file(
             dir.path(),
             "docv.yaml",
-            "version: 1\ntitle: demo\ntopics: [t]\ndocs:\n  - path: README.md\n    kind: overview\n    question: 何か\n  - path: docs/spec/*.md\n    kind: spec\n  - path: docs/archive/**/*.md\n    kind: archive\n  - path: docs/tmp/**/*.md\n    kind: tmp\n",
+            "version: 1\ntitle: demo\ndocs: [docs/**/*.md]\nignore: [docs/tmp/**]\n",
         );
         for (path, text) in files {
             write_file(dir.path(), path, text);
@@ -390,104 +1435,322 @@ mod tests {
     }
 
     #[test]
-    fn builds_pages_and_index_deterministically() {
+    fn builds_index_and_slot_pages_deterministically() {
         let (dir, project) = project(&[
-            (
-                "README.md",
-                "# Demo\n\n[a](docs/spec/a.md) [memo](notes.md) ![img](docs/img.svg)\n",
-            ),
+            ("README.md", "# Demo\n"),
             (
                 "docs/spec/a.md",
-                "---\nquestion: A は何か\ntopics: [t]\n---\n\n# A <仕様>\n\n[readme](../../README.md#top) [x](https://example.com)\n",
+                "---\nmission: A は何か\ntags: [仕様]\n---\n\n# A <仕様>\n\n## 1. 章\n\n本文\n",
+            ),
+            ("docs/plan/b.md", "---\nmission: q\n---\n# B\n"),
+            (
+                "docv/adr/go.md",
+                "---\ngroup: 言語\ndate: 2026-01-01\n---\n\n# Go にする\n\nGo で書く\n",
             ),
             (
-                "docs/archive/spec/a.md",
-                "---\nquestion: q\nsource: s\n---\n# 経緯\n",
+                "docv/adr/rust.md",
+                "---\ngroup: 言語\ndate: 2026-03-01\nsupersedes: [go]\n---\n\n# Rust にする\n\n## 選ばなかった案\n\n| 案 | 理由 |\n| --- | --- |\n| Zig | 情報が少ない |\n\n### 細部\n",
             ),
-            ("notes.md", "# Notes\n"),
             ("docs/tmp/memo.md", "# Memo\n"),
+            (
+                "docv/service/install.yaml",
+                "steps:\n  - id: binary\n    name: 取る\n    items:\n      - os: macos\n        markdown: \"`curl`\"\n      - os: windows\n  - id: cargo\n    name: cargo\n    items:\n      markdown: \"`cargo install`\"\ninclude: [docs/spec/a.md#章]\n",
+            ),
+            (
+                "docv/service/service.md",
+                "# サービス仕様\n\n概要の本文\n\n## 部品\n\n[a](../../docs/spec/a.md)\n\n<details>\n\n細部\n\n</details>\n\n### 小見出し\n",
+            ),
+            (
+                "docv/service/manual.yaml",
+                "commands:\n  - command: demo run\n    description: 動かす\n    details: 詳しく\n",
+            ),
+            ("docv/system/api.yaml", "ref: openapi.yaml\n"),
+            ("docv/system/db.md", "# DB 仕様書\n\n表\n"),
+            (
+                "docv/operation/cost.yaml",
+                "accepted_items:\n  - name: サーバー\n    monthly: 3 ドル\n",
+            ),
         ]);
-        let out = dir.path().join("docv");
-        run(&project, &out).unwrap();
+        let out = dir.path().join("out");
+        html(&project, &out).unwrap();
 
-        let readme = fs::read_to_string(out.join("README.html")).unwrap();
-        assert!(readme.contains("href=\"docs/spec/a.html\""), "{readme}");
-        assert!(readme.contains("href=\"../notes.md\""), "{readme}");
-        assert!(readme.contains("src=\"../docs/img.svg\""), "{readme}");
-
-        let page = fs::read_to_string(out.join("docs/spec/a.html")).unwrap();
-        assert!(page.contains("href=\"../../README.html#top\""), "{page}");
-        assert!(page.contains("href=\"https://example.com\""), "{page}");
+        // トップは 3 ページ。index.html（プロジェクト概要）には、枠のページへのカードだけを置く
+        let index = fs::read_to_string(out.join(PAGE)).unwrap();
+        let detail = fs::read_to_string(out.join(DETAIL_PAGE)).unwrap();
+        let adr_index = fs::read_to_string(out.join(ADR_PAGE)).unwrap();
+        // サイドバーで 3 ページを行き来する。描いているページの項目に印を付ける
         assert!(
-            page.contains("<p class=\"question\">A は何か</p>"),
-            "{page}"
+            index.contains("<li><a href=\"index.html\" aria-current=\"page\">プロジェクト概要</a></li>\n<li><a href=\"ADR.html\">ADR</a></li>\n<li><a href=\"プロジェクト詳細.html\">プロジェクト詳細</a></li>"),
+            "{index}"
         );
         assert!(
-            page.contains("<title>A &lt;仕様&gt; - demo</title>"),
-            "{page}"
+            detail.contains("<a href=\"プロジェクト詳細.html\" aria-current=\"page\">"),
+            "{detail}"
         );
-        assert!(page.contains("href=\"../../assets/style.css\""), "{page}");
+        assert!(!index.contains("class=\"adr-box"), "{index}");
+        assert!(!index.contains(">spec/</td>"), "{index}");
+        assert!(!index.contains("<h1>"), "{index}");
+        assert!(!detail.contains("<h1>"), "{detail}");
+        let install = index.find(">インストール</a>").unwrap();
+        let service = index.find(">サービス仕様</a>").unwrap();
+        let manual = index.find(">利用マニュアル</a>").unwrap();
+        assert!(install < service && service < manual, "{index}");
+        assert!(
+            index.contains(
+                "<a class=\"card\" href=\"サービス仕様/利用マニュアル.html\"><svg class=\"icon\""
+            ),
+            "{index}"
+        );
+        assert!(!index.contains("<p class=\"step-name\">"), "{index}");
+        // ファイルのない枠も、リンクにせずグレーで並べる
+        assert!(
+            index.contains("<span class=\"card missing\"><svg class=\"icon\""),
+            "{index}"
+        );
+        assert!(index.contains("</svg>用語集</span>"), "{index}");
+        // プロジェクト詳細.html に、原本のページへのリンクをツリーに並べる。管理外のファイルは出さない
+        let plan = detail
+            .find("<tr class=\"dir\" data-dir=\"docs/plan\"><td colspan=\"3\"><div style=\"margin-left:0px\">plan/</div></td></tr>")
+            .unwrap();
+        let spec = detail.find(">spec/</div>").unwrap();
+        // すべての原本が入っている docs/ の行は出さず、ファイル名も出さない。タグには色を付ける
+        assert!(!detail.contains(">docs/</div>"), "{detail}");
+        assert!(
+            detail.contains("<tr data-path=\"docs/spec/a.md\" data-tags=\"[&quot;仕様&quot;]\"><td style=\"padding-left:30px\"><a href=\"プロジェクト詳細/docs/spec/a.html\">A &lt;仕様&gt;</a></td><td title=\"A は何か\">A は何か</td><td><span class=\"tag c0\">仕様</span></td>"),
+            "{detail}"
+        );
+        // 表の上に、タグのトグルを数と一緒に並べる。最初はすべて選んでいる
+        assert!(
+            detail.contains("<button type=\"button\" class=\"tag c0\" data-tag=\"仕様\" aria-pressed=\"true\">仕様<span class=\"count\">1</span></button>"),
+            "{detail}"
+        );
+        assert!(detail.contains("<script>(function(){"), "{detail}");
+        // 原本は 1 つずつ HTML のページにする。見出しは h1 から段を飛ばさない
+        let a = fs::read_to_string(out.join("プロジェクト詳細/docs/spec/a.html")).unwrap();
+        assert!(a.contains("<h1>A &lt;仕様&gt;</h1>"), "{a}");
+        // 見出しには GitHub と同じ形の id を付け、右のサイドバーに目次を置く
+        assert!(a.contains("<h2 id=\"1-章\">1. 章</h2>"), "{a}");
+        assert!(
+            a.contains("<nav class=\"outline\">\n<p class=\"outline-title\">目次</p>\n<ul>\n<li class=\"h2\"><a href=\"#1-章\">1. 章</a></li>"),
+            "{a}"
+        );
+        assert!(
+            a.contains("<a href=\"../../../プロジェクト詳細.html\" aria-current=\"page\">"),
+            "{a}"
+        );
+        assert_headings(&a);
+        assert!(plan < spec, "{detail}");
+        assert!(!detail.contains("tmp/"), "{detail}");
 
-        let index = fs::read_to_string(out.join("index.html")).unwrap();
-        let present = index.find("<h2>現在</h2>").unwrap();
-        let past = index.find("<summary>過去（1 件）</summary>").unwrap();
-        let other = index.find("<h2>その他</h2>").unwrap();
-        assert!(present < past && past < other, "{index}");
-        assert!(index.contains("<span class=\"topic\">t</span>"), "{index}");
-        assert!(index.contains("href=\"../notes.md\""), "{index}");
-        assert!(!index.contains("tmp/"), "{index}");
-        assert!(!out.join("docs/tmp").exists());
+        // 枠は 1 つずつ独立したページ。同じ id の手順は os ごとのタブ、ほかは 1 つの手順
+        let read = |path: &str| fs::read_to_string(out.join(path)).unwrap();
+        let install = read("サービス仕様/インストール.html");
+        assert!(install.contains("</svg>インストール</h1>"), "{install}");
+        // 枠のページのサイドバーは、1 つ上のトップのページを指す
+        assert!(
+            install
+                .contains("<a href=\"../index.html\" aria-current=\"page\">プロジェクト概要</a>"),
+            "{install}"
+        );
+        assert!(
+            install.contains("<label for=\"tab-install-binary-0\">macOS</label>"),
+            "{install}"
+        );
+        assert!(
+            install.contains("<label for=\"tab-install-binary-1\">Windows</label>"),
+            "{install}"
+        );
+        assert!(
+            install.contains(
+                "<li><p class=\"step-name\">cargo</p><p><code>cargo install</code></p>\n</li>"
+            ),
+            "{install}"
+        );
+        assert!(install.contains("本文"), "{install}");
+        // Markdown の枠は、h1 を除き、見出しを下げて、そのまま出す。details は開く
+        let service = read("サービス仕様/サービス仕様.html");
+        assert!(service.contains("<h2>部品</h2>"), "{service}");
+        assert!(
+            // Markdown の中のリンクは、pulldown-cmark が和名をパーセントエンコードする
+            service.contains("href=\"../%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E8%A9%B3%E7%B4%B0/docs/spec/a.html\">a</a>"),
+            "{service}"
+        );
+        assert!(service.contains("<details open>"), "{service}");
+        // 利用マニュアルは、先頭に「コマンド | 説明」の表、コマンドごとに h2 と details
+        let manual = read("サービス仕様/利用マニュアル.html");
+        assert!(
+            manual.contains("<tr><td><a href=\"#demo-run\">demo run</a></td><td>動かす</td></tr>"),
+            "{manual}"
+        );
+        assert!(
+            manual.contains(
+                "<h2 class=\"command\" id=\"demo-run\"><span>demo run</span><span class=\"desc\">動かす</span></h2>\n<div class=\"details\"><p>詳しく</p>"
+            ),
+            "{manual}"
+        );
+        // ref だけの枠はページを作らず、カードから定義へ直接リンクする
+        assert!(
+            index.contains("<a class=\"card\" href=\"../openapi.yaml\">"),
+            "{index}"
+        );
+        assert!(!out.join("システム仕様/API 仕様書.html").exists());
+        // 名前に空白のある枠のページは、リンクで空白を %20 にする
+        assert!(
+            index.contains("href=\"システム仕様/DB%20仕様書.html\""),
+            "{index}"
+        );
+        let cost = read("運用/費用.html");
+        assert!(cost.contains("<td class=\"num\">3 ドル</td>"), "{cost}");
+        assert!(
+            cost.contains("<h2>費用を理由にやっていないこと</h2>\n<p class=\"note\">なし</p>"),
+            "{cost}"
+        );
 
-        run(&project, &out).unwrap();
-        assert_eq!(fs::read_to_string(out.join("index.html")).unwrap(), index);
-        assert!(out.join(MARKER).is_file());
-        assert!(!out.join(".gitignore").exists());
+        // ADR は、ADR.html に、まとまりごとの h2 と決定のつながりの図を置く。
+        // 箱をクリックすると、決定 1 つのページを開く
+        assert!(
+            adr_index.contains("<main>\n<h2 class=\"group\">言語</h2>"),
+            "{adr_index}"
+        );
+        assert!(
+            adr_index.contains("<div class=\"lane\"><a class=\"adr-box superseded\" href=\"ADR/言語/Go%20にする.html\">Go にする</a><span class=\"arrow\">→</span><a class=\"adr-box\" href=\"ADR/言語/Rust%20にする.html\">"),
+            "{adr_index}"
+        );
+        let go = read("ADR/言語/Go にする.html");
+        assert!(go.contains("</svg>Go にする</h1>"), "{go}");
+        assert!(
+            go.contains("<nav class=\"adr-nav\"><div class=\"prev\"></div><div class=\"next\"><a class=\"adr-box\" href=\"Rust%20にする.html\">Rust にする</a><span class=\"arrow\">→</span></div></nav>"),
+            "{go}"
+        );
+        assert!(
+            go.contains("<a href=\"../../ADR.html\" aria-current=\"page\">ADR</a>"),
+            "{go}"
+        );
+        assert_headings(&go);
+        let rust = read("ADR/言語/Rust にする.html");
+        assert!(rust.contains("<h2>選ばなかった案</h2>"), "{rust}");
+        assert!(rust.contains("<td>Zig</td>"), "{rust}");
+        // 前後のカードは本文の後に置き、カーソルキーで移れるようにする。状態や id、日付は出さない
+        assert!(
+            rust.find("<td>Zig</td>").unwrap() < rust.find("<nav class=\"adr-nav\">").unwrap(),
+            "{rust}"
+        );
+        assert!(
+            rust.contains("<script>document.addEventListener('keydown'"),
+            "{rust}"
+        );
+        assert!(!rust.contains("2026-03-01"), "{rust}");
+        assert!(
+            rust.contains("<nav class=\"adr-nav\"><div class=\"prev\"><span class=\"arrow\">←</span><a class=\"adr-box superseded\" href=\"Go%20にする.html\">Go にする</a></div><div class=\"next\"></div></nav>"),
+            "{rust}"
+        );
+        assert_headings(&rust);
+
+        // 枠のページは、h1 が 1 つで、見出しの段を飛ばさない
+        for slot in slot::load(&project).unwrap().iter().filter(|s| has_page(s)) {
+            let html = read(&page_path(slot));
+            assert_headings(&html);
+        }
+
+        html(&project, &out).unwrap();
+        assert_eq!(read(PAGE), index);
+        assert_eq!(read(DETAIL_PAGE), detail);
+        assert_eq!(read(ADR_PAGE), adr_index);
+        assert_eq!(read("運用/費用.html"), cost);
+    }
+
+    /// h1 が 1 つだけで先頭にあり、見出しが段を飛ばさない（h1 の次に h3 などが来ない）こと。
+    fn assert_headings(html: &str) {
+        let levels: Vec<u8> = html
+            .match_indices("<h")
+            .filter_map(|(i, _)| {
+                let c = html[i + 2..].chars().next()?;
+                let next = html[i + 3..].chars().next()?;
+                (c.is_ascii_digit() && (next == '>' || next == ' ')).then(|| c as u8 - b'0')
+            })
+            .collect();
+        assert_eq!(levels.first(), Some(&1), "{html}");
+        assert_eq!(levels.iter().filter(|l| **l == 1).count(), 1, "{html}");
+        for pair in levels.windows(2) {
+            assert!(pair[1] <= pair[0] + 1, "{levels:?}: {html}");
+        }
     }
 
     #[test]
-    fn links_outside_files_to_repository() {
-        let (dir, mut project) =
-            project(&[("README.md", "# Demo\n\n[memo](notes.md) ![img](a.svg)\n")]);
+    fn links_files_to_repository() {
+        let (dir, mut project) = project(&[
+            ("docs/a.md", "---\nmission: q\n---\n# A\n"),
+            (
+                "docv/system/system.md",
+                "# システム仕様\n\n[memo](../../notes.md) ![図](../../a.svg)\n",
+            ),
+        ]);
         project.config.repository = Some(crate::config::Repository {
             url: "https://github.com/o/r/".to_string(),
             branch: "main".to_string(),
         });
         project.config.output.commit = false;
-        let out = dir.path().join("docv");
-        run(&project, &out).unwrap();
-        let readme = fs::read_to_string(out.join("README.html")).unwrap();
+        let out = dir.path().join("out");
+        html(&project, &out).unwrap();
+        let page = fs::read_to_string(out.join("システム仕様/システム仕様.html")).unwrap();
+        let detail = fs::read_to_string(out.join(DETAIL_PAGE)).unwrap();
         assert!(
-            readme.contains("href=\"https://github.com/o/r/blob/main/notes.md\""),
-            "{readme}"
+            page.contains("href=\"https://github.com/o/r/blob/main/notes.md\""),
+            "{page}"
         );
         assert!(
-            readme.contains("src=\"https://github.com/o/r/raw/main/a.svg\""),
-            "{readme}"
+            page.contains("src=\"https://github.com/o/r/raw/main/a.svg\""),
+            "{page}"
         );
+        assert!(
+            detail.contains("href=\"プロジェクト詳細/docs/a.html\""),
+            "{detail}"
+        );
+        // ADR がないときは、ADR.html を作らず、サイドバーにも出さない
+        assert!(!out.join(ADR_PAGE).exists());
+        assert!(!detail.contains("ADR.html"), "{detail}");
         assert_eq!(fs::read_to_string(out.join(".gitignore")).unwrap(), "*\n");
     }
 
     #[test]
     fn refuses_to_clear_foreign_directory() {
-        let (dir, project) = project(&[("README.md", "# Demo\n")]);
+        let (dir, project) = project(&[]);
         let out = dir.path().join("docs");
         write_file(dir.path(), "docs/keep.txt", "keep");
-        let error = run(&project, &out).unwrap_err();
+        let error = html(&project, &out).unwrap_err();
         assert!(
             error
                 .to_string()
-                .contains("docv build が作ったディレクトリではない")
+                .contains("docv が作ったディレクトリではない")
         );
         assert!(out.join("keep.txt").is_file());
     }
 
     #[test]
-    fn computes_relative_paths() {
-        assert_eq!(
-            relative_path(Path::new("/a/out/docs"), Path::new("/a/notes.md")),
-            "../../notes.md"
-        );
-        assert_eq!(up_to_root("docs/spec"), "../../");
-        assert_eq!(up_to_root(""), "");
+    fn keeps_jpg_when_rebuilding_html() {
+        let (dir, project) = project(&[]);
+        let out = dir.path().join("docv/build");
+        html(&project, &out).unwrap();
+        write_file(&out, "jpg/a.jpg", "jpg");
+        write_file(&out, "old.html", "old");
+        html(&project, &out).unwrap();
+        assert!(out.join("jpg/a.jpg").is_file());
+        assert!(!out.join("old.html").exists());
+    }
+
+    #[test]
+    fn puts_jpg_under_group_and_label() {
+        let slot = Slot {
+            def: slot::def("manual").unwrap(),
+            path: "docv/service/manual.yaml".to_string(),
+            content: Content::Markdown(String::new()),
+        };
+        assert_eq!(jpg_path(&slot), "jpg/サービス仕様/利用マニュアル.jpg");
+    }
+
+    #[test]
+    fn makes_github_like_slugs() {
+        assert_eq!(slug("1. コマンド一覧"), "1-コマンド一覧");
+        assert_eq!(slug("Foo Bar（例）"), "foo-bar例");
     }
 }

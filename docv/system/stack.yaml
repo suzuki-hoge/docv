@@ -1,0 +1,27 @@
+stack:
+  - group: 言語
+    items:
+      - name: Rust
+        version: 2024 edition
+        purpose: CLI 本体。単一のバイナリにして配る
+        url: https://www.rust-lang.org/
+  - group: 埋め込むもの
+    items:
+      - name: dprint-plugin-markdown
+        version: 0.26.0
+        purpose: Markdown の整形（docv fix）。Rust のライブラリとしてバイナリに埋め込む。Prettier と違って Node.js がいらず、docv の版で整形の結果が固定される
+  - group: 実行時に使うもの
+    items:
+      - name: Node.js（npx）
+        purpose: textlint を使うときだけ要る
+      - name: textlint
+        version: 15.8.0
+        purpose: 日本語の文章の検査。docv の版ごとに版を固定し、npx で取ってくる
+      - name: Google Chrome
+        purpose: JPG を作るときだけ要る
+  - group: 配布
+    items:
+      - name: GitHub Actions
+        purpose: タグの push で各プラットフォーム向けにビルドする
+      - name: GitHub Release
+        purpose: アーカイブとチェックサムを置く

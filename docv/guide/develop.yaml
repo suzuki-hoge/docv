@@ -1,0 +1,30 @@
+steps:
+  - id: check-code
+    name: コミットの前にコードを確かめる
+    items:
+      markdown: |
+        ```sh
+        cargo fmt --check
+        cargo clippy --all-targets -- -D warnings
+        cargo test
+        ```
+  - id: check-docs
+    name: ドキュメントを変えたら確かめる
+    items:
+      markdown: |
+        ```sh
+        ./target/release/docv fix
+        ./target/release/docv check
+        ```
+
+        Node.js がないときは、`--no-textlint` を付ける。
+  - id: build-html
+    name: HTML と JPG を作って見る
+    items:
+      markdown: |
+        docv.yaml の output.dir で、コミットしない tmp/html/ に出す。JPG を作るときは Chrome が要る。
+
+        ```sh
+        ./target/release/docv build-html
+        ./target/release/docv build-image
+        ```

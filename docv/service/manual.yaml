@@ -1,0 +1,205 @@
+commands:
+  - command: docv init
+    description: docv.yaml を作る
+    details: |
+      - 推奨する配置（[docs/spec/config.md](docs/spec/config.md) の 9 章）を前提にした docv.yaml を作る
+      - カレントディレクトリに docv.yaml を作る
+      - スキーマの URL は、実行した docv の版に合わせる
+      - docv.yaml がすでにあればエラーにする
+  - command: docv add
+    args: "<slot>"
+    description: 枠のファイルを、決まったパスに作る
+    options:
+      - name: --list
+        description: 作れる枠の一覧を出す
+    details: |
+      ```sh
+      docv add --list   # 作れる枠の名前と、作るファイルの一覧を出す
+      docv add manual   # docv/service/manual.yaml を作る
+      docv add api-md   # docv/system/api.md を作る
+      ```
+
+      - 枠のファイルのパスは docv が決めていて、選ぶ余地はない。作る場所は slots.dir（既定は docv）の `<まとまり>/<枠>.<拡張子>`
+      - 枠の名前は、枠の ID（[docs/spec/slot.md](docs/spec/slot.md) の 2 章）。yaml と md のどちらでも置ける API 仕様書と DB 仕様書は、`api-yaml`、`api-md`、`db-yaml`、`db-md` のように形を付ける
+      - yaml の枠には、項目のサンプルを書く。md の枠は空のファイルを作る
+      - 同じ枠のファイルがすでにあれば（形が違っても）エラーにする
+      - 原本と ADR は作らない。原本は docs/ に、ADR は docv/adr/ に、それぞれの書き方に沿って直接書く
+  - command: docv check
+    args: "[path...]"
+    description: 管理対象のファイルと枠がルールに沿っているかを確かめる
+    options:
+      - name: --no-textlint
+        description: textlint だけを飛ばす
+    details: |
+      ```sh
+      docv check                    # 管理対象のファイル、枠、ADR をすべて確かめる
+      docv check docs/spec/order.md # 指定したファイルだけ確かめる。枠と ADR は確かめない
+      ```
+
+      - パスを渡す使い方は、hook から編集したファイルだけを確かめるためにある。管理対象でないパスは無視する
+      - 1 件ずつ次の形で出し、最後に error と warn の件数を出す
+
+      ```
+      docs/spec/order.md:12: warn past-wording 「以前は」は過去や実装状態の言い回し。今の姿だけを書き、決めた経緯は ADR に残す
+      docv/service/manual.yaml:3: error slot-invalid 利用マニュアルの枠の形に合わない: unknown field `option`
+      ```
+
+      - error が 1 件以上あれば、終了コード 1 で終わる。docv.yaml がスキーマに合わないときは、ルールを確かめる前に終了コード 2 で終わる
+      - ファイルは書き換えない。直すのは `docv fix`。check が通らないのに直さない、という選択肢はないので、check に直すオプションは持たせない
+
+      | 確かめるもの                     | ルールの一覧                                                                 |
+      | -------------------------------- | ---------------------------------------------------------------------------- |
+      | 原本（frontmatter、構造、リンク、タグのルール） | [docs/rule/docs/guideline.md](docs/rule/docs/guideline.md) の 10 章         |
+      | 枠                               | [docs/spec/slot.md](docs/spec/slot.md) の 5 章                               |
+      | ADR                              | [docs/spec/adr.md](docs/spec/adr.md) の 3 章                                 |
+      | 書式の規則、整形、textlint       | [docs/spec/config.md](docs/spec/config.md) の 5〜7 章。docv.yaml で使うと決めたときだけ |
+  - command: docv fix
+    args: "[path...]"
+    description: 管理対象のファイルを整形し、textlint で直せるところを直す
+    options:
+      - name: --no-textlint
+        description: textlint の自動修正を飛ばし、整形だけをする
+    details: |
+      - 対象は管理対象のファイルだけ。枠のファイル（YAML）は直さない
+      - 書き換えたファイルを出す。Markdown として読めないファイルは、書き換えずにエラーとして出し、終了コード 1 で終わる
+      - lint.textlint.enabled が true なら、整形の前に textlint の自動修正をかける。使うルールは check と同じ。自動修正で直せないものは残り、check で確かめる
+      - docv.yaml の overrides で textlint や format を false にしたパスには、それぞれをかけない
+
+      ### 整形の形
+
+      整形の形は docv が決め、設定では変えない。好みで揉めないことと、どのプロジェクトでも同じ形になることを優先する。エディタごとの自動整形の違いで差分が出るのも防げる。
+
+      | 対象           | 整形の形                                                              |
+      | -------------- | --------------------------------------------------------------------- |
+      | 文の折り返し   | 変えない。改行の位置はそのまま残す                                    |
+      | 空行           | ブロック（段落、見出し、リスト、表、コードブロック）の間を 1 行にする |
+      | 表             | 列の幅をそろえる。全角文字は 2 文字分として数える                     |
+      | 箇条書きの記号 | `-`                                                                   |
+      | 強調の記号     | 斜体は `*`、太字は `**`                                               |
+      | 見出し         | `#` の形                                                              |
+      | コードブロック | 中身は変えない。ただし行末の空白は消す                                |
+      | 行末           | 末尾の空白を消す。改行は LF にし、ファイルの最後に改行を 1 つ置く     |
+      | frontmatter    | 中身は変えない。本文との間を空行 1 行にする                           |
+
+      整形したファイルをもう一度整形しても、結果は変わらない。
+
+      ### エディタと AI Agent
+
+      - エディタの Markdown の自動整形は切り、保存のときに `docv fix --no-textlint <ファイル>` を外部の整形ツールとして実行するように設定する
+      - AI Agent には、ファイルを編集するたびに hook で `docv fix <ファイル>` と `docv check <ファイル>` を実行させるとよい。hook は利用者が設定する
+  - command: docv build-html
+    description: 人間向けの HTML を作る
+    details: |
+      ```
+      docv/build/              # output.dir（既定は docv/build）
+        index.html             # プロジェクト概要。枠のページへのカード
+        ADR.html               # 決定のつながりの図。ADR があるときだけ
+        プロジェクト詳細.html  # 原本のツリー
+        プロジェクト詳細/      # 原本のページ。<原本のパス>.html
+          docs/order.html
+        サービス仕様/          # 枠のページ。<まとまり>/<枠>.html
+          利用マニュアル.html
+        ADR/                   # 決定のページ。ADR/<group>/<title>.html
+        jpg/                   # docv build-image が書く。build-html は消さない
+        .gitignore             # output.commit が false のとき
+        .docv                  # docv が作ったことを示す目印
+      ```
+
+      - ページの中身は、サービス仕様の「HTML の構成」の章
+      - 出力先は docv.yaml の output.dir
+      - 毎回、出力先の中を、jpg/ を除いて作り直す。docv が作った目印（.docv）のない、空でないディレクトリは消さずにエラーにする
+  - command: docv build-image
+    description: 枠のページを JPG にする
+    details: |
+      ```
+      docv/build/              # output.dir（既定は docv/build）
+        jpg/                   # yaml の枠のページごとに 1 枚
+          サービス仕様/
+            利用マニュアル.jpg
+      ```
+
+      - 撮るページと置き場所は、サービス仕様の「JPG」の章
+      - HTML は一時的なディレクトリに作って撮り、出力先には jpg/ だけを書く。build-html を先に実行しておく必要はない
+      - 毎回、jpg/ を作り直す。ほかのファイルは消さない
+      - Chrome が要る
+  - command: docv desc
+    description: AI Agent 向けのルールファイルを出す
+    details: |
+      - ルールファイルはバイナリに埋め込まれていて、docv の版と内容が一致する
+      - 中身は、原本、枠、ADR、docv.yaml の規格（[docs/spec/](docs/spec)）を AI Agent 向けにまとめたものと、AI Agent が使うコマンド（check、add、fix）の使い方
+      - docv.yaml がなくても動く
+      - CLAUDE.md などに「セッションの最初に `docv desc` を実行する」と書いておけば、AI Agent にルールが伝わる
+  - command: docv migrate-guide
+    description: 後から docv を入れるときに、タグと枠の案と、直すところを出す
+    details: |
+      - docv.yaml がなくても動く。そのときは、すべてのファイルを管理外として扱う
+      - ファイルは書かない。直すのは利用者で、出力と `docv desc` を AI Agent に渡して直させてもよい
+
+      ### 推測
+
+      ディレクトリ名（大文字と小文字は区別しない）に次の語が含まれていれば、そのタグを案として出す。
+
+      | 語                                         | タグ |
+      | ------------------------------------------ | ---- |
+      | spec、specification、architecture、design  | 仕様 |
+      | operation、command、manual、setup、runbook | 手順 |
+      | cost、price、pricing                       | 費用 |
+      | rule、guideline、coding、convention        | 規約 |
+
+      README.md の h2 に次の語が含まれていれば、その枠に include で埋め込む案を出す。
+
+      | 語                                               | 枠      |
+      | ------------------------------------------------ | ------- |
+      | install、インストール、入れ方                    | install |
+      | setup、development、contributing、環境構築、開発 | setup   |
+      | usage、使い方、コマンド                          | manual  |
+      | environment、env、環境変数                       | env     |
+
+      ### 版の移行の手順
+
+      - docv は、版ごとに「1 つ前の版から」の手順だけを持つ。版を上げるときに足すのは、1 つ前からの手順 1 つだけでよい
+      - ファイルの frontmatter の version が古いときは、その版から今の版までの手順を、古い順につないで出す（例: version が 1.0 で docv が 1.3 なら、1.0 → 1.1、1.1 → 1.2、1.2 → 1.3 の 3 つ）
+      - 手順をあてたら、ファイルの version を今の版に上げる。古いままなら check が version-older で知らせる
+
+      ### 出力の例
+
+      ```
+      ## 1. 設定
+      docv.yaml: なし。docv init で作る
+
+      ## 2. 管理外のファイル（12 件）
+      ./            1 件
+      docs/design/  5 件
+      docs/manual/  4 件
+
+      ## 3. タグの案
+      - docs/design/ のファイル: tags: [仕様]
+      - docs/manual/ のファイル: tags: [手順]
+
+      ## 4. 枠
+      - [ ] インストール（service/install.yaml）: 利用者はどう入れるか。include: [README.md#Installation] で README の章を埋め込める
+      - [ ] サービス仕様（service/service.md）: これは何で、誰のために、何を解決し、どんな部品からなるか
+      …
+
+      ## 5. ルールに沿っていないファイル
+      （docv.yaml がないため、なし）
+
+      ## 6. frontmatter の版
+      この docv の版: 0.3
+      - 0.1: 4 ファイル
+      - 0.3: 8 ファイル
+
+      0.1 → 0.2
+      - （0.2 で変わったことと、直し方）
+
+      0.2 → 0.3
+      - （0.3 で変わったことと、直し方）
+
+      ## 7. 次にやること
+      1. docv init で docv.yaml を作り、docs に管理するファイルの glob を書く
+      2. 4 の枠のうち、このプロジェクトに当てはまるものを docv add <slot> で作る（docv add --list で一覧を出す）
+      ```
+body: |
+  ## 実行する場所
+
+  すべてのコマンドは、docv.yaml のあるディレクトリで実行する。そのディレクトリがルートになる。親のディレクトリの docv.yaml は探さない。

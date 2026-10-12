@@ -1,0 +1,10 @@
+# 技術スタック: 何で作られているか
+# image は任意。図があれば、層の見出しの下に出す。
+
+stack:
+  - group: バックエンド
+    # image: docs/images/backend.svg
+    items:
+      - name: 言語やライブラリ
+        version: "1.0"
+        purpose: 何に使うか

@@ -1,4 +1,4 @@
-//! docv fix。textlint の自動修正と整形で、管理対象のファイルを書き換える。docs/spec/fix.md。
+//! docv fix。textlint の自動修正と整形で、管理対象のファイルを書き換える。docv/service/manual.yaml の docv fix。
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -22,24 +22,27 @@ pub struct Report {
 pub fn run(project: &Project, targets: &[String], textlint: bool) -> Result<Report> {
     let files = project.targets(targets)?;
     let mut original = BTreeMap::new();
-    for (file, _) in &files {
-        let text = fs::read_to_string(project.root.join(&file.path))
-            .with_context(|| format!("{} を読めない", file.path))?;
-        original.insert(file.path.clone(), text);
+    for path in &files {
+        let text = fs::read_to_string(project.root.join(path))
+            .with_context(|| format!("{path} を読めない"))?;
+        original.insert(path.clone(), text);
     }
 
-    // textlint の自動修正で文を直してから整形する。archive は移した本文をそのまま残すので、textlint をかけない。
+    // textlint の自動修正で文を直してから整形する。overrides で textlint や整形を外したパスは飛ばす。
     if textlint && let Some(textlint) = Textlint::new(project) {
         let paths: Vec<String> = files
             .iter()
-            .filter(|(_, index)| !project.kind_of(*index).is_archive())
-            .map(|(file, _)| file.path.clone())
+            .filter(|path| project.settings_of(path).textlint)
+            .cloned()
             .collect();
         textlint.fix(&paths)?;
     }
 
     let mut report = Report::default();
     for (path, before) in original {
+        if !project.settings_of(&path).format {
+            continue;
+        }
         let full = project.root.join(&path);
         let text = fs::read_to_string(&full).with_context(|| format!("{path} を読めない"))?;
         match format::format(&text) {
@@ -77,12 +80,11 @@ mod tests {
         write(
             root,
             "docv.yaml",
-            "version: 1\ndocs:\n  - path: docs/spec/*.md\n    kind: spec\n  - path: docs/off/*.md\n    kind: spec\n    check: off\n  - path: docs/tmp/*.md\n    kind: tmp\n",
+            "version: 1\ndocs: [docs/spec/*.md]\nignore: [docs/tmp/**]\n",
         );
         write(root, "docs/spec/a.md", "---\nquestion: q\n---\n# A\n* x\n");
         write(root, "docs/spec/b.md", "# B\n");
         write(root, "docs/spec/c.md", "---\nquestion: q\n");
-        write(root, "docs/off/d.md", "* x\n");
         write(root, "docs/tmp/e.md", "* x\n");
         write(root, "notes.md", "* x\n");
         let project = Project::open(&Locate::default(), root).unwrap();
@@ -95,7 +97,7 @@ mod tests {
             fs::read_to_string(root.join("docs/spec/a.md")).unwrap(),
             "---\nquestion: q\n---\n\n# A\n\n- x\n"
         );
-        for path in ["docs/off/d.md", "docs/tmp/e.md", "notes.md"] {
+        for path in ["docs/tmp/e.md", "notes.md"] {
             assert_eq!(fs::read_to_string(root.join(path)).unwrap(), "* x\n");
         }
         assert_eq!(

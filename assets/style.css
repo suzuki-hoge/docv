@@ -1,194 +1,119 @@
-:root {
-  --text: #1f2328;
-  --muted: #59636e;
-  --line: #d1d9e0;
-  --surface: #f6f8fa;
-  --link: #0969da;
-  --present: #1a7f37;
-  --future: #9a6700;
-  --past: #6e7781;
+/* docv build の HTML の見た目。中身を読めることだけを考え、飾らない。 */
+
+body { margin: 0; color: #1f2328; font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif; line-height: 1.7; }
+body { display: flex; align-items: flex-start; }
+main { flex: 1; min-width: 0; max-width: 1040px; margin: 0 auto; padding: 32px 40px 80px; }
+/* トップの 3 ページを行き来するサイドバー。印刷の表示（JPG）では出さない */
+.sidebar { position: sticky; top: 0; flex: none; width: 200px; height: 100vh; box-sizing: border-box; padding: 32px 16px; border-right: 1px solid #d8dee4; background: #f6f8fa; }
+.sidebar .project { margin: 0 0 12px; font-weight: 600; }
+.sidebar ul { list-style: none; margin: 0; padding: 0; }
+.sidebar a { display: block; padding: 4px 10px; border-radius: 6px; color: #1f2328; }
+.sidebar a:hover { color: #0b6bcb; }
+.sidebar a[aria-current="page"] { background: #fff; color: #0b6bcb; font-weight: 600; }
+@media (max-width: 760px) {
+  body { display: block; }
+  .sidebar { position: static; width: auto; height: auto; padding: 12px 16px; border-right: none; border-bottom: 1px solid #d8dee4; }
+  .sidebar ul { display: flex; gap: 8px; }
+}
+/* 原本のページの右の目次。幅が足りないときと、印刷の表示では出さない */
+.outline { position: sticky; top: 0; flex: none; width: 220px; max-height: 100vh; overflow-y: auto; box-sizing: border-box; padding: 32px 16px; font-size: 0.85em; }
+.outline .outline-title { margin: 0 0 8px; font-weight: 600; color: #656d76; }
+.outline ul { list-style: none; margin: 0; padding: 0 0 0 10px; border-left: 1px solid #d8dee4; }
+.outline li { margin: 4px 0; }
+.outline li.h3 { padding-left: 1em; }
+.outline a { color: #3d444d; }
+.outline a:hover { color: #0b6bcb; }
+@media (max-width: 1200px) { .outline { display: none; } }
+@media print { body { display: block; } .sidebar, .outline { display: none; } }
+a { color: #0b6bcb; text-decoration: none; }
+code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
+:not(pre) > code { background: #f6f8fa; padding: 0.1em 0.3em; border-radius: 4px; }
+pre { background: #f6f8fa; padding: 10px 12px; border-radius: 6px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+table { border-collapse: collapse; width: 100%; margin: 8px 0 16px; font-size: 0.93em; }
+th, td { border: 1px solid #d8dee4; padding: 5px 9px; text-align: left; vertical-align: top; }
+th { background: #f6f8fa; white-space: nowrap; }
+img { max-width: 100%; }
+
+h1 { font-size: 2em; margin: 0 0 8px; }
+h2.group { font-size: 1.5em; margin: 28px 0 0; padding-bottom: 4px; border-bottom: 2px solid #1f2328; }
+main > h2.group:first-child { margin-top: 0; }
+h3 { font-size: 1.25em; margin: 32px 0 0; padding-bottom: 2px; border-bottom: 1px solid #d8dee4; }
+h4 { font-size: 1.02em; margin: 20px 0 4px; }
+/* index.html の枠のカード。まとまりの中で横に並べる。幅は名前の 7 文字が収まる固定で、はみ出たら横にスクロールする */
+.cards { display: flex; gap: 8px; overflow-x: auto; margin: 12px 0 8px; padding-bottom: 4px; }
+.card { flex: none; box-sizing: border-box; width: 170px; display: flex; align-items: center; gap: 6px; padding: 12px 8px; border: 1px solid #d8dee4; border-radius: 8px; color: #1f2328; font-weight: 600; white-space: nowrap; }
+.card .icon { width: 24px; height: 24px; flex: none; color: #0b6bcb; }
+.slot > h1 { display: flex; align-items: center; gap: 12px; }
+.slot > h1 .icon { width: 32px; height: 32px; flex: none; color: #0b6bcb; }
+a.card:hover { border-color: #0b6bcb; color: #0b6bcb; }
+/* ファイルのない枠のカード。リンクにしない */
+.card.missing { color: #8c959f; background: #f6f8fa; cursor: default; user-select: none; }
+.card.missing .icon { color: #afb8c1; }
+.note, .from { color: #656d76; font-size: 0.85em; }
+.summary { font-size: 1.1em; }
+/* 開発コマンドの先頭の目次 */
+ul.toc { margin: 8px 0 16px; padding-left: 1.2em; }
+ul.toc li { margin: 2px 0; }
+/* 利用マニュアルの先頭のコマンドの表 */
+/* 用語集の表。まとまりの表どうしで、列の幅をそろえる */
+table.words { table-layout: fixed; }
+table.words th:nth-child(1), table.words th:nth-child(2) { width: 9em; }
+table.words td:nth-child(1), table.words td:nth-child(2) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+h2.command { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
+h2.command .desc { font-size: 0.72em; font-weight: normal; color: #656d76; text-align: right; }
+.toc td:first-child { white-space: nowrap; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
+h2 { font-size: 1.25em; margin: 28px 0 4px; padding-bottom: 2px; border-bottom: 1px solid #d8dee4; }
+.included { margin: 8px 0; padding-left: 12px; border-left: 3px solid #d8dee4; }
+.tag { display: inline-block; border: 1px solid #d8dee4; border-radius: 10px; padding: 0 7px; margin: 0 3px 2px 0; font-size: 0.8em; color: #3d444d; }
+/* タグの色。淡い 8 色を、出てきた順に割り当てる */
+.tag.c0 { background: #ddf4ff; border-color: #b6e3ff; }
+.tag.c1 { background: #dafbe1; border-color: #aceebb; }
+.tag.c2 { background: #fff8c5; border-color: #f5e08a; }
+.tag.c3 { background: #ffebe9; border-color: #ffcecb; }
+.tag.c4 { background: #fbefff; border-color: #ecd8ff; }
+.tag.c5 { background: #fff1e5; border-color: #ffd8b5; }
+.tag.c6 { background: #e6fbf7; border-color: #b3ece2; }
+.tag.c7 { background: #ffeff7; border-color: #ffd3eb; }
+/* 原本のツリー。ディレクトリの行は薄い水色で、ファイルの行と見分ける */
+/* プロジェクト詳細のタグのトグル。選んでいないタグは薄くする */
+.tag-filter { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 4px; }
+.tag-filter button { font-family: inherit; font-size: 0.85em; line-height: 1.6; padding: 1px 10px; margin: 0; cursor: pointer; }
+.tag-filter button[aria-pressed="false"] { opacity: 0.35; }
+.tag-filter .count { margin-left: 6px; font-weight: 600; }
+/* 原本のツリーの列。ファイルとタグは中身の幅で折り返さず、ミッションは残りの幅に 1 行で収め、はみ出たら … にする */
+table.docs td:nth-child(1), table.docs td:nth-child(3) { white-space: nowrap; }
+table.docs td:nth-child(2) { width: 100%; max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+table.docs tr.dir td { padding: 0; }
+table.docs tr.dir div { padding: 5px 9px; background: #eef7fc; color: #3d444d; font-weight: 600; }
+.num { text-align: right; white-space: nowrap; }
+.step-name { font-weight: 600; margin: 0 0 4px; }
+.steps > li { margin-bottom: 12px; }
+
+/* OS ごとの手順のタブ。JS は使わない。印刷の表示（JPG）では、すべての OS を並べる */
+.tabs > input { position: absolute; opacity: 0; pointer-events: none; }
+.tabs > label { display: inline-block; padding: 2px 12px; margin-right: 4px; border: 1px solid #d8dee4; border-bottom: none; border-radius: 6px 6px 0 0; cursor: pointer; color: #656d76; }
+.tabs > input:checked + label { background: #f6f8fa; color: #1f2328; font-weight: 600; }
+.tabs > .panel { display: none; border: 1px solid #d8dee4; padding: 8px 12px; }
+.tabs > input:nth-of-type(1):checked ~ .panel:nth-of-type(1),
+.tabs > input:nth-of-type(2):checked ~ .panel:nth-of-type(2),
+.tabs > input:nth-of-type(3):checked ~ .panel:nth-of-type(3),
+.tabs > input:nth-of-type(4):checked ~ .panel:nth-of-type(4),
+.tabs > input:nth-of-type(5):checked ~ .panel:nth-of-type(5),
+.tabs > input:nth-of-type(6):checked ~ .panel:nth-of-type(6) { display: block; }
+.panel-os { display: none; }
+@media print {
+  .tabs > label { display: none; }
+  .tabs > .panel { display: block; margin-bottom: 8px; }
+  .panel-os { display: block; margin: 0 0 4px; font-weight: 600; color: #656d76; }
 }
 
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif;
-  line-height: 1.7;
-  background: #fff;
-}
-
-a {
-  color: var(--link);
-  text-decoration: none;
-}
-
-a:hover {
-  text-decoration: underline;
-}
-
-header.site {
-  padding: 12px 24px;
-  border-bottom: 1px solid var(--line);
-  font-weight: 600;
-}
-
-main {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 24px;
-}
-
-.meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-  font-size: 13px;
-}
-
-.meta .path {
-  color: var(--muted);
-  margin-left: auto;
-}
-
-.time,
-.kind,
-.status,
-.topic {
-  display: inline-block;
-  padding: 0 8px;
-  border-radius: 999px;
-  font-size: 12px;
-  border: 1px solid var(--line);
-}
-
-.time {
-  color: #fff;
-  border-color: transparent;
-}
-
-.time-present {
-  background: var(--present);
-}
-
-.time-future {
-  background: var(--future);
-}
-
-.time-past {
-  background: var(--past);
-}
-
-.status {
-  background: #fff8c5;
-}
-
-.topic {
-  background: var(--surface);
-  color: var(--muted);
-}
-
-p.question {
-  margin: 12px 0;
-  padding: 8px 12px;
-  border-left: 4px solid var(--line);
-  background: var(--surface);
-  color: var(--muted);
-}
-
-.time-group {
-  margin: 32px 0;
-}
-
-.time-group > h2,
-.time-group > summary {
-  font-size: 20px;
-  font-weight: 600;
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 4px;
-}
-
-details.time-group > summary {
-  cursor: pointer;
-}
-
-.kind-group h3 {
-  font-size: 16px;
-  margin: 20px 0 8px;
-}
-
-.count {
-  color: var(--muted);
-  font-weight: normal;
-  font-size: 13px;
-}
-
-ul.docs,
-ul.unmanaged {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-ul.docs li {
-  padding: 8px 0;
-  border-bottom: 1px solid var(--surface);
-}
-
-ul.docs li p.question {
-  margin: 4px 0 0;
-  padding: 0;
-  border: none;
-  background: none;
-  font-size: 14px;
-}
-
-article.doc table {
-  border-collapse: collapse;
-  margin: 16px 0;
-  display: block;
-  overflow-x: auto;
-}
-
-article.doc th,
-article.doc td {
-  border: 1px solid var(--line);
-  padding: 6px 12px;
-  vertical-align: top;
-}
-
-article.doc th {
-  background: var(--surface);
-}
-
-article.doc pre {
-  background: var(--surface);
-  padding: 12px 16px;
-  overflow-x: auto;
-  border-radius: 6px;
-}
-
-article.doc code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.9em;
-}
-
-article.doc :not(pre) > code {
-  background: var(--surface);
-  padding: 1px 4px;
-  border-radius: 4px;
-}
-
-article.doc hr {
-  border: none;
-  border-top: 1px solid var(--line);
-  margin: 24px 0;
-}
-
-article.doc img {
-  max-width: 100%;
-}
+/* ADR。まとまりごとに、決定のつながりを過去から未来へ左から右に並べる。カードの幅は固定して題を折り返し、並びきらなければ横にスクロールする */
+.lanes { display: flex; flex-direction: column; gap: 8px; margin: 12px 0 20px; }
+.lane { display: flex; align-items: stretch; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.adr-box { flex: none; box-sizing: border-box; width: 220px; display: flex; flex-direction: column; overflow-wrap: anywhere; padding: 8px 14px; border: 1px solid #1f2328; border-radius: 6px; color: #1f2328; font-weight: 600; }
+.adr-box.superseded { border-style: dashed; border-color: #8c959f; color: #656d76; background: #f6f8fa; }
+.arrow { flex: none; align-self: center; color: #656d76; font-size: 1.2em; }
+/* 決定のページの下の、前後の決定のカード */
+.adr-nav { display: flex; justify-content: space-between; gap: 16px; margin: 40px 0 0; padding-top: 16px; border-top: 1px solid #d8dee4; }
+.adr-nav > div { display: flex; align-items: stretch; gap: 8px; }
+.label { font-weight: 600; margin: 12px 0 2px; }

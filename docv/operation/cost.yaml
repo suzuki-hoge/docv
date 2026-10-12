@@ -1,0 +1,8 @@
+accepted_items:
+  - name: GitHub Actions（標準のランナー）
+    desc: タグの push で各プラットフォーム向けにビルドする。public リポジトリでは、macOS と Windows のランナーも無料
+    monthly: 0 円
+  - name: GitHub Release
+    desc: リリースのアーカイブの置き場所。public リポジトリでは無料
+    monthly: 0 円
+rejected_items: []

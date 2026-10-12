@@ -1,4 +1,4 @@
-//! 書式の規則（lint.style）。docs/spec/style.md。
+//! 書式の規則（lint.style）。docs/spec/config.md の 5 章。
 
 use std::collections::{BTreeMap, HashSet};
 use std::path::Path;
@@ -55,15 +55,6 @@ impl Style {
                         .to_string()
                 }),
             image_alt: is("image_alt", "require"),
-        }
-    }
-
-    /// archive の章の形は docv retire が決めるので、章番号と区切り線の規則を外す。
-    pub fn for_archive(self) -> Style {
-        Style {
-            heading_number: false,
-            section_separator: false,
-            ..self
         }
     }
 }
@@ -370,12 +361,11 @@ mod tests {
         assert!(style.bold);
         assert!(!style.heading_number);
         assert_eq!(style.html, Some(Vec::new()));
-        assert!(!all().for_archive().section_separator);
     }
 
     #[test]
     fn passes_valid_text() {
-        let text = "---\nquestion: q\n---\n\n# A\n\n## 1. 一\n\n[spec/b.md](b.md) [README.md](../../README.md) [外](https://example.com) `$a $b` 3 ドル\n\n<details><summary>s</summary>\n\n<!-- <b>x</b>\n<i> -->\n\n</details>\n\n![図](x.png)\n\n```\n**$x$**\n```\n\n---\n\n## 2. 二\n";
+        let text = "---\nmission: q\n---\n\n# A\n\n## 1. 一\n\n[spec/b.md](b.md) [README.md](../../README.md) [外](https://example.com) `$a $b` 3 ドル\n\n<details><summary>s</summary>\n\n<!-- <b>x</b>\n<i> -->\n\n</details>\n\n![図](x.png)\n\n```\n**$x$**\n```\n\n---\n\n## 2. 二\n";
         assert_eq!(run(&all(), "docs/spec/a.md", text), Vec::<String>::new());
     }
 

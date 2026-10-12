@@ -1,0 +1,11 @@
+# 開発コマンド: 開発者はテストやビルドなどをどう実行するか
+# items が複数ある手順は、HTML で os ごとのタブになる。1 つなら配列にしなくてよい。markdown には Markdown を書ける。
+
+steps:
+  - id: test
+    name: テストを実行する
+    items:
+      markdown: |
+        ```sh
+        make test
+        ```

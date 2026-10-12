@@ -1,0 +1,11 @@
+# 利用マニュアル: 利用者はどう使うか（CLI のコマンド、GUI の操作など）
+# 開発者だけが使うコマンドは guide/develop.yaml に書く。GUI の操作は body に書く。
+
+commands:
+  - command: example run
+    args: "<パス>"
+    description: 何をするか
+    options:
+      - name: --dry-run
+        description: 何をするか
+    # details: 詳しい説明

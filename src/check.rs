@@ -1,20 +1,19 @@
-//! docv check のルール。docs/spec/check.md。
+//! docv check のルール。原本は docs/rule/docs/guideline.md の 10 章、書式の規則と textlint は docs/spec/config.md。
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 
 use anyhow::{Context, Result};
 use serde_yaml_ng::Value;
 
-use crate::config::CheckLevel;
 use crate::diagnostic::{Diagnostic, Level};
-use crate::format;
-use crate::kind::{Kind, Time};
 use crate::markdown::{self, Document, Outline};
 use crate::style::{self, Style};
 use crate::textlint::Textlint;
-use crate::workspace::{Class, DocFile, Project};
+use crate::version::{self, Version};
+use crate::workspace::{Project, Settings};
+use crate::{adr, format, meta, slot};
 
 pub const PAST_WORDING: &[&str] = &[
     "以前は",
@@ -50,46 +49,31 @@ pub struct Options {
     pub textlint: bool,
 }
 
-/// 管理対象のファイルを確かめる。targets が空ならすべて、そうでなければそのパス（ルートからの相対パス）だけ。
+/// 管理対象のファイルと枠を確かめる。targets が空ならすべて、そうでなければそのパス（ルートからの相対パス）だけ。
 pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Vec<Diagnostic>> {
     let words = Words::new(project);
-    let managed = managed_paths(project)?;
+    let managed: HashSet<String> = project.managed()?.into_iter().collect();
     let mut diagnostics = Vec::new();
-    let mut levels = HashMap::new();
     let mut textlint_files = Vec::new();
-    for (file, index) in project.targets(targets)? {
-        let text = fs::read_to_string(project.root.join(&file.path))
-            .with_context(|| format!("{} を読めない", file.path))?;
-        diagnostics.extend(check_file(project, &words, &managed, &file, index, &text));
-        levels.insert(file.path.clone(), project.check_level_of(index));
-        if !project.kind_of(index).is_archive() {
-            textlint_files.push(file.path);
+    for path in project.targets(targets)? {
+        let text = fs::read_to_string(project.root.join(&path))
+            .with_context(|| format!("{path} を読めない"))?;
+        diagnostics.extend(check_file(project, &words, &managed, &path, &text));
+        if project.settings_of(&path).textlint {
+            textlint_files.push(path);
         }
+    }
+    if targets.is_empty() {
+        diagnostics.extend(slot::check(project)?);
+        diagnostics.extend(adr::check(project)?);
     }
     if options.textlint
         && let Some(textlint) = Textlint::new(project)
     {
         diagnostics.extend(textlint.lint(&textlint_files)?);
     }
-    for d in &mut diagnostics {
-        if levels.get(&d.path) == Some(&CheckLevel::Warn) {
-            d.level = Level::Warn;
-        }
-    }
     diagnostics.sort();
     Ok(diagnostics)
-}
-
-/// 管理対象のファイル（tmp を除く）のパス。link_text の規則で使う。
-fn managed_paths(project: &Project) -> Result<HashSet<String>> {
-    Ok(project
-        .files()?
-        .into_iter()
-        .filter_map(|file| match file.class {
-            Class::Managed(index) if !project.kind_of(index).is_tmp() => Some(file.path),
-            _ => None,
-        })
-        .collect())
 }
 
 struct Words {
@@ -117,15 +101,15 @@ impl Words {
 
 struct Checker<'a> {
     project: &'a Project,
-    file: &'a DocFile,
-    kind: &'a Kind,
+    path: &'a str,
+    settings: Settings,
     diagnostics: Vec<Diagnostic>,
 }
 
 impl Checker<'_> {
     fn push(&mut self, line: usize, rule: &str, level: Level, message: impl Into<String>) {
         self.diagnostics.push(Diagnostic {
-            path: self.file.path.clone(),
+            path: self.path.to_string(),
             line,
             rule: rule.to_string(),
             level,
@@ -138,39 +122,48 @@ fn check_file(
     project: &Project,
     words: &Words,
     managed: &HashSet<String>,
-    file: &DocFile,
-    index: usize,
+    path: &str,
     text: &str,
 ) -> Vec<Diagnostic> {
     let mut cx = Checker {
         project,
-        file,
-        kind: project.kind_of(index),
+        path,
+        settings: project.settings_of(path),
         diagnostics: Vec::new(),
     };
     let document = markdown::split(text);
     let outline = markdown::outline(&document);
 
-    check_frontmatter(&mut cx, index, &document);
+    check_frontmatter(&mut cx, &document);
     check_structure(&mut cx, &document, &outline);
-    if cx.kind.time == Time::Present {
+
+    let tags = meta::read(&document, &outline).tags;
+    let rules: HashSet<&str> = project.config.rules_of(&tags).collect();
+    if rules.contains("no-past-wording") {
         check_wording(&mut cx, words, &outline);
     }
-    if !cx.kind.is_archive() {
-        check_links(&mut cx, &outline);
+    if rules.contains("no-done-task") {
+        for &line in &outline.done_tasks {
+            cx.push(
+                line,
+                "done-task",
+                Level::Warn,
+                "終わったタスクが残っている。終わったタスクは消す",
+            );
+        }
     }
+    check_links(&mut cx, &outline);
 
-    let entry = project.entry(index);
-    let mut style = Style::resolve(project.config.lint.style.as_ref(), entry.style.as_ref());
-    if cx.kind.is_archive() {
-        style = style.for_archive();
-    }
-    for found in style::check(&style, &file.path, &document, managed) {
-        cx.push(found.line, found.rule, Level::Error, found.message);
+    if cx.settings.style {
+        let style = Style::resolve(project.config.lint.style.as_ref(), None);
+        for found in style::check(&style, path, &document, managed) {
+            cx.push(found.line, found.rule, Level::Error, found.message);
+        }
     }
 
     // 整形できないファイルは frontmatter-invalid が出ているので、ここでは出さない。
     if project.config.format.enabled
+        && cx.settings.format
         && let Ok(formatted) = format::format(text)
         && formatted != text
     {
@@ -184,8 +177,7 @@ fn check_file(
     cx.diagnostics
 }
 
-fn check_frontmatter(cx: &mut Checker, index: usize, document: &Document) {
-    let entry = cx.project.entry(index);
+fn check_frontmatter(cx: &mut Checker, document: &Document) {
     let fm = document.frontmatter.as_ref();
     let mapping = match fm {
         None => serde_yaml_ng::Mapping::new(),
@@ -223,87 +215,91 @@ fn check_frontmatter(cx: &mut Checker, index: usize, document: &Document) {
     };
     let line_of = |key: &str| fm.map_or(1, |fm| fm.line_of_key(key));
 
-    match (mapping.get("question"), &entry.question) {
-        (Some(_), Some(_)) => cx.push(
-            line_of("question"),
-            "question-duplicated",
-            Level::Error,
-            "question が frontmatter と docv.yaml の両方にある",
-        ),
-        (Some(Value::String(q)), None) => {
-            if q.trim_end().contains('\n') {
+    // overrides で mission を optional にしたパスでは、frontmatter（mission と version）を求めない。
+    let required = cx.settings.mission_required;
+    match mapping.get("mission") {
+        Some(Value::String(m)) => {
+            if m.trim_end().contains('\n') {
                 cx.push(
-                    line_of("question"),
-                    "question-multiline",
+                    line_of("mission"),
+                    "mission-multiline",
                     Level::Error,
-                    "question は 1 行で書く",
+                    "mission は 1 行で書く",
                 );
             }
         }
-        (Some(_), None) => cx.push(
-            line_of("question"),
+        Some(_) => cx.push(
+            line_of("mission"),
             "frontmatter-invalid",
             Level::Error,
-            "question は文字列で書く",
+            "mission は文字列で書く",
         ),
-        (None, Some(_)) => {}
-        (None, None) => cx.push(
+        None if required => cx.push(
             1,
-            "question-missing",
+            "mission-missing",
             Level::Error,
-            "question がない。このファイルが答える問いを 1 文で書く",
+            "mission がない。このファイルが答えることを 1 文で書く",
         ),
+        None => {}
     }
 
-    match mapping.get("topics") {
+    let current = version::current();
+    match mapping.get("version").map(Version::parse) {
+        None if required => cx.push(
+            1,
+            "version-missing",
+            Level::Error,
+            format!("version がない。このファイルが従う docv の版（{current}）を書く"),
+        ),
         None => {}
-        Some(Value::Sequence(topics)) => {
-            for topic in topics {
-                match topic {
-                    Value::String(t) if cx.project.config.topics.contains(t) => {}
-                    Value::String(t) => cx.push(
-                        line_of("topics"),
-                        "topic-unknown",
+        Some(None) => cx.push(
+            line_of("version"),
+            "frontmatter-invalid",
+            Level::Error,
+            "version は「0.1」のように、メジャーとマイナーを . でつないで書く",
+        ),
+        Some(Some(v)) if v > current => cx.push(
+            line_of("version"),
+            "version-newer",
+            Level::Error,
+            format!("version {v} は、この docv（{current}）より新しい。docv を上げる"),
+        ),
+        Some(Some(v)) if v < current => cx.push(
+            line_of("version"),
+            "version-older",
+            Level::Warn,
+            format!("version {v} は、この docv（{current}）より古い。docv migrate-guide の手順で直し、version を上げる"),
+        ),
+        Some(Some(_)) => {}
+    }
+
+    match mapping.get("tags") {
+        None => {}
+        Some(Value::Sequence(tags)) => {
+            for tag in tags {
+                match (tag, &cx.project.config.tags) {
+                    (Value::String(t), Some(known)) if !known.contains(t) => cx.push(
+                        line_of("tags"),
+                        "tag-unknown",
                         Level::Error,
-                        format!("話題 {t} は docv.yaml の topics にない"),
+                        format!("タグ {t} は docv.yaml の tags にない"),
                     ),
+                    (Value::String(_), _) => {}
                     _ => cx.push(
-                        line_of("topics"),
+                        line_of("tags"),
                         "frontmatter-invalid",
                         Level::Error,
-                        "topics は文字列の配列で書く",
+                        "tags は文字列の配列で書く",
                     ),
                 }
             }
         }
         Some(_) => cx.push(
-            line_of("topics"),
+            line_of("tags"),
             "frontmatter-invalid",
             Level::Error,
-            "topics は文字列の配列で書く",
+            "tags は文字列の配列で書く",
         ),
-    }
-
-    if cx.kind.is_plan() {
-        let valid =
-            matches!(mapping.get("status"), Some(Value::String(s)) if s == "todo" || s == "doing");
-        if !valid {
-            cx.push(
-                line_of("status"),
-                "status-invalid",
-                Level::Error,
-                "status は todo か doing",
-            );
-        }
-    }
-
-    if cx.kind.is_archive() && !matches!(mapping.get("source"), Some(Value::String(_))) {
-        cx.push(
-            line_of("source"),
-            "source-missing",
-            Level::Error,
-            "source（移した元のファイルのパス）がない",
-        );
     }
 }
 
@@ -318,78 +314,6 @@ fn check_structure(cx: &mut Checker, document: &Document, outline: &Outline) {
             format!("h1 が {} 個ある。1 つにする", h1.len()),
         );
     }
-
-    let h2: Vec<_> = outline.headings.iter().filter(|h| h.level == 2).collect();
-    for word in cx.kind.required_sections.clone() {
-        if !h2.iter().any(|h| h.text.contains(&word)) {
-            cx.push(
-                1,
-                "section-required",
-                Level::Error,
-                format!("「{word}」を含む章（h2）がない"),
-            );
-        }
-    }
-
-    if cx.kind.is_archive() {
-        check_archive_entries(cx, document, outline);
-    }
-
-    if cx.kind.is_plan() {
-        for &line in &outline.done_tasks {
-            cx.push(
-                line,
-                "plan-done-task",
-                Level::Warn,
-                "終わったタスクが残っている。終わったタスクは消す",
-            );
-        }
-    }
-}
-
-fn check_archive_entries(cx: &mut Checker, document: &Document, outline: &Outline) {
-    let lines: Vec<&str> = document.body.lines().collect();
-    let h2: Vec<_> = outline.headings.iter().filter(|h| h.level == 2).collect();
-    for (i, heading) in h2.iter().enumerate() {
-        if !is_dated(&heading.text) {
-            cx.push(
-                heading.line,
-                "archive-entry-format",
-                Level::Error,
-                "章の見出しを「YYYY-MM-DD 見出し」にする",
-            );
-        }
-        let start = heading.line - document.body_start_line + 1;
-        let end = h2
-            .get(i + 1)
-            .map_or(lines.len(), |next| next.line - document.body_start_line);
-        let has_reason = lines[start.min(lines.len())..end.min(lines.len())]
-            .iter()
-            .any(|l| {
-                let l = l.trim_start();
-                ["- 理由:", "- 理由：", "* 理由:", "* 理由："]
-                    .iter()
-                    .any(|p| l.starts_with(p))
-            });
-        if !has_reason {
-            cx.push(
-                heading.line,
-                "archive-entry-format",
-                Level::Error,
-                "章に「- 理由:」の行がない",
-            );
-        }
-    }
-}
-
-fn is_dated(text: &str) -> bool {
-    let bytes = text.as_bytes();
-    bytes.len() > 11
-        && bytes[..10].iter().enumerate().all(|(i, b)| match i {
-            4 | 7 => *b == b'-',
-            _ => b.is_ascii_digit(),
-        })
-        && bytes[10] == b' '
 }
 
 fn check_wording(cx: &mut Checker, words: &Words, outline: &Outline) {
@@ -401,7 +325,7 @@ fn check_wording(cx: &mut Checker, words: &Words, outline: &Outline) {
                     "past-wording",
                     Level::Warn,
                     format!(
-                        "「{word}」は過去や実装状態の言い回し。経緯は docv retire で archive に移す"
+                        "「{word}」は過去や実装状態の言い回し。今の姿だけを書き、決めた経緯は ADR に残す"
                     ),
                 );
             }
@@ -414,7 +338,7 @@ fn check_wording(cx: &mut Checker, words: &Words, outline: &Outline) {
                     heading.line,
                     "past-heading",
                     Level::Warn,
-                    format!("見出しの「{word}」は過去を扱う語。経緯は archive に移す"),
+                    format!("見出しの「{word}」は過去を扱う語。決めた経緯は ADR に残す"),
                 );
             }
         }
@@ -422,8 +346,7 @@ fn check_wording(cx: &mut Checker, words: &Words, outline: &Outline) {
 }
 
 fn check_links(cx: &mut Checker, outline: &Outline) {
-    let root = cx.project.root.clone();
-    let base = Path::new(&cx.file.path)
+    let base = Path::new(cx.path)
         .parent()
         .unwrap_or(Path::new(""))
         .to_path_buf();
@@ -431,18 +354,7 @@ fn check_links(cx: &mut Checker, outline: &Outline) {
         let Some((target, _)) = markdown::resolve_link(&base, &link.dest) else {
             continue;
         };
-        let rel = markdown::slash_path(&target);
-        if cx.project.is_tmp_path(&rel) {
-            cx.push(
-                link.line,
-                "link-to-tmp",
-                Level::Error,
-                format!(
-                    "tmp のファイル {} にリンクしている。tmp はいつ消えるか分からないので、リンクしない",
-                    link.dest
-                ),
-            );
-        } else if !root.join(&target).exists() {
+        if !cx.project.root.join(&target).exists() {
             cx.push(
                 link.line,
                 "link-broken",
@@ -469,32 +381,32 @@ mod tests {
     const OPTIONS: Options = Options { textlint: true };
 
     const CONFIG: &str = "version: 1
-topics: [a]
 docs:
-  - path: README.md
-    kind: overview
-    question: q
-  - path: docs/spec/*.md
-    kind: spec
-  - path: docs/cost/*.md
-    kind: cost
-  - path: docs/plan/*.md
-    kind: plan
-  - path: docs/archive/**/*.md
-    kind: archive
-  - path: docs/loose/*.md
-    kind: spec
-    check: warn
-  - path: docs/off/*.md
-    kind: spec
-    check: off
-  - path: docs/tmp/**/*.md
-    kind: tmp
+  - docs/**/*.md
+ignore:
+  - docs/ignored/**
+tags: [仕様, 計画]
 lint:
+  tags:
+    仕様: [no-past-wording]
+    計画: [no-done-task]
   words:
     add: [いずれ]
     remove: [将来的に]
+overrides:
+  - paths: [docs/tmp/**]
+    textlint: false
+    style: false
+    mission: optional
 ";
+
+    /// この CLI の版を書いた frontmatter。
+    fn fm(rest: &str) -> String {
+        format!(
+            "---\nmission: q\nversion: {}\n{rest}---\n",
+            version::current()
+        )
+    }
 
     fn check(files: &[(&str, &str)]) -> Vec<String> {
         let dir = tempfile::tempdir().unwrap();
@@ -513,43 +425,47 @@ lint:
     #[test]
     fn passes_valid_files() {
         let result = check(&[
-            ("README.md", "# R\n\n[spec](docs/spec/a.md)\n"),
+            ("README.md", "no frontmatter\n"),
             (
                 "docs/spec/a.md",
-                "---\nquestion: q\ntopics: [a]\n---\n\n# A\n\n`以前は` と書かない。[README](../../README.md#x)\n",
-            ),
-            (
-                "docs/cost/c.md",
-                "---\nquestion: q\n---\n\n# C\n\n## 1. 単価\n\n## 2. 見積もり\n",
+                &format!(
+                    "{}\n# A\n\n`以前は` と書かない。[README](../../README.md#x)\n",
+                    fm("tags: [仕様]\n")
+                ),
             ),
             (
                 "docs/plan/p.md",
-                "---\nquestion: q\nstatus: doing\n---\n\n# P\n\n- [ ] t\n",
+                &format!("{}\n# P\n\n- [ ] t\n", fm("tags: [計画]\n")),
             ),
-            (
-                "docs/archive/spec/a.md",
-                "---\nquestion: q\nsource: docs/spec/a.md\n---\n\n# A の経緯\n\n## 2026-10-11 案\n\n- 移した元: [x](gone.md)\n- 理由: r\n\n以前は\n",
-            ),
-            ("docs/off/x.md", "no frontmatter\n"),
+            ("docs/ignored/memo.md", "以前は TODO [x](missing.md)\n"),
+            // overrides で frontmatter を求めないパス
+            ("docs/tmp/memo.md", "# メモ\n\n**太字**\n"),
+            ("docv/service/service.md", "# サービス仕様\n"),
         ]);
         assert!(result.is_empty(), "{result:#?}");
     }
 
     #[test]
     fn reports_frontmatter_problems() {
+        let current = version::current();
+        let newer = Version {
+            major: current.major + 1,
+            minor: 0,
+        };
         let result = check(&[
-            ("README.md", "---\nquestion: dup\n---\n# R\n"),
             ("docs/spec/a.md", "# A\n"),
             (
                 "docs/spec/b.md",
-                "---\nquestion: |\n  1\n  2\ntopics: [a, z]\n---\n# B\n",
+                &format!(
+                    "---\nmission: |\n  1\n  2\nversion: {current}\ntags: [仕様, z]\n---\n# B\n"
+                ),
             ),
-            ("docs/spec/c.md", "---\nquestion: [\n---\n# C\n"),
+            ("docs/spec/c.md", "---\nmission: [\n---\n# C\n"),
             (
-                "docs/plan/p.md",
-                "---\nquestion: q\nstatus: done\n---\n# P\n",
+                "docs/spec/d.md",
+                &format!("---\nmission: q\nversion: {newer}\n---\n# D\n"),
             ),
-            ("docs/archive/a.md", "---\nquestion: q\n---\n# A\n"),
+            ("docs/spec/e.md", "---\nmission: q\nversion: x\n---\n# E\n"),
         ]);
         let without_c: Vec<&str> = result
             .iter()
@@ -559,12 +475,12 @@ lint:
         assert_eq!(
             without_c,
             [
-                "README.md:2: error question-duplicated question が frontmatter と docv.yaml の両方にある",
-                "docs/archive/a.md:1: error source-missing source（移した元のファイルのパス）がない",
-                "docs/plan/p.md:3: error status-invalid status は todo か doing",
-                "docs/spec/a.md:1: error question-missing question がない。このファイルが答える問いを 1 文で書く",
-                "docs/spec/b.md:2: error question-multiline question は 1 行で書く",
-                "docs/spec/b.md:5: error topic-unknown 話題 z は docv.yaml の topics にない",
+                "docs/spec/a.md:1: error mission-missing mission がない。このファイルが答えることを 1 文で書く".to_string(),
+                format!("docs/spec/a.md:1: error version-missing version がない。このファイルが従う docv の版（{current}）を書く"),
+                "docs/spec/b.md:2: error mission-multiline mission は 1 行で書く".to_string(),
+                "docs/spec/b.md:6: error tag-unknown タグ z は docv.yaml の tags にない".to_string(),
+                format!("docs/spec/d.md:3: error version-newer version {newer} は、この docv（{current}）より新しい。docv を上げる"),
+                "docs/spec/e.md:3: error frontmatter-invalid version は「0.1」のように、メジャーとマイナーを . でつないで書く".to_string(),
             ]
         );
         assert!(
@@ -577,89 +493,73 @@ lint:
     #[test]
     fn reports_structure_problems() {
         let result = check(&[
-            ("docs/spec/a.md", "---\nquestion: q\n---\n# A\n\n# B\n"),
-            (
-                "docs/cost/c.md",
-                "---\nquestion: q\n---\n# C\n\n## 1. 単価\n",
-            ),
+            ("docs/spec/a.md", &format!("{}# A\n\n# B\n", fm(""))),
             (
                 "docs/plan/p.md",
-                "---\nquestion: q\nstatus: todo\n---\n# P\n\n- [x] done\n",
-            ),
-            (
-                "docs/archive/a.md",
-                "---\nquestion: q\nsource: s\n---\n# A\n\n## 案\n\n本文\n",
+                &format!("{}# P\n\n- [x] done\n", fm("tags: [計画]\n")),
             ),
         ]);
         assert_eq!(
             result,
             [
-                "docs/archive/a.md:7: error archive-entry-format 章に「- 理由:」の行がない",
-                "docs/archive/a.md:7: error archive-entry-format 章の見出しを「YYYY-MM-DD 見出し」にする",
-                "docs/cost/c.md:1: error section-required 「見積もり」を含む章（h2）がない",
-                "docs/plan/p.md:7: warn plan-done-task 終わったタスクが残っている。終わったタスクは消す",
-                "docs/spec/a.md:6: error title-count h1 が 2 個ある。1 つにする",
+                "docs/plan/p.md:8: warn done-task 終わったタスクが残っている。終わったタスクは消す",
+                "docs/spec/a.md:7: error title-count h1 が 2 個ある。1 つにする",
             ]
         );
     }
 
     #[test]
-    fn reports_wording_only_in_present_kinds() {
+    fn reports_wording_only_in_files_with_the_rule() {
         let result = check(&[
             (
                 "docs/spec/a.md",
-                "---\nquestion: q\n---\n# A\n\n## 変更履歴\n\n以前は X だった。いずれ直す。将来的に直す。\n",
+                &format!(
+                    "{}# A\n\n## 変更履歴\n\n以前は X だった。いずれ直す。将来的に直す。\n",
+                    fm("tags: [仕様]\n")
+                ),
             ),
             (
                 "docs/plan/p.md",
-                "---\nquestion: q\nstatus: todo\n---\n# P\n\n以前は\n",
+                &format!("{}# P\n\n以前は\n", fm("tags: [計画]\n")),
             ),
         ]);
         assert_eq!(
             result,
             [
-                "docs/spec/a.md:6: warn past-heading 見出しの「変更履歴」は過去を扱う語。経緯は archive に移す",
-                "docs/spec/a.md:8: warn past-wording 「いずれ」は過去や実装状態の言い回し。経緯は docv retire で archive に移す",
-                "docs/spec/a.md:8: warn past-wording 「以前は」は過去や実装状態の言い回し。経緯は docv retire で archive に移す",
+                "docs/spec/a.md:8: warn past-heading 見出しの「変更履歴」は過去を扱う語。決めた経緯は ADR に残す",
+                "docs/spec/a.md:10: warn past-wording 「いずれ」は過去や実装状態の言い回し。今の姿だけを書き、決めた経緯は ADR に残す",
+                "docs/spec/a.md:10: warn past-wording 「以前は」は過去や実装状態の言い回し。今の姿だけを書き、決めた経緯は ADR に残す",
             ]
         );
     }
 
     #[test]
-    fn reports_broken_links_and_lowers_level() {
+    fn reports_broken_links_and_slot_and_adr_problems() {
         let result = check(&[
             (
                 "docs/spec/a.md",
-                "---\nquestion: q\n---\n# A\n\n[x](missing.md) [y](https://example.com) [z](#top) [w](%E3%81%82.md) [v](/README.md)\n",
+                &format!(
+                    "{}# A\n\n[x](missing.md) [y](https://example.com) [z](#top) [w](%E3%81%82.md) [v](/README.md)\n",
+                    fm("")
+                ),
             ),
-            ("docs/spec/あ.md", "---\nquestion: q\n---\n# あ\n"),
+            ("docs/spec/あ.md", &format!("{}# あ\n", fm(""))),
             ("README.md", "# R\n"),
-            ("docs/loose/l.md", "# L\n"),
+            ("docv/service/manual.yaml", "commands: 1\n"),
+            ("docv/adr/a.md", "# A\n"),
         ]);
+        assert_eq!(result.len(), 3, "{result:#?}");
         assert_eq!(
-            result,
-            [
-                "docs/loose/l.md:1: warn question-missing question がない。このファイルが答える問いを 1 文で書く",
-                "docs/spec/a.md:6: error link-broken リンク先 missing.md がない",
-            ]
+            result[0],
+            "docs/spec/a.md:7: error link-broken リンク先 missing.md がない"
         );
-    }
-
-    #[test]
-    fn reports_links_to_tmp_and_skips_tmp_files() {
-        let result = check(&[
-            (
-                "docs/spec/a.md",
-                "---\nquestion: q\n---\n# A\n\n[memo](../tmp/memo.md) [gone](../tmp/gone.md)\n",
-            ),
-            ("docs/tmp/memo.md", "以前は TODO [x](missing.md)\n"),
-        ]);
+        assert!(
+            result[1].starts_with("docv/adr/a.md:1: error adr-invalid"),
+            "{result:#?}"
+        );
         assert_eq!(
-            result,
-            [
-                "docs/spec/a.md:6: error link-to-tmp tmp のファイル ../tmp/gone.md にリンクしている。tmp はいつ消えるか分からないので、リンクしない",
-                "docs/spec/a.md:6: error link-to-tmp tmp のファイル ../tmp/memo.md にリンクしている。tmp はいつ消えるか分からないので、リンクしない",
-            ]
+            result[2],
+            "docv/service/manual.yaml:1: error slot-invalid 利用マニュアルの枠の形に合わない: commands: invalid type: integer `1`, expected a sequence at line 1 column 11"
         );
     }
 
@@ -671,7 +571,7 @@ lint:
         write(dir.path(), "docs/spec/b.md", "# B\n");
         let project = Project::open(&Locate::default(), dir.path()).unwrap();
         let result = run(&project, &["docs/spec/b.md".to_string()], OPTIONS).unwrap();
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].path, "docs/spec/b.md");
+        assert_eq!(result.len(), 2);
+        assert!(result.iter().all(|d| d.path == "docs/spec/b.md"));
     }
 }

@@ -1,0 +1,21 @@
+---
+group: コマンド
+date: 2026-10-11
+supersedes: [fmt-command]
+---
+
+# 整形と textlint の自動修正を docv fix にまとめる
+
+## 背景
+
+textlint の自動修正も docv から呼ぶことにした。
+
+## 決めたこと
+
+整形と textlint の自動修正を `docv fix` にまとめる。整形が必要なファイルは check の format-diff で分かるので、`--check` は置かない。
+
+## 選ばなかった案
+
+| 案 | 選ばなかった理由 |
+| --- | --- |
+| check に --fix を付ける | check が通らないのに直さない、という選択肢はない。check は検査だけにする |
