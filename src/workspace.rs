@@ -97,18 +97,49 @@ impl Project {
     }
 
     /// Slot のディレクトリの中の .md のファイル（md の Slot と ADR）を、パスの辞書順で返す。
-    /// 原本のルールはかけず、整形と textlint だけをかける。output.dir の中と ignore に当てはまるものは除く。
+    /// 原本のルールはかけず、整形と textlint だけをかける。シンボリックリンクは書き換えないので除く。
     pub fn slot_markdown(&self) -> Result<Vec<String>> {
+        Ok(self
+            .walk_slots_dir()?
+            .into_iter()
+            .filter(|(rel, symlink)| !symlink && rel.ends_with(".md"))
+            .map(|(rel, _)| rel)
+            .collect())
+    }
+
+    /// Slot のディレクトリの中のファイル（Slot と ADR の候補）を、パスの辞書順で返す。シンボリックリンクも含む。
+    /// 除外するもの（.gitignore に書かれている、output.dir の中にある、ignore に当てはまる）と、
+    /// 名前がドットで始まるファイルとディレクトリ（.DS_Store など）は除く。
+    pub fn slot_dir_files(&self) -> Result<Vec<String>> {
+        Ok(self
+            .walk_slots_dir()?
+            .into_iter()
+            .map(|(rel, _)| rel)
+            .collect())
+    }
+
+    /// Slot のディレクトリの中のファイルと、それがシンボリックリンクか。
+    fn walk_slots_dir(&self) -> Result<Vec<(String, bool)>> {
         let dir = self.root.join(self.slots_dir());
         if !dir.is_dir() {
             return Ok(Vec::new());
         }
         let output_dir = normalize_dir(&self.config.output.dir);
-        let mut files: Vec<String> = self
-            .markdown_under(&dir)?
-            .into_iter()
-            .filter(|rel| !is_under(rel, &output_dir) && !self.ignore.is_match(rel))
-            .collect();
+        let mut files = Vec::new();
+        for entry in walker(&dir) {
+            let entry = entry?;
+            let Some(file_type) = entry.file_type() else {
+                continue;
+            };
+            if file_type.is_dir() {
+                continue;
+            }
+            let rel = relative(&self.root, entry.path())?;
+            if is_under(&rel, &output_dir) || self.ignore.is_match(&rel) {
+                continue;
+            }
+            files.push((rel, file_type.is_symlink()));
+        }
         files.sort();
         Ok(files)
     }
@@ -116,12 +147,7 @@ impl Project {
     /// dir の下の .md のファイルの、ルートからの相対パス。.gitignore に書かれたものと、シンボリックリンクは除く。
     fn markdown_under(&self, dir: &Path) -> Result<Vec<String>> {
         let mut files = Vec::new();
-        let walker = WalkBuilder::new(dir)
-            .require_git(false)
-            .git_global(false)
-            .ignore(false)
-            .build();
-        for entry in walker {
+        for entry in walker(dir) {
             let entry = entry?;
             if !entry.file_type().is_some_and(|t| t.is_file()) {
                 continue;
@@ -236,6 +262,15 @@ impl Project {
                 .unwrap_or_default()
         })
     }
+}
+
+/// dir の下を辿る。.gitignore に書かれたものと、名前がドットで始まるものは辿らない。
+fn walker(dir: &Path) -> ignore::Walk {
+    WalkBuilder::new(dir)
+        .require_git(false)
+        .git_global(false)
+        .ignore(false)
+        .build()
 }
 
 fn glob_set(patterns: &[String]) -> Result<GlobSet> {

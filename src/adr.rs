@@ -103,22 +103,17 @@ fn id_of(path: &str) -> &str {
 }
 
 /// adr/ の中の .md のパス（ルートからの相対パス）を、名前の順に返す。
+/// 除外するファイルと、名前がドットで始まるファイルは含まない（Project::slot_markdown）。
 fn files(project: &Project) -> Result<Vec<String>> {
-    let dir = dir(project);
-    let full = project.root.join(&dir);
-    if !full.is_dir() {
-        return Ok(Vec::new());
-    }
-    let mut paths = Vec::new();
-    for entry in fs::read_dir(&full).with_context(|| format!("{dir} を読めない"))? {
-        let entry = entry?;
-        let name = entry.file_name().to_string_lossy().into_owned();
-        if entry.file_type()?.is_file() && name.ends_with(".md") {
-            paths.push(format!("{dir}/{name}"));
-        }
-    }
-    paths.sort();
-    Ok(paths)
+    let prefix = format!("{}/", dir(project));
+    Ok(project
+        .slot_markdown()?
+        .into_iter()
+        .filter(|path| {
+            path.strip_prefix(&prefix)
+                .is_some_and(|name| !name.contains('/'))
+        })
+        .collect())
 }
 
 /// ADR を、日付と id の順に読む。読めないものは飛ばす（check が報告する）。

@@ -584,45 +584,21 @@ struct SlotFile {
     def: Option<(&'static Def, &'static str)>,
 }
 
+/// 除外するファイルと、名前がドットで始まるファイルは含まない（Project::slot_dir_files）。
 fn slot_files(project: &Project) -> Result<Vec<SlotFile>> {
     let dir = project.slots_dir();
-    let full = project.root.join(&dir);
-    if !full.is_dir() {
-        return Ok(Vec::new());
-    }
-    let mut rels = Vec::new();
-    collect_files(&full, "", &mut rels)?;
+    let prefix = format!("{dir}/");
     // adr/ は ADR のディレクトリ。Slot としては読まない（docs/spec/adr.md）。
-    let adr_dir = format!("{}/", crate::adr::DIR);
-    let mut files: Vec<SlotFile> = rels
+    let adr_dir = format!("{prefix}{}/", crate::adr::DIR);
+    Ok(project
+        .slot_dir_files()?
         .into_iter()
-        .filter(|rel| !rel.starts_with(&adr_dir))
-        .map(|rel| SlotFile {
-            path: format!("{dir}/{rel}"),
-            def: def_of_file(&rel),
+        .filter(|path| !path.starts_with(&adr_dir))
+        .map(|path| SlotFile {
+            def: def_of_file(path.strip_prefix(&prefix).unwrap_or(&path)),
+            path,
         })
-        .collect();
-    files.sort_by(|a, b| a.path.cmp(&b.path));
-    Ok(files)
-}
-
-/// dir の下のファイルを、prefix を付けた相対パスで集める。
-fn collect_files(dir: &Path, prefix: &str, out: &mut Vec<String>) -> Result<()> {
-    for entry in fs::read_dir(dir).with_context(|| format!("{} を読めない", dir.display()))? {
-        let entry = entry?;
-        let name = entry.file_name().to_string_lossy().into_owned();
-        let rel = if prefix.is_empty() {
-            name
-        } else {
-            format!("{prefix}/{name}")
-        };
-        if entry.file_type()?.is_dir() {
-            collect_files(&entry.path(), &rel, out)?;
-        } else {
-            out.push(rel);
-        }
-    }
-    Ok(())
+        .collect())
 }
 
 /// Slot を DEFS の順に読む。読めない Slot と、同じ Slot の 2 つ目のファイルは飛ばす（check が報告する）。

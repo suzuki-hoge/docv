@@ -537,6 +537,23 @@ overrides:
     }
 
     #[test]
+    fn skips_excluded_and_dot_files_in_slots_dir() {
+        let result = check(&[
+            (".gitignore", "memo.txt\n"),
+            ("docv/service/words.yaml", "groups: []\n"),
+            // output.dir の既定は docv/build
+            ("docv/build/.docv", ""),
+            ("docv/build/index.html", "<html></html>\n"),
+            ("docv/build/jpg/サービス仕様/用語集.jpg", ""),
+            ("docv/service/.DS_Store", ""),
+            ("docv/.cache/a.yaml", "a: 1\n"),
+            ("docv/service/memo.txt", "メモ\n"),
+            ("docv/adr/.draft.md", "# 下書き\n"),
+        ]);
+        assert!(result.is_empty(), "{result:#?}");
+    }
+
+    #[test]
     fn checks_only_format_in_slot_markdown() {
         let dir = tempfile::tempdir().unwrap();
         write(

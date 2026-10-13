@@ -32,6 +32,8 @@
 
 Slot は、Markdown とは別に、`slots.dir`（既定は `docv/`）から `<まとまり>/<ID>.<拡張子>` の名前のファイルだけを読む。拡張子は Slot ごとに決まる（YAML か md）。知らない項目があれば、読めない Slot として check が error にする。
 
+`slots.dir` の中でも、除外に当たるファイルと、名前がドットで始まるファイルとディレクトリ（`.DS_Store` など）は読まない。`output.dir` の既定の `docv/build` は `slots.dir` の中にあるが、出力は Slot として読まない。それ以外で Slot の名前でないファイルは、check が slot-unknown の error にする。
+
 `slots.dir` の中の Markdown（md の Slot と ADR）には、原本のルール（YAML front matter、書式の規則など）はかけない。整形と textlint だけを、管理対象のファイルと同じくかける。
 
 ## ソースの構成
