@@ -1,4 +1,4 @@
-//! docv fix。textlint の自動修正と整形で、管理対象のファイルを書き換える。docv/service/manual.yaml の docv fix。
+//! docv fix。textlint の自動修正と整形で、管理対象のファイルを書き換える。docv/service/manual.md の docv fix。
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -80,7 +80,7 @@ mod tests {
         write(
             root,
             "docv.yaml",
-            "version: 1\ndocs: [docs/spec/*.md]\nignore: [docs/tmp/**]\n",
+            "docs: [docs/spec/*.md]\nignore: [docs/tmp/**]\n",
         );
         write(root, "docs/spec/a.md", "---\nquestion: q\n---\n# A\n* x\n");
         write(root, "docs/spec/b.md", "# B\n");

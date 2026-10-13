@@ -1,7 +1,7 @@
 //! ADR（意思決定の記録）。docs/spec/adr.md。
 //!
 //! slots.dir の下の adr/ に、決定 1 つを 1 つの Markdown で置く。ファイル名（.md を除く）が id。
-//! システムが使う項目は frontmatter に、決定の中身（背景、決めたこと、選ばなかった案など）は本文に書く。題は本文の h1。
+//! システムが使う項目は YAML front matter に、決定の中身（背景、決めたこと、選ばなかった案など）は本文に書く。題は本文の h1。
 //! 状態は持たない。打ち消されたかどうかは、つながりからわかる。
 //! 過去の決定を打ち消すときは、新しい決定の supersedes から過去の決定の id を指す（未来から過去を参照する）。
 //! 過去から未来へのつながりは、読み込むときに組み立てる。
@@ -22,7 +22,7 @@ pub const DIR: &str = "adr";
 /// group を書かなかった ADR のまとまり。
 pub const NO_GROUP: &str = "その他";
 
-/// ADR の frontmatter。
+/// ADR の YAML front matter。
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Front {
@@ -45,7 +45,7 @@ pub struct Record {
     pub group: Option<String>,
     pub date: String,
     pub supersedes: Vec<String>,
-    /// frontmatter を除いた本文（Markdown）。
+    /// YAML front matter を除いた本文（Markdown）。
     pub body: String,
 }
 
@@ -53,12 +53,12 @@ pub struct Record {
 pub fn parse(id: &str, text: &str) -> Result<Record, (usize, String)> {
     let document = markdown::split(text);
     let Some(fm) = &document.frontmatter else {
-        return Err((1, "frontmatter がない".to_string()));
+        return Err((1, "YAML front matter がない".to_string()));
     };
     let front: Front = serde_yaml_ng::from_str(&fm.yaml).map_err(|e| {
         (
             e.location().map_or(1, |l| l.line() + 1),
-            format!("frontmatter が ADR の形に合わない: {e}"),
+            format!("YAML front matter が ADR の形に合わない: {e}"),
         )
     })?;
     let outline = markdown::outline(&document);
@@ -277,11 +277,7 @@ mod tests {
 
     fn project(files: &[(&str, &str)]) -> (tempfile::TempDir, Project) {
         let dir = tempfile::tempdir().unwrap();
-        write(
-            dir.path(),
-            "docv.yaml",
-            "version: 1\ndocs: [docs/**/*.md]\n",
-        );
+        write(dir.path(), "docv.yaml", "docs: [docs/**/*.md]\n");
         for (path, text) in files {
             write(dir.path(), path, text);
         }

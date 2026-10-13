@@ -228,7 +228,7 @@ mod tests {
     #[test]
     fn builds_builtin_config() {
         let config = config::parse(
-            "version: 1\ndocs: []\nlint:\n  textlint:\n    enabled: true\n    presets: [ja-technical-writing, ja-spacing]\n    rules:\n      ja-technical-writing/sentence-length: { max: 120 }\n      ja-technical-writing/no-exclamation-question-mark: false\n    prh: [docs/rule/prh.yml]\n",
+            "docs: []\nlint:\n  textlint:\n    enabled: true\n    presets: [ja-technical-writing, ja-spacing]\n    rules:\n      ja-technical-writing/sentence-length: { max: 120 }\n      ja-technical-writing/no-exclamation-question-mark: false\n    prh: [docs/rule/prh.yml]\n",
         )
         .unwrap();
         let textlint = &config.lint.textlint;

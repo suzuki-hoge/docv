@@ -1,7 +1,7 @@
-//! docv add。枠のファイルを、決まったパスに作る。docv/service/manual.yaml の docv add。
+//! docv add。Slot のファイルを、決まったパスに作る。docv/service/manual.md の docv add。
 //!
-//! パスは docv が枠ごとに決めていて、選ぶ余地はない。yaml の枠には項目のサンプル（テンプレ）を書き、md の枠は空のファイルを作る。
-//! yaml と md のどちらでも置ける枠（API 仕様書、DB 仕様書）は、`api-yaml` と `api-md` のように、名前で形を選ぶ。
+//! パスは docv が Slot ごとに決めていて、選ぶ余地はない。yaml の Slot には項目のサンプル（テンプレ）を書き、md の Slot は空のファイルを作る。
+//! yaml と md のどちらでも置ける Slot（API 仕様書、DB 仕様書）は、`api-yaml` と `api-md` のように、名前で形を選ぶ。
 
 use std::fmt::Write as _;
 use std::fs;
@@ -11,8 +11,8 @@ use anyhow::{Context, Result, bail};
 use crate::slot::{self, DEFS, Def, Format};
 use crate::workspace::Project;
 
-/// 作れる枠の名前と、枠と拡張子の組を、枠の一覧の順に返す。
-fn pages() -> Vec<(String, &'static Def, &'static str)> {
+/// 作れる Slot の名前と、Slot と拡張子の組を、Slot の一覧の順に返す。
+pub fn pages() -> Vec<(String, &'static Def, &'static str)> {
     DEFS.iter()
         .flat_map(|def| {
             def.extensions().iter().map(move |ext| {
@@ -26,7 +26,7 @@ fn pages() -> Vec<(String, &'static Def, &'static str)> {
         .collect()
 }
 
-/// docv add --list の出力。名前、作るファイル（slots.dir からの相対パス）、枠の名前を 1 行ずつ並べる。
+/// docv add --list の出力。名前、作るファイル（slots.dir からの相対パス）、Slot の名前を 1 行ずつ並べる。
 pub fn list() -> String {
     let pages = pages();
     let rows: Vec<(String, String, &str)> = pages
@@ -48,10 +48,10 @@ pub fn list() -> String {
     out
 }
 
-/// 枠のファイルを作り、ルートからの相対パスを返す。
+/// Slot のファイルを作り、ルートからの相対パスを返す。
 pub fn run(project: &Project, slot: &str) -> Result<String> {
     let Some((_, def, ext)) = pages().into_iter().find(|(p, ..)| p == slot) else {
-        bail!("{slot} は枠の名前ではない。docv add --list で作れる枠の一覧を出す");
+        bail!("{slot} は Slot の名前ではない。docv add --list で作れる Slot の一覧を出す");
     };
     let dir = project.slots_dir();
     if let Some(existing) = def
@@ -64,7 +64,7 @@ pub fn run(project: &Project, slot: &str) -> Result<String> {
     }
     let rel = format!("{dir}/{}/{}.{ext}", def.group.dir(), def.id);
     let text = match ext {
-        "yaml" => slot::template(def.id).expect("yaml の枠にはテンプレがある"),
+        "yaml" => slot::template(def.id).expect("yaml の Slot にはテンプレがある"),
         _ => "",
     };
     let path = project.root.join(&rel);
@@ -90,11 +90,7 @@ mod tests {
 
     fn project() -> (tempfile::TempDir, Project) {
         let dir = tempfile::tempdir().unwrap();
-        write(
-            dir.path(),
-            "docv.yaml",
-            "version: 1\ndocs: [docs/**/*.md]\n",
-        );
+        write(dir.path(), "docv.yaml", "docs: [docs/**/*.md]\n");
         let project = Project::open(&Locate::default(), dir.path()).unwrap();
         (dir, project)
     }
@@ -102,10 +98,10 @@ mod tests {
     #[test]
     fn creates_slots_at_fixed_paths() {
         let (dir, project) = project();
-        assert_eq!(run(&project, "manual").unwrap(), "docv/service/manual.yaml");
+        assert_eq!(run(&project, "words").unwrap(), "docv/service/words.yaml");
         assert_eq!(
-            fs::read_to_string(dir.path().join("docv/service/manual.yaml")).unwrap(),
-            include_str!("../templates/slot/manual.yaml")
+            fs::read_to_string(dir.path().join("docv/service/words.yaml")).unwrap(),
+            include_str!("../templates/slot/words.yaml")
         );
         assert_eq!(run(&project, "service").unwrap(), "docv/service/service.md");
         assert_eq!(
@@ -120,8 +116,8 @@ mod tests {
         let (_dir, project) = project();
         run(&project, "db-yaml").unwrap();
         for (page, message) in [
-            ("api", "枠の名前ではない"),
-            ("docv/service/manual.yaml", "枠の名前ではない"),
+            ("api", "Slot の名前ではない"),
+            ("docv/service/words.yaml", "Slot の名前ではない"),
             ("db-yaml", "docv/system/db.yaml がすでにある"),
             ("db-md", "docv/system/db.yaml がすでにある"),
         ] {
@@ -136,7 +132,7 @@ mod tests {
         assert!(list.starts_with("install "), "{list}");
         assert!(list.contains("api-yaml"), "{list}");
         assert!(list.contains("api-md"), "{list}");
-        assert!(list.contains("service/manual.yaml"), "{list}");
+        assert!(list.contains("service/manual.md"), "{list}");
         assert_eq!(list.lines().count(), DEFS.len() + 2);
     }
 }

@@ -1,0 +1,42 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: 費用（operation/cost.yaml）
+description: 何にいくらかかり、費用を理由に何をしていないか
+type: object
+additionalProperties: false
+properties:
+  accepted_items:
+    description: 費用をかけて使っているもの
+    type: array
+    items:
+      $ref: "#/$defs/item"
+  rejected_items:
+    description: 費用を理由にやっていないこと。予算が変われば、`accepted_items` との間で項目を移す
+    type: array
+    items:
+      $ref: "#/$defs/item"
+  body:
+    description: Slot のページの最後に出す Markdown
+    type: string
+  include:
+    description: ページに埋め込む Markdown の、ルートからの相対パスの配列。`パス` はファイル全体を（YAML front matter と h1 を除く）、`パス#見出し` はその見出しの章を埋め込む
+    type: array
+    items:
+      type: string
+$defs:
+  item:
+    type: object
+    additionalProperties: false
+    required: [name]
+    properties:
+      name:
+        description: 名前
+        type: string
+      desc:
+        description: 何のためか、なぜやらないか
+        type: string
+      monthly:
+        description: 1 か月あたりの金額。数でも文字列（「3 ドル」など）でもよい
+        type: [number, string]
+      ref:
+        description: 料金のページなどの、ルートからの相対パスか URL
+        type: string

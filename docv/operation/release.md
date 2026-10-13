@@ -1,10 +1,10 @@
 # リリース
 
-版は Cargo.toml の version で決め、タグの push を合図に、GitHub Actions が各プラットフォーム向けのバイナリを GitHub Release に置く。
+版は `Cargo.toml` の `version` で決め、タグの push を合図に、GitHub Actions が各プラットフォーム向けのバイナリを GitHub Release に置く。
 
 ## 手順
 
-1. Cargo.toml の version を上げてコミットする
+1. `Cargo.toml` の `version` を上げてコミットする
 2. v で始まるタグを push する（人間が行う）
 
    ```sh

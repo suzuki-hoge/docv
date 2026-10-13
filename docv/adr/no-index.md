@@ -7,18 +7,18 @@ date: 2026-10-12
 
 ## 背景
 
-AI Agent が読むファイルを選べるように、枠、原本、ADR の一覧と、それぞれが答える問いを出す `docv index` を持っていた。
+AI Agent が読むファイルを選べるように、Slot、原本、ADR の一覧と、それぞれが答える問いを出す `docv index` を持っていた。
 
 ## 決めたこと
 
-`docv index` をなくす。AI Agent は、docv/ の枠と、docs/ の原本の frontmatter の mission を見て、読むファイルを選ぶ。
+`docv index` をなくす。AI Agent は、`docv/` の Slot と、`docs/` の原本の YAML front matter の `mission` を見て、読むファイルを選ぶ。
 
 ## 結果
 
-コマンドが 1 つ減る。CLAUDE.md などには `docv desc` の実行だけを書けばよい。
+コマンドが 1 つ減る。`CLAUDE.md` などには `docv desc` の実行だけを書けばよい。
 
 ## 選ばなかった案
 
 | 案 | 選ばなかった理由 |
 | --- | --- |
-| `docv index` を残す | 枠は docv/ に、原本は docs/ に分かれていて、どこに何があるかは置き場所で自明。一覧を出すコマンドに価値がない |
+| `docv index` を残す | Slot は `docv/` に、原本は `docs/` に分かれていて、どこに何があるかは置き場所で自明。一覧を出すコマンドに価値がない |

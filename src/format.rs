@@ -1,4 +1,4 @@
-//! Markdown の整形。整形の形は docv/service/manual.yaml の docv fix の「整形の形」。
+//! Markdown の整形。整形の形は docv/service/manual.md の docv fix の「整形の形」。
 
 use anyhow::{Result, anyhow, bail};
 use dprint_plugin_markdown::configuration::{
@@ -19,13 +19,13 @@ fn configuration() -> Configuration {
         .build()
 }
 
-/// ファイル全体を整形する。frontmatter は中身を変えず、本文だけを dprint-plugin-markdown で整形する。
+/// ファイル全体を整形する。YAML front matter は中身を変えず、本文だけを dprint-plugin-markdown で整形する。
 pub fn format(text: &str) -> Result<String> {
     let text = text.replace("\r\n", "\n");
     let document = markdown::split(&text);
     let mut head = match &document.frontmatter {
         None => String::new(),
-        Some(fm) if !fm.closed => bail!("frontmatter を閉じる --- がない"),
+        Some(fm) if !fm.closed => bail!("YAML front matter を閉じる --- がない"),
         Some(_) => text
             .split_inclusive('\n')
             .take(document.body_start_line - 1)

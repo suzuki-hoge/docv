@@ -1,9 +1,9 @@
-//! docv build-html と docv build-image。人間向けの HTML と、枠のページの JPG を生成する。docv/service/service.md の「HTML の構成」、docv/system/system.md の「HTML の作り」。
+//! docv build-html と docv build-image。人間向けの HTML と、Slot のページの JPG を生成する。docv/service/service.md の「HTML の構成」、docv/system/system.md の「HTML の作り」。
 //!
 //! トップは 3 ページに分け、サイドバーで行き来する。
-//! index.html（プロジェクト概要）に docv の規格のファイル（枠）のページへのカード、ADR.html に決定のつながりの図、
+//! index.html（プロジェクト概要）に docv の規格のファイル（Slot）のページへのカード、ADR.html に決定のつながりの図、
 //! プロジェクト詳細.html にプロジェクトが自由に書いたファイル（原本）のツリーを置く。
-//! 枠は 1 つずつ独立したページにし、`<まとまり>/<枠>.html` に置く。
+//! Slot は 1 つずつ独立したページにし、`<まとまり>/<Slot>.html` に置く。
 //! 画像にしても読めるように、折りたたみは使わない。OS ごとの手順のタブは、印刷の表示（JPG）ではすべて並べる。
 
 use std::cell::RefCell;
@@ -83,7 +83,7 @@ struct Page {
     title: String,
     mission: Option<String>,
     tags: Vec<String>,
-    /// frontmatter を除いた本文。
+    /// YAML front matter を除いた本文。
     body: String,
 }
 
@@ -97,9 +97,9 @@ pub fn html(project: &Project, out: &Path) -> Result<()> {
     finish_out(project, &out)
 }
 
-/// docv build-image。枠のページを一時的なディレクトリに作り、出力先の jpg/ に JPG だけを書く。
-/// 枠のページごとに 1 枚。見つけやすいように、まとまりと枠の表示名をパスにする。
-/// Markdown から作るページ（md の枠、ADR、原本）は、GitHub で md をそのまま見られるので JPG にしない。
+/// docv build-image。Slot のページを一時的なディレクトリに作り、出力先の jpg/ に JPG だけを書く。
+/// Slot のページごとに 1 枚。見つけやすいように、まとまりと Slot の表示名をパスにする。
+/// Markdown から作るページ（md の Slot、ADR、原本）は、GitHub で md をそのまま見られるので JPG にしない。
 pub fn image(project: &Project, out: &Path) -> Result<()> {
     let out = prepare_out(out, false)?;
     let work = std::env::temp_dir().join(format!("docv-html-{}", std::process::id()));
@@ -126,7 +126,7 @@ pub fn image(project: &Project, out: &Path) -> Result<()> {
     finish_out(project, &out)
 }
 
-/// out にすべてのページを書き、読み込んだ枠を返す。
+/// out にすべてのページを書き、読み込んだ Slot を返す。
 fn render(project: &Project, out: &Path) -> Result<Vec<Slot>> {
     let mut pages = Vec::new();
     for path in project.managed()? {
@@ -168,17 +168,17 @@ fn finish_out(project: &Project, out: &Path) -> Result<()> {
     write(&out.join(MARKER), MARKER_TEXT)
 }
 
-/// 枠のページを作るか。外の定義へのリンク（ref）だけの枠は、ページを作らず、index.html から直接リンクする。
+/// Slot のページを作るか。外の定義へのリンク（ref）だけの Slot は、ページを作らず、index.html から直接リンクする。
 fn has_page(slot: &Slot) -> bool {
     !matches!(slot.content, Content::Ref(_))
 }
 
-/// 枠のページの、出力先からの相対パス。`サービス仕様/利用マニュアル.html`。
+/// Slot のページの、出力先からの相対パス。`サービス仕様/利用マニュアル.html`。
 fn page_path(slot: &Slot) -> String {
     format!("{}/{}.html", slot.def.group.label(), slot.def.label)
 }
 
-/// 枠の JPG の、出力先からの相対パス。`jpg/サービス仕様/利用マニュアル.jpg`。
+/// Slot の JPG の、出力先からの相対パス。`jpg/サービス仕様/用語集.jpg`。
 fn jpg_path(slot: &Slot) -> String {
     format!("jpg/{}/{}.jpg", slot.def.group.label(), slot.def.label)
 }
@@ -253,7 +253,7 @@ struct Site<'a> {
 }
 
 impl Site<'_> {
-    /// index.html（プロジェクト概要）。枠のページへのカード。
+    /// index.html（プロジェクト概要）。Slot のページへのカード。
     fn render_index(&self) -> String {
         *self.dir.borrow_mut() = self.out.to_path_buf();
         let mut out = String::new();
@@ -365,7 +365,7 @@ impl Site<'_> {
         page(title, &nav, body, aside)
     }
 
-    /// 枠のページ。
+    /// Slot のページ。
     fn render_slot(&self, slot: &Slot) -> String {
         *self.dir.borrow_mut() = self.out.join(slot.def.group.label());
         let mut out = String::new();
@@ -377,13 +377,13 @@ impl Site<'_> {
         )
     }
 
-    /// 枠のページへのカード。まとまりごとに、すべての枠をカードで横に並べる。
-    /// ファイルのない枠は、リンクにせずグレーで出す。
+    /// Slot のページへのカード。まとまりごとに、すべての Slot をカードで横に並べる。
+    /// ファイルのない Slot は、リンクにせずグレーで出す。
     fn index(&self, out: &mut String) {
         if self.slots.is_empty() {
             let _ = writeln!(
                 out,
-                "<p class=\"note\">枠のファイルがない。{} に枠のファイルを置くと、カードから開ける。</p>",
+                "<p class=\"note\">Slot のファイルがない。{} に Slot のファイルを置くと、カードから開ける。</p>",
                 escape(&self.project.slots_dir())
             );
         }
@@ -532,7 +532,7 @@ impl Site<'_> {
         let _ = writeln!(out, "</section>");
     }
 
-    /// 枠ごとの形の中身。
+    /// Slot ごとの形の中身。
     fn slot_body(&self, slot: &Slot) -> String {
         let mut body = String::new();
         let out = &mut body;
@@ -545,7 +545,6 @@ impl Site<'_> {
                     self.steps(out, slot.def.id, &c.steps);
                 }
             }
-            Content::Commands(c) => self.commands(out, &c.commands),
             Content::Words(c) => self.words(out, &c.groups),
             Content::Stack(c) => self.stack(out, &c.stack),
             // ページを作らない（has_page）。
@@ -563,14 +562,16 @@ impl Site<'_> {
                     .parent()
                     .unwrap_or(Path::new(""))
                     .to_path_buf();
-                let _ = writeln!(out, "{}", self.markdown(text, &base, true, 2));
+                // md の Slot はページ全体なので、原本と同じく見出しに id を付け、ページ内リンクで飛べるようにする。
+                let (html, _) = self.markdown_with_toc(text, &base, true, 2);
+                let _ = writeln!(out, "{html}");
             }
         }
         self.extra(out, slot);
         body
     }
 
-    /// 枠の body と include。
+    /// Slot の body と include。
     fn extra(&self, out: &mut String, slot: &Slot) {
         let (body, include) = slot.content.body_and_include();
         if let Some(body) = body {
@@ -702,44 +703,6 @@ impl Site<'_> {
             .unwrap_or_default()
     }
 
-    /// コマンド。先頭に「コマンド | 説明」の表を置き、コマンドごとに h2（左にコマンド、右に説明）、details、オプションの順に出す。
-    fn commands(&self, out: &mut String, commands: &[slot::Command]) {
-        if commands.is_empty() {
-            return;
-        }
-        let line = |c: &slot::Command| match &c.args {
-            Some(args) => format!("{} {args}", c.command),
-            None => c.command.clone(),
-        };
-        let _ = writeln!(
-            out,
-            "<table class=\"toc\">\n<thead><tr><th>コマンド</th><th>説明</th></tr></thead>\n<tbody>"
-        );
-        for c in commands {
-            let _ = writeln!(
-                out,
-                "<tr><td><a href=\"#{}\">{}</a></td><td>{}</td></tr>",
-                slug(&c.command),
-                escape(&line(c)),
-                self.inline(&c.description)
-            );
-        }
-        let _ = writeln!(out, "</tbody>\n</table>");
-        for c in commands {
-            let _ = writeln!(
-                out,
-                "<h2 class=\"command\" id=\"{}\"><span>{}</span><span class=\"desc\">{}</span></h2>",
-                slug(&c.command),
-                escape(&line(c)),
-                self.inline(&c.description)
-            );
-            if let Some(details) = &c.details {
-                let _ = writeln!(out, "<div class=\"details\">{}</div>", self.md(details));
-            }
-            self.options(out, &c.options);
-        }
-    }
-
     /// 用語集。まとまりごとに h2 と「日本語 | 英語 | 意味」の表。
     fn words(&self, out: &mut String, groups: &[slot::WordGroup]) {
         for group in groups {
@@ -759,26 +722,6 @@ impl Site<'_> {
             }
             let _ = writeln!(out, "</tbody>\n</table>");
         }
-    }
-
-    fn options(&self, out: &mut String, options: &[slot::CommandOption]) {
-        if options.is_empty() {
-            return;
-        }
-        let _ = writeln!(
-            out,
-            "<table>\n<thead><tr><th>オプション</th><th>意味</th><th>既定</th></tr></thead>\n<tbody>"
-        );
-        for o in options {
-            let _ = writeln!(
-                out,
-                "<tr><td><code>{}</code></td><td>{}</td><td>{}</td></tr>",
-                escape(&o.name),
-                self.inline(&o.description),
-                code_of(o.default.as_ref())
-            );
-        }
-        let _ = writeln!(out, "</tbody>\n</table>");
     }
 
     fn stack(&self, out: &mut String, groups: &[slot::StackGroup]) {
@@ -995,7 +938,7 @@ impl Site<'_> {
 
     // ---- Markdown ----
 
-    /// 枠の中の文字列（ルートを起点にした Markdown）を描く。h2 の下に置くので、見出しは h3 から。
+    /// Slot の中の文字列（ルートを起点にした Markdown）を描く。h2 の下に置くので、見出しは h3 から。
     fn md(&self, text: &str) -> String {
         self.markdown(text, Path::new(""), false, 3)
     }
@@ -1010,7 +953,7 @@ impl Site<'_> {
     }
 
     /// Markdown を HTML にする。base はリンクの起点（ルートからの相対パス）。
-    /// drop_h1 なら、最初の h1 を除く（Markdown の枠。ページの h1 と重なるため）。
+    /// drop_h1 なら、最初の h1 を除く（Markdown の Slot。ページの h1 と重なるため）。
     /// 見出しは、いちばん浅いものが top の段になるように付け直す。ページの中で h1 から h2、h3 と段を飛ばさないため。
     /// `<details>` は開いた状態にする。画像にしても中身が読めるように。
     fn markdown(&self, text: &str, base: &Path, drop_h1: bool, top: usize) -> String {
@@ -1201,7 +1144,7 @@ impl Site<'_> {
     }
 }
 
-/// 枠のアイコン。線で描いた 24 × 24 の SVG。外部の素材に頼らず、バイナリに持つ。
+/// Slot のアイコン。線で描いた 24 × 24 の SVG。外部の素材に頼らず、バイナリに持つ。
 fn icon(id: &str) -> String {
     let shapes = match id {
         // 下向きの矢印と受け皿
@@ -1364,12 +1307,6 @@ fn open_details(html: &str) -> String {
     html.replace("<details>", "<details open>")
 }
 
-fn code_of(value: Option<&serde_yaml_ng::Value>) -> String {
-    value
-        .map(|v| format!("<code>{}</code>", escape(&slot::scalar(v))))
-        .unwrap_or_default()
-}
-
 fn strip_paragraph(html: &str) -> String {
     let trimmed = html.trim();
     match trimmed
@@ -1425,7 +1362,7 @@ mod tests {
         write_file(
             dir.path(),
             "docv.yaml",
-            "version: 1\ntitle: demo\ndocs: [docs/**/*.md]\nignore: [docs/tmp/**]\n",
+            "title: demo\ndocs: [docs/**/*.md]\nignore: [docs/tmp/**]\n",
         );
         for (path, text) in files {
             write_file(dir.path(), path, text);
@@ -1461,8 +1398,8 @@ mod tests {
                 "# サービス仕様\n\n概要の本文\n\n## 部品\n\n[a](../../docs/spec/a.md)\n\n<details>\n\n細部\n\n</details>\n\n### 小見出し\n",
             ),
             (
-                "docv/service/manual.yaml",
-                "commands:\n  - command: demo run\n    description: 動かす\n    details: 詳しく\n",
+                "docv/service/manual.md",
+                "# 利用マニュアル\n\n| コマンド | 説明 |\n| --- | --- |\n| [demo run](#demo-run) | 動かす |\n\n## demo run\n\n詳しく\n",
             ),
             ("docv/system/api.yaml", "ref: openapi.yaml\n"),
             ("docv/system/db.md", "# DB 仕様書\n\n表\n"),
@@ -1474,7 +1411,7 @@ mod tests {
         let out = dir.path().join("out");
         html(&project, &out).unwrap();
 
-        // トップは 3 ページ。index.html（プロジェクト概要）には、枠のページへのカードだけを置く
+        // トップは 3 ページ。index.html（プロジェクト概要）には、Slot のページへのカードだけを置く
         let index = fs::read_to_string(out.join(PAGE)).unwrap();
         let detail = fs::read_to_string(out.join(DETAIL_PAGE)).unwrap();
         let adr_index = fs::read_to_string(out.join(ADR_PAGE)).unwrap();
@@ -1502,7 +1439,7 @@ mod tests {
             "{index}"
         );
         assert!(!index.contains("<p class=\"step-name\">"), "{index}");
-        // ファイルのない枠も、リンクにせずグレーで並べる
+        // ファイルのない Slot も、リンクにせずグレーで並べる
         assert!(
             index.contains("<span class=\"card missing\"><svg class=\"icon\""),
             "{index}"
@@ -1542,11 +1479,11 @@ mod tests {
         assert!(plan < spec, "{detail}");
         assert!(!detail.contains("tmp/"), "{detail}");
 
-        // 枠は 1 つずつ独立したページ。同じ id の手順は os ごとのタブ、ほかは 1 つの手順
+        // Slot は 1 つずつ独立したページ。同じ id の手順は os ごとのタブ、ほかは 1 つの手順
         let read = |path: &str| fs::read_to_string(out.join(path)).unwrap();
         let install = read("サービス仕様/インストール.html");
         assert!(install.contains("</svg>インストール</h1>"), "{install}");
-        // 枠のページのサイドバーは、1 つ上のトップのページを指す
+        // Slot のページのサイドバーは、1 つ上のトップのページを指す
         assert!(
             install
                 .contains("<a href=\"../index.html\" aria-current=\"page\">プロジェクト概要</a>"),
@@ -1567,34 +1504,32 @@ mod tests {
             "{install}"
         );
         assert!(install.contains("本文"), "{install}");
-        // Markdown の枠は、h1 を除き、見出しを下げて、そのまま出す。details は開く
+        // Markdown の Slot は、h1 を除き、見出しを下げて、そのまま出す。見出しには id を付ける。details は開く
         let service = read("サービス仕様/サービス仕様.html");
-        assert!(service.contains("<h2>部品</h2>"), "{service}");
+        assert!(service.contains("<h2 id=\"部品\">部品</h2>"), "{service}");
         assert!(
             // Markdown の中のリンクは、pulldown-cmark が和名をパーセントエンコードする
             service.contains("href=\"../%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E8%A9%B3%E7%B4%B0/docs/spec/a.html\">a</a>"),
             "{service}"
         );
         assert!(service.contains("<details open>"), "{service}");
-        // 利用マニュアルは、先頭に「コマンド | 説明」の表、コマンドごとに h2 と details
+        // md の Slot の見出しには id が付き、ページ内リンクで飛べる
         let manual = read("サービス仕様/利用マニュアル.html");
         assert!(
-            manual.contains("<tr><td><a href=\"#demo-run\">demo run</a></td><td>動かす</td></tr>"),
+            manual.contains("<a href=\"#demo-run\">demo run</a>"),
             "{manual}"
         );
         assert!(
-            manual.contains(
-                "<h2 class=\"command\" id=\"demo-run\"><span>demo run</span><span class=\"desc\">動かす</span></h2>\n<div class=\"details\"><p>詳しく</p>"
-            ),
+            manual.contains("<h2 id=\"demo-run\">demo run</h2>"),
             "{manual}"
         );
-        // ref だけの枠はページを作らず、カードから定義へ直接リンクする
+        // ref だけの Slot はページを作らず、カードから定義へ直接リンクする
         assert!(
             index.contains("<a class=\"card\" href=\"../openapi.yaml\">"),
             "{index}"
         );
         assert!(!out.join("システム仕様/API 仕様書.html").exists());
-        // 名前に空白のある枠のページは、リンクで空白を %20 にする
+        // 名前に空白のある Slot のページは、リンクで空白を %20 にする
         assert!(
             index.contains("href=\"システム仕様/DB%20仕様書.html\""),
             "{index}"
@@ -1646,7 +1581,7 @@ mod tests {
         );
         assert_headings(&rust);
 
-        // 枠のページは、h1 が 1 つで、見出しの段を飛ばさない
+        // Slot のページは、h1 が 1 つで、見出しの段を飛ばさない
         for slot in slot::load(&project).unwrap().iter().filter(|s| has_page(s)) {
             let html = read(&page_path(slot));
             assert_headings(&html);
@@ -1741,11 +1676,11 @@ mod tests {
     #[test]
     fn puts_jpg_under_group_and_label() {
         let slot = Slot {
-            def: slot::def("manual").unwrap(),
-            path: "docv/service/manual.yaml".to_string(),
+            def: slot::def("words").unwrap(),
+            path: "docv/service/words.yaml".to_string(),
             content: Content::Markdown(String::new()),
         };
-        assert_eq!(jpg_path(&slot), "jpg/サービス仕様/利用マニュアル.jpg");
+        assert_eq!(jpg_path(&slot), "jpg/サービス仕様/用語集.jpg");
     }
 
     #[test]

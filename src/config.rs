@@ -1,6 +1,6 @@
 //! docv.yaml の読み込みと検証。項目の意味は docs/spec/config.md。
 //!
-//! docv.yaml にはツールの設定と、プロジェクト全体で共有する語彙だけを書く。ファイルごとの設定は frontmatter に書く。
+//! docv.yaml にはツールの設定と、プロジェクト全体で共有する語彙だけを書く。ファイルごとの設定は YAML front matter に書く。
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -19,14 +19,13 @@ pub const TAG_RULES: &[&str] = &["no-past-wording", "no-done-task"];
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
-    pub version: u32,
     pub title: Option<String>,
     pub repository: Option<Repository>,
     /// 管理対象のファイルの glob。
     pub docs: Vec<String>,
     #[serde(default)]
     pub ignore: Vec<String>,
-    /// タグの一覧。書いたときだけ、frontmatter の tags をこの中に限る。
+    /// タグの一覧。書いたときだけ、YAML front matter の tags をこの中に限る。
     pub tags: Option<Vec<String>>,
     #[serde(default)]
     pub slots: Slots,
@@ -51,7 +50,7 @@ pub struct Override {
     pub style: Option<bool>,
     /// 整形するか。
     pub format: Option<bool>,
-    /// frontmatter（mission と version）を必須にするか。
+    /// YAML front matter の mission を必須にするか。
     pub mission: Option<Requirement>,
 }
 
@@ -173,11 +172,6 @@ pub fn load(path: &Path) -> Result<Config> {
 }
 
 impl Config {
-    /// docv.yaml がないときの設定。すべてのファイルが管理外になる。
-    pub fn unconfigured() -> Config {
-        parse("version: 1\ndocs: []\n").expect("空の設定は正しい")
-    }
-
     /// タグにかけるルール。
     pub fn rules_of<'a>(&'a self, tags: &'a [String]) -> impl Iterator<Item = &'a str> + 'a {
         tags.iter()
@@ -295,7 +289,7 @@ mod tests {
 
     #[test]
     fn fills_defaults() {
-        let config = parse("version: 1\ndocs: []\n").unwrap();
+        let config = parse("docs: []\n").unwrap();
         assert_eq!(config.slots.dir, "docv");
         assert_eq!(config.output.dir, "docv/build");
         assert!(config.output.commit);
@@ -311,28 +305,26 @@ mod tests {
 
     #[test]
     fn rejects_schema_violation() {
-        let error = error_of("version: 2\ndocs: []\nunknown: 1\n");
+        let error = error_of("docs: []\nunknown: 1\n");
         assert!(error.contains("スキーマに合わない"), "{error}");
-        assert!(error.contains("/version"), "{error}");
+        assert!(error.contains("unknown"), "{error}");
     }
 
     #[test]
     fn rejects_unknown_tag_and_rule() {
-        let error = error_of(
-            "version: 1\ndocs: []\ntags: [仕様]\nlint:\n  tags:\n    計画: [no-done-task]\n",
-        );
+        let error = error_of("docs: []\ntags: [仕様]\nlint:\n  tags:\n    計画: [no-done-task]\n");
         assert!(
             error.contains("/lint/tags/計画: タグ 計画 は tags にない"),
             "{error}"
         );
-        let error = error_of("version: 1\ndocs: []\nlint:\n  tags:\n    仕様: [no-such-rule]\n");
+        let error = error_of("docs: []\nlint:\n  tags:\n    仕様: [no-such-rule]\n");
         assert!(error.contains("/lint/tags/仕様/0"), "{error}");
     }
 
     #[test]
     fn collects_rules_of_tags() {
         let config = parse(
-            "version: 1\ndocs: []\nlint:\n  tags:\n    仕様: [no-past-wording]\n    計画: [no-done-task]\n",
+            "docs: []\nlint:\n  tags:\n    仕様: [no-past-wording]\n    計画: [no-done-task]\n",
         )
         .unwrap();
         let tags = ["計画".to_string(), "その他".to_string()];
@@ -342,7 +334,7 @@ mod tests {
     #[test]
     fn rejects_textlint_rule_of_unused_preset() {
         let error = error_of(
-            "version: 1\ndocs: []\nlint:\n  textlint:\n    presets: [ja-spacing]\n    rules:\n      jtf-style/x: false\n",
+            "docs: []\nlint:\n  textlint:\n    presets: [ja-spacing]\n    rules:\n      jtf-style/x: false\n",
         );
         assert!(
             error.contains(
@@ -355,7 +347,7 @@ mod tests {
     #[test]
     fn reads_overrides() {
         let config = parse(
-            "version: 1\ndocs: []\noverrides:\n  - paths: [docs/tmp/**]\n    textlint: false\n    mission: optional\n",
+            "docs: []\noverrides:\n  - paths: [docs/tmp/**]\n    textlint: false\n    mission: optional\n",
         )
         .unwrap();
         assert_eq!(config.overrides[0].textlint, Some(false));

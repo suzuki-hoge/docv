@@ -1,4 +1,4 @@
-//! Markdown のファイルを、frontmatter と、check が見る要素（見出し、リンク、地の文、タスク）に分ける。
+//! Markdown のファイルを、YAML front matter と、check が見る要素（見出し、リンク、地の文、タスク）に分ける。
 
 use std::ops::Range;
 use std::path::{Component, Path, PathBuf};
@@ -10,7 +10,7 @@ pub const OPTIONS: Options = Options::ENABLE_TABLES
     .union(Options::ENABLE_TASKLISTS)
     .union(Options::ENABLE_STRIKETHROUGH);
 
-/// frontmatter と本文に分けたファイル。
+/// YAML front matter と本文に分けたファイル。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Document {
     pub frontmatter: Option<Frontmatter>,

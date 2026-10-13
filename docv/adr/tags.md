@@ -12,8 +12,8 @@ supersedes: [kinds]
 
 ## 決めたこと
 
-分類は、frontmatter の tags に任意の数を書くタグで行う。種類ごとのルールは、docv.yaml の lint.tags でタグに付ける。
+分類は、YAML front matter の `tags` に任意の数を書くタグで行う。種類ごとのルールは、`docv.yaml` の `lint.tags` でタグに付ける。
 
 ## 結果
 
-どのプロジェクトにもある問いは、タグではなく docv の規格のファイル（枠）で答える。
+どのプロジェクトにもある問いは、タグではなく docv の規格のファイル（Slot）で答える。

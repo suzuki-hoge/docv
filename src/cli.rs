@@ -1,4 +1,4 @@
-//! コマンドラインの入口。コマンドの一覧は docv/service/manual.yaml。
+//! コマンドラインの入口。コマンドの一覧は docv/service/manual.md。
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -9,7 +9,7 @@ use clap::{Parser, Subcommand};
 use crate::check::Options;
 use crate::diagnostic::Level;
 use crate::workspace::{Locate, Project};
-use crate::{add, build, check, desc, fix, init, migrate};
+use crate::{add, build, check, desc, fix, init, schema};
 
 /// 終了コード。docv/system/system.md の「終了コード」。
 pub const EXIT_FAILURE: u8 = 1;
@@ -33,16 +33,16 @@ struct Cli {
 enum Command {
     /// docv.yaml を作る
     Init,
-    /// 枠のファイルを、決まったパスに作る
+    /// Slot のファイルを、決まったパスに作る
     Add {
-        /// 作る枠（docv add --list で一覧を出す）
+        /// 作る Slot（docv add --list で一覧を出す）
         #[arg(required_unless_present = "list", value_name = "slot")]
         slot: Option<String>,
-        /// 作れる枠の一覧を出す
+        /// 作れる Slot の一覧を出す
         #[arg(long, conflicts_with = "slot")]
         list: bool,
     },
-    /// 管理対象のファイルと枠がルールに沿っているかを確かめる
+    /// 管理対象のファイルと Slot がルールに沿っているかを確かめる
     Check {
         /// 確かめるファイル。省略すると管理対象のファイルをすべて確かめる
         #[arg(value_name = "path")]
@@ -62,12 +62,16 @@ enum Command {
     },
     /// 人間向けの HTML を作る
     BuildHtml,
-    /// 枠のページを JPG にする
+    /// Slot のページを JPG にする
     BuildImage,
-    /// フレームワークのルールファイルを出す
+    /// docv の概要を出す
     Desc,
-    /// 後から docv を入れるときのガイドを出す
-    MigrateGuide,
+    /// docv.yaml か、yaml の Slot のスキーマを出す
+    Schema {
+        /// スキーマを出す yaml の Slot（docv add --list の名前）。省略すると docv.yaml のスキーマを出す
+        #[arg(value_name = "slot")]
+        slot: Option<String>,
+    },
 }
 
 pub fn run() -> ExitCode {
@@ -97,16 +101,11 @@ fn execute(cli: Cli) -> Result<ExitCode> {
             Ok(ExitCode::SUCCESS)
         }
         Command::Desc => {
-            print!("{}", desc::RULES);
+            print!("{}", desc::TEXT);
             Ok(ExitCode::SUCCESS)
         }
-        Command::MigrateGuide => {
-            let project = if locate.config_path(&root).is_file() {
-                Project::open(&locate, &root)?
-            } else {
-                Project::unconfigured(&root)?
-            };
-            print!("{}", migrate::render(&project, Options { textlint: true })?);
+        Command::Schema { slot } => {
+            print!("{}", schema::text(slot.as_deref())?);
             Ok(ExitCode::SUCCESS)
         }
         command => {
@@ -172,7 +171,7 @@ fn execute_in_project(project: &Project, command: Command) -> Result<ExitCode> {
             println!("{} に出力した", out.join(build::JPG_DIR).display());
             Ok(ExitCode::SUCCESS)
         }
-        Command::Init | Command::Add { .. } | Command::Desc | Command::MigrateGuide => {
+        Command::Init | Command::Add { .. } | Command::Desc | Command::Schema { .. } => {
             unreachable!("docv.yaml を読まずに実行するコマンド")
         }
     }

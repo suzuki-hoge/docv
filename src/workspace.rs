@@ -19,8 +19,6 @@ pub struct Locate {
 pub struct Project {
     pub root: PathBuf,
     pub config_path: PathBuf,
-    /// docv.yaml を読んだか。migrate-guide だけが、docv.yaml がなくても動く。
-    pub configured: bool,
     pub config: Config,
     docs: GlobSet,
     ignore: GlobSet,
@@ -39,7 +37,7 @@ pub struct Settings {
     pub textlint: bool,
     pub style: bool,
     pub format: bool,
-    /// frontmatter（mission と version）を必須にするか。
+    /// YAML front matter の mission を必須にするか。
     pub mission_required: bool,
 }
 
@@ -69,27 +67,16 @@ impl Project {
             );
         }
         let config = config::load(&config_path)?;
-        Self::new(config_path, root, config, true)
+        Self::new(config_path, root, config)
     }
 
-    /// docv.yaml がないときのプロジェクト。すべてのファイルが管理外になる。
-    pub fn unconfigured(root: &Path) -> Result<Self> {
-        Self::new(
-            root.join(config::FILE_NAME),
-            root,
-            Config::unconfigured(),
-            false,
-        )
-    }
-
-    fn new(config_path: PathBuf, root: &Path, config: Config, configured: bool) -> Result<Self> {
+    fn new(config_path: PathBuf, root: &Path, config: Config) -> Result<Self> {
         let root = root
             .canonicalize()
             .with_context(|| format!("ルート {} が見つからない", root.display()))?;
         Ok(Project {
             root,
             config_path,
-            configured,
             docs: glob_set(&config.docs)?,
             ignore: glob_set(&config.ignore)?,
             config,
@@ -129,7 +116,7 @@ impl Project {
         self.classify_with(rel, &normalize_dir(&self.config.output.dir))
     }
 
-    /// 枠のディレクトリの中の Markdown は、枠として読むので、原本にも管理外にもしない。
+    /// Slot のディレクトリの中の Markdown は、Slot として読むので、原本にも管理外にもしない。
     fn classify_with(&self, rel: &str, output_dir: &str) -> Option<Class> {
         if is_under(rel, output_dir)
             || is_under(rel, &self.slots_dir())
@@ -196,7 +183,7 @@ impl Project {
         settings
     }
 
-    /// 枠のディレクトリ（ルートからの相対パス）。
+    /// Slot のディレクトリ（ルートからの相対パス）。
     pub fn slots_dir(&self) -> String {
         normalize_dir(&self.config.slots.dir)
     }
@@ -264,8 +251,7 @@ mod tests {
         fs::write(path, text).unwrap();
     }
 
-    const CONFIG: &str = "version: 1
-docs:
+    const CONFIG: &str = "docs:
   - README.md
   - docs/**/*.md
 ignore:
@@ -312,7 +298,7 @@ ignore:
         write(
             dir.path(),
             "docv.yaml",
-            "version: 1\ndocs: [docs/**/*.md]\noverrides:\n  - paths: [docs/tmp/**]\n    textlint: false\n    mission: optional\n  - paths: [docs/tmp/keep.md]\n    textlint: true\n",
+            "docs: [docs/**/*.md]\noverrides:\n  - paths: [docs/tmp/**]\n    textlint: false\n    mission: optional\n  - paths: [docs/tmp/keep.md]\n    textlint: true\n",
         );
         let project = Project::open(&Locate::default(), dir.path()).unwrap();
         let memo = project.settings_of("docs/tmp/memo.md");

@@ -4,24 +4,28 @@ entries:
   - path: src/
     description: CLI のソースコード。コマンドごとにファイルを分ける
   - path: templates/
-    description: docv add が yaml の枠に書くサンプル。バイナリに埋め込む
+    description: docv add が YAML の Slot に書くサンプル。バイナリに埋め込む
   - path: templates/slot/
-    description: 枠のテンプレ
+    description: Slot のテンプレ
   - path: assets/
-    description: HTML の CSS、docv desc が出すルールファイル。バイナリに埋め込む
+    description: HTML の CSS、docv desc が出す docv の概要（Slot のサービス仕様と同じファイル）、YAML の Slot のスキーマ。バイナリに埋め込む
+  - path: assets/schema/
+    description: YAML の Slot のスキーマ。docv schema <slot> で出す
   - path: schema/
-    description: docv.yaml の JSON Schema。公開して、エディタの補完に使う
+    description: "`docv.yaml` の JSON Schema。公開して、エディタの補完に使う"
   - path: docs/
     description: このリポジトリのドキュメント。docv 自身で管理する
   - path: docv/
-    description: このリポジトリの枠のファイル
+    description: このリポジトリの Slot のファイル
   - path: docv/adr/
     description: 決めた経緯（ADR）
   - path: docs/spec/
-    description: docv の規格の詳細（枠、ADR、docv.yaml）。docv desc のルールファイルの元
+    description: docv の規格の詳細（Slot、ADR、`docv.yaml`）
+  - path: docs/schema/
+    description: "`docv.yaml` と YAML の Slot のスキーマの写し。HTML で公開する"
   - path: docs/rule/
     description: このリポジトリのドキュメントの書式
   - path: docs/rule/docs/guideline.md
-    description: 原本の書き方。docv desc のルールファイルの元
+    description: 原本の書き方
   - path: docs/fixme/
     description: まだ決まっていないこと

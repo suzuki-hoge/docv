@@ -1,0 +1,24 @@
+---
+group: コマンド
+date: 2026-10-12
+---
+
+# 後から入れるときのガイドを出すコマンドを持たない
+
+## 背景
+
+`docv migrate-guide` は、後から docv を入れるときと docv を上げたときのために、管理外のファイルの数、タグと Slot の案、check の結果、版ごとの移行の手順を出していた。版の管理をなくし（no-version）、版ごとの手順は出せなくなった。
+
+## 決めたこと
+
+`docv migrate-guide` をなくす。後から入れるときも、docv を上げたときも、`docv desc` で docv を知り、`docv check` の結果を見て直す。
+
+## 結果
+
+コマンドが 1 つ減る。`docv.yaml` のない場所で動くコマンドは、init と desc と `add --list` だけになる。
+
+## 選ばなかった案
+
+| 案 | 選ばなかった理由 |
+| --- | --- |
+| 版の章を除いて `docv migrate-guide` を残す | `docv check` と `docv desc` だけで足りる |

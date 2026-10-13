@@ -22,7 +22,7 @@ steps:
     name: HTML と JPG を作って見る
     items:
       markdown: |
-        docv.yaml の output.dir で、コミットしない tmp/html/ に出す。JPG を作るときは Chrome が要る。
+        `docv.yaml` の `output.dir` で、コミットしない `tmp/html/` に出す。JPG を作るときは Chrome が要る。
 
         ```sh
         ./target/release/docv build-html

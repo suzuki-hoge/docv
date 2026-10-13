@@ -11,7 +11,6 @@ use crate::diagnostic::{Diagnostic, Level};
 use crate::markdown::{self, Document, Outline};
 use crate::style::{self, Style};
 use crate::textlint::Textlint;
-use crate::version::{self, Version};
 use crate::workspace::{Project, Settings};
 use crate::{adr, format, meta, slot};
 
@@ -49,7 +48,7 @@ pub struct Options {
     pub textlint: bool,
 }
 
-/// 管理対象のファイルと枠を確かめる。targets が空ならすべて、そうでなければそのパス（ルートからの相対パス）だけ。
+/// 管理対象のファイルと Slot を確かめる。targets が空ならすべて、そうでなければそのパス（ルートからの相対パス）だけ。
 pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Vec<Diagnostic>> {
     let words = Words::new(project);
     let managed: HashSet<String> = project.managed()?.into_iter().collect();
@@ -186,7 +185,7 @@ fn check_frontmatter(cx: &mut Checker, document: &Document) {
                 1,
                 "frontmatter-invalid",
                 Level::Error,
-                "frontmatter を閉じる --- がない",
+                "YAML front matter を閉じる --- がない",
             );
             return;
         }
@@ -198,7 +197,7 @@ fn check_frontmatter(cx: &mut Checker, document: &Document) {
                     1,
                     "frontmatter-invalid",
                     Level::Error,
-                    "frontmatter はキーと値の組で書く",
+                    "YAML front matter はキーと値の組で書く",
                 );
                 return;
             }
@@ -207,7 +206,7 @@ fn check_frontmatter(cx: &mut Checker, document: &Document) {
                     1,
                     "frontmatter-invalid",
                     Level::Error,
-                    format!("frontmatter が YAML として読めない: {e}"),
+                    format!("YAML front matter が読めない: {e}"),
                 );
                 return;
             }
@@ -215,7 +214,7 @@ fn check_frontmatter(cx: &mut Checker, document: &Document) {
     };
     let line_of = |key: &str| fm.map_or(1, |fm| fm.line_of_key(key));
 
-    // overrides で mission を optional にしたパスでは、frontmatter（mission と version）を求めない。
+    // overrides で mission を optional にしたパスでは、mission を求めない。
     let required = cx.settings.mission_required;
     match mapping.get("mission") {
         Some(Value::String(m)) => {
@@ -241,36 +240,6 @@ fn check_frontmatter(cx: &mut Checker, document: &Document) {
             "mission がない。このファイルが答えることを 1 文で書く",
         ),
         None => {}
-    }
-
-    let current = version::current();
-    match mapping.get("version").map(Version::parse) {
-        None if required => cx.push(
-            1,
-            "version-missing",
-            Level::Error,
-            format!("version がない。このファイルが従う docv の版（{current}）を書く"),
-        ),
-        None => {}
-        Some(None) => cx.push(
-            line_of("version"),
-            "frontmatter-invalid",
-            Level::Error,
-            "version は「0.1」のように、メジャーとマイナーを . でつないで書く",
-        ),
-        Some(Some(v)) if v > current => cx.push(
-            line_of("version"),
-            "version-newer",
-            Level::Error,
-            format!("version {v} は、この docv（{current}）より新しい。docv を上げる"),
-        ),
-        Some(Some(v)) if v < current => cx.push(
-            line_of("version"),
-            "version-older",
-            Level::Warn,
-            format!("version {v} は、この docv（{current}）より古い。docv migrate-guide の手順で直し、version を上げる"),
-        ),
-        Some(Some(_)) => {}
     }
 
     match mapping.get("tags") {
@@ -380,8 +349,7 @@ mod tests {
 
     const OPTIONS: Options = Options { textlint: true };
 
-    const CONFIG: &str = "version: 1
-docs:
+    const CONFIG: &str = "docs:
   - docs/**/*.md
 ignore:
   - docs/ignored/**
@@ -400,12 +368,9 @@ overrides:
     mission: optional
 ";
 
-    /// この CLI の版を書いた frontmatter。
+    /// mission を書いた YAML front matter。
     fn fm(rest: &str) -> String {
-        format!(
-            "---\nmission: q\nversion: {}\n{rest}---\n",
-            version::current()
-        )
+        format!("---\nmission: q\n{rest}---\n")
     }
 
     fn check(files: &[(&str, &str)]) -> Vec<String> {
@@ -438,7 +403,7 @@ overrides:
                 &format!("{}\n# P\n\n- [ ] t\n", fm("tags: [計画]\n")),
             ),
             ("docs/ignored/memo.md", "以前は TODO [x](missing.md)\n"),
-            // overrides で frontmatter を求めないパス
+            // overrides で YAML front matter を求めないパス
             ("docs/tmp/memo.md", "# メモ\n\n**太字**\n"),
             ("docv/service/service.md", "# サービス仕様\n"),
         ]);
@@ -447,25 +412,13 @@ overrides:
 
     #[test]
     fn reports_frontmatter_problems() {
-        let current = version::current();
-        let newer = Version {
-            major: current.major + 1,
-            minor: 0,
-        };
         let result = check(&[
             ("docs/spec/a.md", "# A\n"),
             (
                 "docs/spec/b.md",
-                &format!(
-                    "---\nmission: |\n  1\n  2\nversion: {current}\ntags: [仕様, z]\n---\n# B\n"
-                ),
+                "---\nmission: |\n  1\n  2\ntags: [仕様, z]\n---\n# B\n",
             ),
             ("docs/spec/c.md", "---\nmission: [\n---\n# C\n"),
-            (
-                "docs/spec/d.md",
-                &format!("---\nmission: q\nversion: {newer}\n---\n# D\n"),
-            ),
-            ("docs/spec/e.md", "---\nmission: q\nversion: x\n---\n# E\n"),
         ]);
         let without_c: Vec<&str> = result
             .iter()
@@ -476,11 +429,8 @@ overrides:
             without_c,
             [
                 "docs/spec/a.md:1: error mission-missing mission がない。このファイルが答えることを 1 文で書く".to_string(),
-                format!("docs/spec/a.md:1: error version-missing version がない。このファイルが従う docv の版（{current}）を書く"),
                 "docs/spec/b.md:2: error mission-multiline mission は 1 行で書く".to_string(),
-                "docs/spec/b.md:6: error tag-unknown タグ z は docv.yaml の tags にない".to_string(),
-                format!("docs/spec/d.md:3: error version-newer version {newer} は、この docv（{current}）より新しい。docv を上げる"),
-                "docs/spec/e.md:3: error frontmatter-invalid version は「0.1」のように、メジャーとマイナーを . でつないで書く".to_string(),
+                "docs/spec/b.md:5: error tag-unknown タグ z は docv.yaml の tags にない".to_string(),
             ]
         );
         assert!(
@@ -502,8 +452,8 @@ overrides:
         assert_eq!(
             result,
             [
-                "docs/plan/p.md:8: warn done-task 終わったタスクが残っている。終わったタスクは消す",
-                "docs/spec/a.md:7: error title-count h1 が 2 個ある。1 つにする",
+                "docs/plan/p.md:7: warn done-task 終わったタスクが残っている。終わったタスクは消す",
+                "docs/spec/a.md:6: error title-count h1 が 2 個ある。1 つにする",
             ]
         );
     }
@@ -526,9 +476,9 @@ overrides:
         assert_eq!(
             result,
             [
-                "docs/spec/a.md:8: warn past-heading 見出しの「変更履歴」は過去を扱う語。決めた経緯は ADR に残す",
-                "docs/spec/a.md:10: warn past-wording 「いずれ」は過去や実装状態の言い回し。今の姿だけを書き、決めた経緯は ADR に残す",
-                "docs/spec/a.md:10: warn past-wording 「以前は」は過去や実装状態の言い回し。今の姿だけを書き、決めた経緯は ADR に残す",
+                "docs/spec/a.md:7: warn past-heading 見出しの「変更履歴」は過去を扱う語。決めた経緯は ADR に残す",
+                "docs/spec/a.md:9: warn past-wording 「いずれ」は過去や実装状態の言い回し。今の姿だけを書き、決めた経緯は ADR に残す",
+                "docs/spec/a.md:9: warn past-wording 「以前は」は過去や実装状態の言い回し。今の姿だけを書き、決めた経緯は ADR に残す",
             ]
         );
     }
@@ -545,13 +495,13 @@ overrides:
             ),
             ("docs/spec/あ.md", &format!("{}# あ\n", fm(""))),
             ("README.md", "# R\n"),
-            ("docv/service/manual.yaml", "commands: 1\n"),
+            ("docv/service/words.yaml", "groups: 1\n"),
             ("docv/adr/a.md", "# A\n"),
         ]);
         assert_eq!(result.len(), 3, "{result:#?}");
         assert_eq!(
             result[0],
-            "docs/spec/a.md:7: error link-broken リンク先 missing.md がない"
+            "docs/spec/a.md:6: error link-broken リンク先 missing.md がない"
         );
         assert!(
             result[1].starts_with("docv/adr/a.md:1: error adr-invalid"),
@@ -559,7 +509,7 @@ overrides:
         );
         assert_eq!(
             result[2],
-            "docv/service/manual.yaml:1: error slot-invalid 利用マニュアルの枠の形に合わない: commands: invalid type: integer `1`, expected a sequence at line 1 column 11"
+            "docv/service/words.yaml:1: error slot-invalid 用語集の Slot の形に合わない: groups: invalid type: integer `1`, expected a sequence at line 1 column 9"
         );
     }
 
@@ -571,7 +521,7 @@ overrides:
         write(dir.path(), "docs/spec/b.md", "# B\n");
         let project = Project::open(&Locate::default(), dir.path()).unwrap();
         let result = run(&project, &["docs/spec/b.md".to_string()], OPTIONS).unwrap();
-        assert_eq!(result.len(), 2);
+        assert_eq!(result.len(), 1);
         assert!(result.iter().all(|d| d.path == "docs/spec/b.md"));
     }
 }

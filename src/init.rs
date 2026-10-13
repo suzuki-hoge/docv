@@ -1,4 +1,4 @@
-//! docv init。推奨する配置の docv.yaml を作る。docv/service/manual.yaml の docv init。
+//! docv init。推奨する配置の docv.yaml を作る。docv/service/manual.md の docv init。
 
 use std::fs;
 use std::path::Path;
@@ -17,15 +17,13 @@ pub fn schema_url() -> String {
 pub fn config_text() -> String {
     format!(
         "# yaml-language-server: $schema={}
-version: 1
-
-# 管理対象の Markdown。各ファイルの frontmatter に mission、version、tags を書く。
+# 管理対象の Markdown。各ファイルの YAML front matter に mission と tags を書く。
 docs:
   - docs/**/*.md
 ignore:
   - docs/tmp/**
 
-# docv の規格のファイル（枠。概要、コマンドなど）を置くディレクトリ。docs/ はプロジェクトが自由に書く。
+# docv の規格のファイル（Slot。概要、コマンドなど）を置くディレクトリ。docs/ はプロジェクトが自由に書く。
 slots:
   dir: docv
 ",

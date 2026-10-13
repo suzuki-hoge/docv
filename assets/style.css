@@ -39,14 +39,14 @@ h2.group { font-size: 1.5em; margin: 28px 0 0; padding-bottom: 4px; border-botto
 main > h2.group:first-child { margin-top: 0; }
 h3 { font-size: 1.25em; margin: 32px 0 0; padding-bottom: 2px; border-bottom: 1px solid #d8dee4; }
 h4 { font-size: 1.02em; margin: 20px 0 4px; }
-/* index.html の枠のカード。まとまりの中で横に並べる。幅は名前の 7 文字が収まる固定で、はみ出たら横にスクロールする */
+/* index.html の Slot のカード。まとまりの中で横に並べる。幅は名前の 7 文字が収まる固定で、はみ出たら横にスクロールする */
 .cards { display: flex; gap: 8px; overflow-x: auto; margin: 12px 0 8px; padding-bottom: 4px; }
 .card { flex: none; box-sizing: border-box; width: 170px; display: flex; align-items: center; gap: 6px; padding: 12px 8px; border: 1px solid #d8dee4; border-radius: 8px; color: #1f2328; font-weight: 600; white-space: nowrap; }
 .card .icon { width: 24px; height: 24px; flex: none; color: #0b6bcb; }
 .slot > h1 { display: flex; align-items: center; gap: 12px; }
 .slot > h1 .icon { width: 32px; height: 32px; flex: none; color: #0b6bcb; }
 a.card:hover { border-color: #0b6bcb; color: #0b6bcb; }
-/* ファイルのない枠のカード。リンクにしない */
+/* ファイルのない Slot のカード。リンクにしない */
 .card.missing { color: #8c959f; background: #f6f8fa; cursor: default; user-select: none; }
 .card.missing .icon { color: #afb8c1; }
 .note, .from { color: #656d76; font-size: 0.85em; }
@@ -54,14 +54,10 @@ a.card:hover { border-color: #0b6bcb; color: #0b6bcb; }
 /* 開発コマンドの先頭の目次 */
 ul.toc { margin: 8px 0 16px; padding-left: 1.2em; }
 ul.toc li { margin: 2px 0; }
-/* 利用マニュアルの先頭のコマンドの表 */
 /* 用語集の表。まとまりの表どうしで、列の幅をそろえる */
 table.words { table-layout: fixed; }
 table.words th:nth-child(1), table.words th:nth-child(2) { width: 9em; }
 table.words td:nth-child(1), table.words td:nth-child(2) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-h2.command { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
-h2.command .desc { font-size: 0.72em; font-weight: normal; color: #656d76; text-align: right; }
-.toc td:first-child { white-space: nowrap; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
 h2 { font-size: 1.25em; margin: 28px 0 4px; padding-bottom: 2px; border-bottom: 1px solid #d8dee4; }
 .included { margin: 8px 0; padding-left: 12px; border-left: 3px solid #d8dee4; }
 .tag { display: inline-block; border: 1px solid #d8dee4; border-radius: 10px; padding: 0 7px; margin: 0 3px 2px 0; font-size: 0.8em; color: #3d444d; }

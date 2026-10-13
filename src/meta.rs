@@ -1,4 +1,4 @@
-//! 管理対象のファイルのタイトル、ミッション、タグ。frontmatter と h1 から読む。
+//! 管理対象のファイルのタイトル、ミッション、タグ。YAML front matter と h1 から読む。
 
 use serde_yaml_ng::Value;
 
@@ -8,7 +8,7 @@ use crate::markdown::{Document, Outline};
 pub struct Meta {
     /// h1 の文字列。
     pub title: Option<String>,
-    /// frontmatter の mission。このファイルが答えること。
+    /// YAML front matter の mission。このファイルが答えること。
     pub mission: Option<String>,
     pub tags: Vec<String>,
 }

@@ -1,18 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "docv.yaml",
-  "description": "docv の設定ファイル。ツールの設定と、プロジェクト全体で共有する語彙を書く。ファイルごとの設定は frontmatter に書く。項目の意味は docs/spec/config.md を参照。",
+  "description": "docv の設定ファイル。ツールの設定と、プロジェクト全体で共有する語彙を書く。ファイルごとの設定は YAML front matter に書く。項目の意味は `docs/spec/config.md` を参照。",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "version",
     "docs"
   ],
   "properties": {
-    "version": {
-      "description": "設定ファイルの形式の版。",
-      "const": 1
-    },
     "title": {
       "description": "HTML とインデックスに出すプロジェクト名。省略するとルートのディレクトリ名。",
       "type": "string",
@@ -39,7 +34,7 @@
       }
     },
     "docs": {
-      "description": "管理対象のファイルの glob。ルートからの相対パス。.md のファイルだけが対象。",
+      "description": "管理対象のファイルの glob。ルートからの相対パス。`.md` のファイルだけが対象。",
       "type": "array",
       "items": {
         "type": "string",
@@ -55,7 +50,7 @@
       }
     },
     "tags": {
-      "description": "タグの一覧。書いたときだけ、frontmatter の tags をこの中に限る。",
+      "description": "タグの一覧。書いたときだけ、YAML front matter の `tags` をこの中に限る。",
       "type": "array",
       "items": {
         "type": "string",
@@ -68,7 +63,7 @@
       "additionalProperties": false,
       "properties": {
         "dir": {
-          "description": "枠のファイルを置くディレクトリ。",
+          "description": "Slot のファイルを置くディレクトリ。",
           "type": "string",
           "default": "docv"
         }
@@ -84,7 +79,7 @@
           "default": "docv/build"
         },
         "commit": {
-          "description": "出力を git で管理するか。false なら出力先に .gitignore を置く。",
+          "description": "出力を git で管理するか。false なら出力先に `.gitignore` を置く。",
           "type": "boolean",
           "default": true
         }
@@ -108,7 +103,7 @@
             "type": "boolean"
           },
           "style": {
-            "description": "書式の規則（lint.style）をかけるか。",
+            "description": "書式の規則（`lint.style`）をかけるか。",
             "type": "boolean"
           },
           "format": {
@@ -116,7 +111,7 @@
             "type": "boolean"
           },
           "mission": {
-            "description": "frontmatter（mission と version）を必須にするか。",
+            "description": "YAML front matter の `mission` を必須にするか。",
             "enum": ["required", "optional"]
           }
         }
@@ -183,7 +178,7 @@
   },
   "$defs": {
     "style": {
-      "description": "書式の規則。項目の意味は docs/spec/config.md の 5 章を参照。書いた規則だけを確かめる。false を書くと使わない。",
+      "description": "書式の規則。項目の意味は `docs/spec/config.md` の 5 章を参照。書いた規則だけを確かめる。false を書くと使わない。",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -263,7 +258,7 @@
       }
     },
     "textlint": {
-      "description": "textlint の設定。項目の意味は docs/spec/config.md の 6 章を参照。",
+      "description": "textlint の設定。項目の意味は `docs/spec/config.md` の 6 章を参照。",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -290,7 +285,7 @@
           "uniqueItems": true
         },
         "rules": {
-          "description": "<プリセット>/<ルール> をキーに、false か、ルールのオプションを書く。",
+          "description": "`<プリセット>/<ルール>` をキーに、false か、ルールのオプションを書く。",
           "type": "object",
           "propertyNames": {
             "pattern": "^(ja-technical-writing|ja-spacing|jtf-style)/[a-z0-9-]+$"

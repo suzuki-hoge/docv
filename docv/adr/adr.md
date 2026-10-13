@@ -12,11 +12,11 @@ archive は、外した本文を移したものの集まりで、保守するド
 
 ## 決めたこと
 
-決定 1 つを 1 つの Markdown で docv/adr/ に置き、ファイル名を id にし、システムが使う項目（group、date、supersedes）は frontmatter に書く。決定を変えるときは、新しい決定の supersedes から過去の決定を指す。HTML では、まとまりごとに決定のつながりを図で見せる。
+決定 1 つを 1 つの Markdown で `docv/adr/` に置き、ファイル名を id にし、システムが使う項目（`group`、`date`、`supersedes`）は YAML front matter に書く。決定を変えるときは、新しい決定の `supersedes` から過去の決定を指す。HTML では、まとまりごとに決定のつながりを図で見せる。
 
 ## 結果
 
-`docv retire`、archive のディレクトリ、frontmatter の source はなくなる。docs/ には今の姿だけを書く。
+`docv retire`、archive のディレクトリ、YAML front matter の source はなくなる。`docs/` には今の姿だけを書く。
 
 ## 選ばなかった案
 
@@ -24,4 +24,4 @@ archive は、外した本文を移したものの集まりで、保守するド
 | --- | --- |
 | archive を続ける | 外した本文がたまるだけで、決めた理由を探しにくい |
 | ADR に状態（採用、却下など）を持たせる | ADR に残すのは決めたことだけ。打ち消されたかは、新しい決定からのつながりでわかる |
-| frontmatter に id を書く | ファイル名と二重になる |
+| YAML front matter に `id` を書く | ファイル名と二重になる |
