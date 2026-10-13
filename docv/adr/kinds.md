@@ -11,4 +11,4 @@ date: 2026-10-10
 
 ## 決めたこと
 
-overview、spec、operation、cost、rule、plan、proposal、fixme、archive、tmp の種類を組み込みで持ち、種類ごとに時間（現在、未来、過去）、粒度、見出しの制約を決める。
+overview、spec、operation、cost、rule、plan、proposal、fixme、archive、tmp の種類を組み込みで持つ。種類ごとに時間（現在、未来、過去）、粒度、見出しの制約を決める。

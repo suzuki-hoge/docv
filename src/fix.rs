@@ -1,4 +1,4 @@
-//! docv fix。textlint の自動修正と整形で、管理対象のファイルを書き換える。docv/service/manual.md の docv fix。
+//! docv fix。textlint の自動修正と整形で、管理対象のファイルと Slot のディレクトリの中の .md のファイルを書き換える。docv/service/manual.md の docv fix。
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -17,10 +17,10 @@ pub struct Report {
     pub failed: Vec<(String, String)>,
 }
 
-/// targets が空なら check と同じ対象をすべて、そうでなければそのパス（ルートからの相対パス）だけ。
+/// targets が空なら対象をすべて、そうでなければそのパス（ルートからの相対パス）だけ。
 /// textlint が false なら、textlint の自動修正を飛ばす。
 pub fn run(project: &Project, targets: &[String], textlint: bool) -> Result<Report> {
-    let files = project.targets(targets)?;
+    let files = project.fix_targets(targets)?;
     let mut original = BTreeMap::new();
     for path in &files {
         let text = fs::read_to_string(project.root.join(path))
@@ -87,15 +87,24 @@ mod tests {
         write(root, "docs/spec/c.md", "---\nquestion: q\n");
         write(root, "docs/tmp/e.md", "* x\n");
         write(root, "notes.md", "* x\n");
+        write(
+            root,
+            "docv/service/manual.md",
+            "# M\n| a | bb |\n|---|---|\n| 種類 | c |\n",
+        );
         let project = Project::open(&Locate::default(), root).unwrap();
 
         let report = run(&project, &[], true).unwrap();
-        assert_eq!(report.changed, ["docs/spec/a.md"]);
+        assert_eq!(report.changed, ["docs/spec/a.md", "docv/service/manual.md"]);
         assert_eq!(report.failed.len(), 1);
         assert_eq!(report.failed[0].0, "docs/spec/c.md");
         assert_eq!(
             fs::read_to_string(root.join("docs/spec/a.md")).unwrap(),
             "---\nquestion: q\n---\n\n# A\n\n- x\n"
+        );
+        assert_eq!(
+            fs::read_to_string(root.join("docv/service/manual.md")).unwrap(),
+            "# M\n\n| a    | bb |\n| ---- | -- |\n| 種類 | c  |\n"
         );
         for path in ["docs/tmp/e.md", "notes.md"] {
             assert_eq!(fs::read_to_string(root.join(path)).unwrap(), "* x\n");

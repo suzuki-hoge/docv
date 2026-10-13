@@ -157,7 +157,7 @@ lint:
 
 文章の校正に textlint を使う仕組み。
 
-- 既定では使わない。`enabled` を true にしたときだけ、`docv check` が管理対象のファイルに textlint をかけ、`docv fix` が自動修正できるところを直す
+- 既定では使わない。`enabled` を true にしたときだけ、`docv check` が textlint をかけ、`docv fix` が自動修正できるところを直す。かけるのは、管理対象のファイルと、`slots.dir` の中の Markdown（md の Slot と ADR）
 - textlint は Node.js で動くので、使うときだけ Node.js（npx）が必要になる。docv のバイナリには textlint を入れない。`enabled` が true なのに Node.js が見つからないときは、終了コード 2 で終わる
 - 結果は、ほかのルールと同じ形で出す。ルール ID は `textlint/<textlint のルール ID>`（例: textlint/ja-technical-writing/sentence-length）。強さは `level` で決め、既定は warn
 - `overrides` で textlint を false にしたパスには、かけない。`--no-textlint` で、textlint だけを飛ばせる
@@ -206,7 +206,11 @@ lint:
 
 ## 7. 整形との連動（`format.enabled`）
 
-整形の形は docv が決め、設定では変えない。設定で決めるのは、check を整形と連動させるかだけ。
+整形の形は docv が決め、設定では変えない。設定で決めるのは、check を整形と連動させるかだけ。整形は、管理対象のファイルと、`slots.dir` の中の Markdown（md の Slot と ADR）にかける。
+
+- 表は、列ごとに縦の線の位置を揃える。幅は、全角の文字（Unicode の East Asian Width が W か F の文字）を 2、それ以外の文字を 1 と数える
+- エディタの表の揃え方は、この数え方と違うことがある。手で揃えず、`docv fix` の結果を正とする
+- 整形の形は docv の版ごとに固定する。同じ docv なら、同じ入力から同じ結果になる
 
 | コマンド     | `format.enabled` が true のときの動き                             |
 | ------------ | ----------------------------------------------------------------- |

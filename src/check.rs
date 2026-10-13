@@ -62,6 +62,25 @@ pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Ve
             textlint_files.push(path);
         }
     }
+    // Slot のディレクトリの中の .md のファイルには、原本のルールはかけず、整形と textlint だけをかける。
+    for path in project.slot_markdown()? {
+        if !targets.is_empty() && !targets.contains(&path) {
+            continue;
+        }
+        let text = fs::read_to_string(project.root.join(&path))
+            .with_context(|| format!("{path} を読めない"))?;
+        let mut cx = Checker {
+            project,
+            path: &path,
+            settings: project.settings_of(&path),
+            diagnostics: Vec::new(),
+        };
+        check_format(&mut cx, &text);
+        diagnostics.extend(cx.diagnostics);
+        if project.settings_of(&path).textlint {
+            textlint_files.push(path);
+        }
+    }
     if targets.is_empty() {
         diagnostics.extend(slot::check(project)?);
         diagnostics.extend(adr::check(project)?);
@@ -160,8 +179,13 @@ fn check_file(
         }
     }
 
-    // 整形できないファイルは frontmatter-invalid が出ているので、ここでは出さない。
-    if project.config.format.enabled
+    check_format(&mut cx, text);
+    cx.diagnostics
+}
+
+/// 整形できないファイルは、原本なら frontmatter-invalid、ADR なら adr-invalid が出ているので、ここでは出さない。
+fn check_format(cx: &mut Checker, text: &str) {
+    if cx.project.config.format.enabled
         && cx.settings.format
         && let Ok(formatted) = format::format(text)
         && formatted != text
@@ -173,7 +197,6 @@ fn check_file(
             "整形が必要。docv fix で整形する",
         );
     }
-    cx.diagnostics
 }
 
 fn check_frontmatter(cx: &mut Checker, document: &Document) {
@@ -510,6 +533,36 @@ overrides:
         assert_eq!(
             result[2],
             "docv/service/words.yaml:1: error slot-invalid 用語集の Slot の形に合わない: groups: invalid type: integer `1`, expected a sequence at line 1 column 9"
+        );
+    }
+
+    #[test]
+    fn checks_only_format_in_slot_markdown() {
+        let dir = tempfile::tempdir().unwrap();
+        write(
+            dir.path(),
+            "docv.yaml",
+            "docs: [docs/**/*.md]\nformat:\n  enabled: true\n",
+        );
+        write(
+            dir.path(),
+            "docv/service/manual.md",
+            "# M\n\n| a | b |\n| --- | --- |\n| 種類 | c |\n",
+        );
+        write(
+            dir.path(),
+            "docv/adr/a.md",
+            "---\ndate: 2026-10-13\n---\n\n# A\n\n| 種類 | c |\n| ---- | - |\n",
+        );
+        let project = Project::open(&Locate::default(), dir.path()).unwrap();
+        let result: Vec<String> = run(&project, &[], OPTIONS)
+            .unwrap()
+            .iter()
+            .map(|d| d.to_string())
+            .collect();
+        assert_eq!(
+            result,
+            ["docv/service/manual.md:3: error format-diff 整形が必要。docv fix で整形する"]
         );
     }
 

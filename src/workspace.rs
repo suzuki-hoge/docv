@@ -87,7 +87,36 @@ impl Project {
     pub fn files(&self) -> Result<Vec<DocFile>> {
         let output_dir = normalize_dir(&self.config.output.dir);
         let mut files = Vec::new();
-        let walker = WalkBuilder::new(&self.root)
+        for rel in self.markdown_under(&self.root)? {
+            if let Some(class) = self.classify_with(&rel, &output_dir) {
+                files.push(DocFile { path: rel, class });
+            }
+        }
+        files.sort_by(|a, b| a.path.cmp(&b.path));
+        Ok(files)
+    }
+
+    /// Slot のディレクトリの中の .md のファイル（md の Slot と ADR）を、パスの辞書順で返す。
+    /// 原本のルールはかけず、整形と textlint だけをかける。output.dir の中と ignore に当てはまるものは除く。
+    pub fn slot_markdown(&self) -> Result<Vec<String>> {
+        let dir = self.root.join(self.slots_dir());
+        if !dir.is_dir() {
+            return Ok(Vec::new());
+        }
+        let output_dir = normalize_dir(&self.config.output.dir);
+        let mut files: Vec<String> = self
+            .markdown_under(&dir)?
+            .into_iter()
+            .filter(|rel| !is_under(rel, &output_dir) && !self.ignore.is_match(rel))
+            .collect();
+        files.sort();
+        Ok(files)
+    }
+
+    /// dir の下の .md のファイルの、ルートからの相対パス。.gitignore に書かれたものと、シンボリックリンクは除く。
+    fn markdown_under(&self, dir: &Path) -> Result<Vec<String>> {
+        let mut files = Vec::new();
+        let walker = WalkBuilder::new(dir)
             .require_git(false)
             .git_global(false)
             .ignore(false)
@@ -101,12 +130,8 @@ impl Project {
             if path.extension().is_none_or(|ext| ext != "md") {
                 continue;
             }
-            let rel = relative(&self.root, path)?;
-            if let Some(class) = self.classify_with(&rel, &output_dir) {
-                files.push(DocFile { path: rel, class });
-            }
+            files.push(relative(&self.root, path)?);
         }
-        files.sort_by(|a, b| a.path.cmp(&b.path));
         Ok(files)
     }
 
@@ -148,6 +173,16 @@ impl Project {
             .into_iter()
             .filter(|path| targets.is_empty() || targets.contains(path))
             .collect())
+    }
+
+    /// fix で書き換えるファイル。管理対象のファイルと、Slot のディレクトリの中の .md のファイル。
+    /// targets が空ならすべて、そうでなければそのパス（ルートからの相対パス）だけ。
+    pub fn fix_targets(&self, targets: &[String]) -> Result<Vec<String>> {
+        let mut files = self.managed()?;
+        files.extend(self.slot_markdown()?);
+        files.retain(|path| targets.is_empty() || targets.contains(path));
+        files.sort();
+        Ok(files)
     }
 
     /// overrides を当てた、そのファイルへの道具の設定。後に書いた overrides が優先する。
@@ -273,6 +308,8 @@ ignore:
             "secret.md",
             "tmp/work.md",
             "docv/build/index.md",
+            "docv/adr/rust.md",
+            "docv/service/secret.md",
         ] {
             write(root, path, "# x\n");
         }
@@ -289,6 +326,22 @@ ignore:
                 ("docs/spec/sub/b.md", Class::Managed),
                 ("notes.md", Class::Unmanaged),
             ]
+        );
+        assert_eq!(project.slot_markdown().unwrap(), ["docv/adr/rust.md"]);
+        assert_eq!(
+            project.fix_targets(&[]).unwrap(),
+            [
+                "README.md",
+                "docs/spec/a.md",
+                "docs/spec/sub/b.md",
+                "docv/adr/rust.md",
+            ]
+        );
+        assert_eq!(
+            project
+                .fix_targets(&["docv/adr/rust.md".to_string()])
+                .unwrap(),
+            ["docv/adr/rust.md"]
         );
     }
 

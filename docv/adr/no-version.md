@@ -11,7 +11,7 @@ date: 2026-10-12
 
 ## 決めたこと
 
-docv から版の管理をなくす。原本の `version`、`docv.yaml` の `version`、check の version-missing、version-newer、version-older、migrate-guide の版の章をなくす。docv を上げたときも、後から入れるときも、`docv desc` と `docv check` を見て直す。
+docv から版の管理をなくす。原本と `docv.yaml` の `version` をなくす。check の version-missing、version-newer、version-older と、migrate-guide の版の章もなくす。docv を上げたときも、後から入れるときも、`docv desc` と `docv check` を見て直す。
 
 ## 結果
 
@@ -19,8 +19,8 @@ docv から版の管理をなくす。原本の `version`、`docv.yaml` の `ver
 
 ## 選ばなかった案
 
-| 案 | 選ばなかった理由 |
-| --- | --- |
-| 原本の `version` を残す | `docs/` のファイルは、docv で版を管理する必要がない |
-| 版ごとの手順だけ残し、migrate-guide で元の版を指定させる | `docv desc` と `docv check` で直せる |
-| `docv.yaml` にプロジェクトの版を 1 つ書く | `docv desc` と `docv check` で直せる |
+| 案                                                       | 選ばなかった理由                                    |
+| -------------------------------------------------------- | --------------------------------------------------- |
+| 原本の `version` を残す                                  | `docs/` のファイルは、docv で版を管理する必要がない |
+| 版ごとの手順だけ残し、migrate-guide で元の版を指定させる | `docv desc` と `docv check` で直せる                |
+| `docv.yaml` にプロジェクトの版を 1 つ書く                | `docv desc` と `docv check` で直せる                |
