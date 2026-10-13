@@ -11,9 +11,15 @@ use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 
 use anyhow::{Context, Result, bail};
-use pulldown_cmark::{CowStr, Event, HeadingLevel, Parser, Tag, TagEnd, html};
+use pulldown_cmark::{CodeBlockKind, CowStr, Event, HeadingLevel, Parser, Tag, TagEnd, html};
+use syntect::easy::HighlightLines;
+use syntect::highlighting::{Theme, ThemeSet};
+use syntect::html::{IncludeBackground, styled_line_to_highlighted_html};
+use syntect::parsing::SyntaxSet;
+use syntect::util::LinesWithEndings;
 
 use crate::adr::{self, Adr};
 use crate::jpg;
@@ -1101,7 +1107,7 @@ impl Site<'_> {
             events.push(event);
         }
         let mut body = String::new();
-        html::push_html(&mut body, events.into_iter());
+        html::push_html(&mut body, highlight_code_blocks(events).into_iter());
         (body, toc)
     }
 
@@ -1300,6 +1306,67 @@ fn name_link(name: &str, url: Option<&str>) -> String {
         Some(url) => format!("<a href=\"{}\">{}</a>", escape(url), escape(name)),
         None => escape(name),
     }
+}
+
+/// フェンスのコードブロックに、言語に合わせて色を付ける。色は `<span style>` で埋め込む。
+/// 言語がないブロックと、docv が知らない言語のブロックは、そのまま出す。
+fn highlight_code_blocks(events: Vec<Event>) -> Vec<Event> {
+    let mut out = Vec::with_capacity(events.len());
+    let mut iter = events.into_iter();
+    while let Some(event) = iter.next() {
+        let Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(info))) = &event else {
+            out.push(event);
+            continue;
+        };
+        let lang = info.split_whitespace().next().unwrap_or("").to_string();
+        let mut inner = Vec::new();
+        let mut code = String::new();
+        for e in iter.by_ref() {
+            if matches!(e, Event::End(TagEnd::CodeBlock)) {
+                break;
+            }
+            if let Event::Text(t) = &e {
+                code.push_str(t);
+            }
+            inner.push(e);
+        }
+        match highlight(&lang, &code) {
+            Some(html) => out.push(Event::Html(CowStr::from(format!(
+                "<pre><code class=\"language-{}\">{html}</code></pre>\n",
+                escape(&lang)
+            )))),
+            None => {
+                out.push(event);
+                out.extend(inner);
+                out.push(Event::End(TagEnd::CodeBlock));
+            }
+        }
+    }
+    out
+}
+
+/// コードを、言語の構文に沿って色付きの HTML にする。知らない言語なら None。
+fn highlight(lang: &str, code: &str) -> Option<String> {
+    static SYNTAXES: OnceLock<SyntaxSet> = OnceLock::new();
+    static THEME: OnceLock<Theme> = OnceLock::new();
+    if lang.is_empty() {
+        return None;
+    }
+    let syntaxes = SYNTAXES.get_or_init(SyntaxSet::load_defaults_newlines);
+    let theme = THEME.get_or_init(|| {
+        ThemeSet::load_defaults()
+            .themes
+            .remove("InspiredGitHub")
+            .expect("syntect の既定のテーマにある")
+    });
+    let syntax = syntaxes.find_syntax_by_token(lang)?;
+    let mut lines = HighlightLines::new(syntax, theme);
+    let mut html = String::new();
+    for line in LinesWithEndings::from(code) {
+        let ranges = lines.highlight_line(line, syntaxes).ok()?;
+        html.push_str(&styled_line_to_highlighted_html(&ranges, IncludeBackground::No).ok()?);
+    }
+    Some(html)
 }
 
 /// `<details>` を開いた状態にする。
@@ -1681,6 +1748,30 @@ mod tests {
             content: Content::Markdown(String::new()),
         };
         assert_eq!(jpg_path(&slot), "jpg/サービス仕様/用語集.jpg");
+    }
+
+    #[test]
+    fn highlights_fenced_code_blocks() {
+        let html = |text: &str| {
+            let mut out = String::new();
+            let events: Vec<Event> = Parser::new_ext(text, markdown::OPTIONS).collect();
+            html::push_html(&mut out, highlight_code_blocks(events).into_iter());
+            out
+        };
+        let yaml = html("```yaml\nkey: 1\n```\n");
+        assert!(
+            yaml.starts_with("<pre><code class=\"language-yaml\"><span style=\"color:"),
+            "{yaml}"
+        );
+        // 言語がないブロックと、知らない言語のブロックは、色を付けない
+        assert_eq!(
+            html("```\nkey: 1\n```\n"),
+            "<pre><code>key: 1\n</code></pre>\n"
+        );
+        assert_eq!(
+            html("```nolang\n<a>\n```\n"),
+            "<pre><code class=\"language-nolang\">&lt;a&gt;\n</code></pre>\n"
+        );
     }
 
     #[test]

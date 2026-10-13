@@ -16,6 +16,7 @@ pulldown-cmark = { version = "0.13.4", default-features = false, features = ["ht
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.152"
 serde_yaml_ng = "0.10.0"
+syntect = { version = "5.3.0", default-features = false, features = ["default-syntaxes", "default-themes", "html", "regex-fancy"] }
 tungstenite = { version = "0.30.0", default-features = false, features = ["handshake"] }
 
 [dev-dependencies]

@@ -48,6 +48,7 @@ Rust で書いた単一のバイナリにし、次のものを埋め込む。利
 
 - YAML の Slot のテンプレ（`templates/`）、YAML の Slot と `docv.yaml` のスキーマ（`assets/schema/`、`schema/docv.schema.json`）、docv の概要（`docv desc` が出す `assets/desc.md`。`docv/service/service.md` はこのファイルへのシンボリックリンク）、HTML の CSS（`assets/style.css`）
 - Markdown の整形に使う dprint-plugin-markdown
+- コードブロックの色付けに使う syntect と、その構文の定義とテーマ
 
 textlint を使うときだけ Node.js が、JPG を作るときだけ Chrome が要る。`docv.yaml` の JSON Schema（`schema/docv.schema.json`）は、埋め込むほかにリポジトリでも公開し、`docv.yaml` からは版を含む URL で参照する。
 
@@ -55,6 +56,7 @@ textlint を使うときだけ Node.js が、JPG を作るときだけ Chrome �
 
 - CSS は各ページの中に書く。外部の CDN は使わない。file:// で開いても、そのままホスティングしても見られる
 - JS は、決定のページのカーソルキーでの移動と、プロジェクト詳細のタグのトグルにだけ使い、ページの中に書く。どちらも JPG にしないページで、JS が動かなくても、すべての中身は読め、リンクから辿れる。OS ごとの手順のタブは、JS を使わず CSS で切り替える
+- フェンスのコードブロックは、フェンスに書いた言語（`yaml` など）に合わせて、build のときに色を付ける。色は HTML の中に埋め込み、JS は使わない。言語がないか、syntect が知らない言語なら、色を付けずに出す
 - 原本へのリンク（ツリー、Slot や原本の本文の中のリンク）は、その原本のページに向ける。ほかのルートの中のファイルへのリンクは、`docv.yaml` に `repository.url` があれば GitHub の URL にし、なければ出力先から辿れる相対パスにする
 
 ## 毎回同じ出力にする決まり
