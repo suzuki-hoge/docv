@@ -7,7 +7,7 @@
 //! 画像にしても読めるように、折りたたみは使わない。OS ごとの手順のタブは、印刷の表示（JPG）ではすべて並べる。
 
 use std::cell::RefCell;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -304,27 +304,12 @@ impl Site<'_> {
             .parent()
             .unwrap_or(Path::new(""))
             .to_path_buf();
-        let (html, toc) = self.markdown_with_toc(&page.body, &base, true, 2);
+        let html = self.markdown_with_ids(&page.body, &base, true, 2);
         let body = format!(
             "<section class=\"doc\">\n<h1>{}</h1>\n{html}</section>\n",
             escape(&page.title)
         );
-        // 右のサイドバーに、h2 と h3 の目次を置く。
-        let mut aside = String::new();
-        let items: Vec<&(usize, String, String)> = toc.iter().filter(|(l, ..)| *l <= 3).collect();
-        if !items.is_empty() {
-            aside.push_str("<nav class=\"outline\">\n<p class=\"outline-title\">目次</p>\n<ul>\n");
-            for (level, id, text) in items {
-                let _ = writeln!(
-                    aside,
-                    "<li class=\"h{level}\"><a href=\"#{}\">{}</a></li>",
-                    escape(id),
-                    escape(text)
-                );
-            }
-            aside.push_str("</ul>\n</nav>\n");
-        }
-        self.page_with(
+        self.page(
             &format!(
                 "{} - {} - {}",
                 escape(&page.title),
@@ -333,17 +318,11 @@ impl Site<'_> {
             ),
             Nav::Detail,
             &body,
-            &aside,
         )
     }
 
-    /// HTML の全体。左にトップの 3 ページへのサイドバーを置く。印刷の表示（JPG）では出さない。
+    /// HTML の全体。左にトップの 3 ページへのサイドバーを、右に h2 と h3 の目次を置く。印刷の表示（JPG）では、どちらも出さない。
     fn page(&self, title: &str, current: Nav, body: &str) -> String {
-        self.page_with(title, current, body, "")
-    }
-
-    /// page に、右のサイドバー（aside）を足したもの。
-    fn page_with(&self, title: &str, current: Nav, body: &str, aside: &str) -> String {
         let mut nav = format!(
             "<nav class=\"sidebar\">\n<p class=\"project\">{}</p>\n<ul>\n",
             escape(&self.project.title())
@@ -368,7 +347,8 @@ impl Site<'_> {
             );
         }
         nav.push_str("</ul>\n</nav>\n");
-        page(title, &nav, body, aside)
+        let (body, aside) = outline(body);
+        page(title, &nav, &body, &aside)
     }
 
     /// Slot のページ。
@@ -570,7 +550,7 @@ impl Site<'_> {
                     .unwrap_or(Path::new(""))
                     .to_path_buf();
                 // md の Slot はページ全体なので、Free ファイルと同じく見出しに id を付け、ページ内リンクで飛べるようにする。
-                let (html, _) = self.markdown_with_toc(text, &base, true, 2);
+                let html = self.markdown_with_ids(text, &base, true, 2);
                 let _ = writeln!(out, "{html}");
             }
         }
@@ -1021,17 +1001,11 @@ impl Site<'_> {
     /// 見出しは、いちばん浅いものが top の段になるように付け直す。ページの中で h1 から h2、h3 と段を飛ばさないため。
     /// `<details>` は開いた状態にする。画像にしても中身が読めるように。
     fn markdown(&self, text: &str, base: &Path, drop_h1: bool, top: usize) -> String {
-        self.render_markdown(text, base, drop_h1, top, false).0
+        self.render_markdown(text, base, drop_h1, top, false)
     }
 
-    /// markdown と同じく HTML にし、見出しに GitHub と同じ形の id を付けて、見出しの一覧（段、id、文字）も返す。
-    fn markdown_with_toc(
-        &self,
-        text: &str,
-        base: &Path,
-        drop_h1: bool,
-        top: usize,
-    ) -> (String, Vec<(usize, String, String)>) {
+    /// markdown と同じく HTML にし、見出しに GitHub と同じ形の id を付ける。
+    fn markdown_with_ids(&self, text: &str, base: &Path, drop_h1: bool, top: usize) -> String {
         self.render_markdown(text, base, drop_h1, top, true)
     }
 
@@ -1042,7 +1016,7 @@ impl Site<'_> {
         drop_h1: bool,
         top: usize,
         ids: bool,
-    ) -> (String, Vec<(usize, String, String)>) {
+    ) -> String {
         let parsed: Vec<Event> = Parser::new_ext(text, markdown::OPTIONS).collect();
         let mut dropped_h1 = !drop_h1;
         let mut skipping = false;
@@ -1073,7 +1047,7 @@ impl Site<'_> {
             HeadingLevel::try_from((level as usize + top - shallowest).clamp(1, 6))
                 .unwrap_or(HeadingLevel::H6)
         };
-        // 見出しの文字。id と見出しの一覧に使う。
+        // 見出しの文字。id に使う。
         let mut texts: Vec<String> = Vec::new();
         let mut in_heading = false;
         for event in &kept {
@@ -1091,7 +1065,6 @@ impl Site<'_> {
                 _ => {}
             }
         }
-        let mut toc = Vec::new();
         let mut used: BTreeMap<String, usize> = BTreeMap::new();
         let mut index = 0;
         let mut events = Vec::new();
@@ -1122,9 +1095,6 @@ impl Site<'_> {
                         }
                         None => None,
                     };
-                    if let Some(id) = &id {
-                        toc.push((level_of(level) as usize, id.to_string(), text));
-                    }
                     Event::Start(Tag::Heading {
                         level: level_of(level),
                         id,
@@ -1178,7 +1148,7 @@ impl Site<'_> {
         }
         let mut body = String::new();
         html::push_html(&mut body, highlight_code_blocks(events).into_iter());
-        (body, toc)
+        body
     }
 
     /// Markdown のリンク先を、HTML から辿れるリンク先にする。ルートの中のファイルで、ページのないものは None（リンクにしない）。
@@ -1322,6 +1292,99 @@ fn page(title: &str, nav: &str, body: &str, aside: &str) -> String {
 </html>
 "
     )
+}
+
+/// 本文の h2 と h3 から、右のサイドバーの目次を作る。id のない見出しには、GitHub と同じ形の id を付ける。
+/// 見出しがなければ、目次は空にする。
+fn outline(body: &str) -> (String, String) {
+    let mut used: BTreeSet<String> = BTreeSet::new();
+    let mut rest = body;
+    while let Some(i) = rest.find(" id=\"") {
+        rest = &rest[i + 5..];
+        if let Some(end) = rest.find('"') {
+            used.insert(rest[..end].to_string());
+        }
+    }
+    let mut out = String::with_capacity(body.len());
+    let mut items = Vec::new();
+    let mut rest = body;
+    while let Some(i) = ["<h2", "<h3"].iter().filter_map(|t| rest.find(t)).min() {
+        let level = &rest[i + 2..i + 3];
+        let after = &rest[i + 3..];
+        // <header> などを見出しと取り違えない。
+        if !after.starts_with('>') && !after.starts_with(' ') {
+            out.push_str(&rest[..i + 3]);
+            rest = after;
+            continue;
+        }
+        let (Some(open), Some(close)) = (after.find('>'), after.find(&format!("</h{level}>")))
+        else {
+            break;
+        };
+        let attrs = &after[..open];
+        let inner = &after[open + 1..close];
+        let text = strip_tags(inner);
+        let id = match attrs.find(" id=\"") {
+            Some(j) => attrs[j + 5..].split('"').next().unwrap_or("").to_string(),
+            None => {
+                let base = slug(&unescape(&text));
+                let mut id = base.clone();
+                let mut n = 1;
+                while used.contains(&id) {
+                    id = format!("{base}-{n}");
+                    n += 1;
+                }
+                used.insert(id.clone());
+                id
+            }
+        };
+        out.push_str(&rest[..i + 3]);
+        if !attrs.contains(" id=\"") {
+            let _ = write!(out, " id=\"{}\"", escape(&id));
+        }
+        out.push_str(&after[..close]);
+        rest = &after[close..];
+        items.push((level.to_string(), id, text));
+    }
+    out.push_str(rest);
+    let mut aside = String::new();
+    if !items.is_empty() {
+        aside.push_str("<nav class=\"outline\">\n<p class=\"outline-title\">目次</p>\n<ul>\n");
+        for (level, id, text) in items {
+            let _ = writeln!(
+                aside,
+                "<li class=\"h{level}\"><a href=\"#{}\">{}</a></li>",
+                escape(&id),
+                text.trim()
+            );
+        }
+        aside.push_str("</ul>\n</nav>\n");
+    }
+    (out, aside)
+}
+
+/// HTML のタグを除いた文字。実体参照は、そのまま残す。
+fn strip_tags(html: &str) -> String {
+    let mut out = String::new();
+    let mut in_tag = false;
+    for c in html.chars() {
+        match c {
+            '<' => in_tag = true,
+            '>' => in_tag = false,
+            c if !in_tag => out.push(c),
+            _ => {}
+        }
+    }
+    out
+}
+
+/// escape の逆。
+fn unescape(s: &str) -> String {
+    s.replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&amp;", "&")
 }
 
 /// リンクに書くパス。空白などを、URL で使える形にする。
@@ -1718,14 +1781,19 @@ mod tests {
         let cost = read("運用/費用.html");
         assert!(cost.contains("<td class=\"num\">3 ドル</td>"), "{cost}");
         assert!(
-            cost.contains("<h2>費用を理由にやっていないこと</h2>\n<p class=\"note\">なし</p>"),
+            cost.contains("<h2 id=\"費用を理由にやっていないこと\">費用を理由にやっていないこと</h2>\n<p class=\"note\">なし</p>"),
+            "{cost}"
+        );
+        // Slot のページにも、id を付けた見出しから右のサイドバーの目次を置く
+        assert!(
+            cost.contains("<li class=\"h2\"><a href=\"#費用を理由にやっていないこと\">費用を理由にやっていないこと</a></li>"),
             "{cost}"
         );
 
         // ADR は、ADR.html に、まとまりごとの h2 と決定のつながりの図を置く。
         // 箱をクリックすると、決定 1 つのページを開く
         assert!(
-            adr_index.contains("<main>\n<h2 class=\"group\">言語</h2>"),
+            adr_index.contains("<main>\n<h2 id=\"言語\" class=\"group\">言語</h2>"),
             "{adr_index}"
         );
         assert!(
@@ -1744,7 +1812,10 @@ mod tests {
         );
         assert_headings(&go);
         let rust = read("ADR/言語/Rust にする.html");
-        assert!(rust.contains("<h2>選ばなかった案</h2>"), "{rust}");
+        assert!(
+            rust.contains("<h2 id=\"選ばなかった案\">選ばなかった案</h2>"),
+            "{rust}"
+        );
         assert!(rust.contains("<td>Zig</td>"), "{rust}");
         // 前後のカードは本文の後に置き、カーソルキーで移れるようにする。状態や id、日付は出さない
         assert!(
