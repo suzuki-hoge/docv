@@ -13,26 +13,6 @@
       "type": "string",
       "minLength": 1
     },
-    "repository": {
-      "description": "HTML で、管理対象でないファイルへのリンクを GitHub の URL にするために使う。",
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "url"
-      ],
-      "properties": {
-        "url": {
-          "description": "GitHub のリポジトリの URL。",
-          "type": "string",
-          "pattern": "^https://"
-        },
-        "branch": {
-          "description": "リンクで使うブランチ。",
-          "type": "string",
-          "default": "main"
-        }
-      }
-    },
     "docs": {
       "description": "管理対象のファイルの glob。ルートからの相対パス。`.md` のファイルだけが対象。",
       "type": "array",

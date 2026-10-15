@@ -410,7 +410,8 @@ impl Site<'_> {
                     continue;
                 };
                 let href = match &slot.content {
-                    Content::Ref(c) => escape(&self.href(&c.target)),
+                    Content::Ref(c) if slot::is_url(&c.target) => escape(&c.target),
+                    Content::Ref(c) => escape(&encode_path(&self.file_path(&c.target))),
                     _ => encode_path(&page_path(slot)),
                 };
                 let _ = writeln!(
@@ -597,11 +598,14 @@ impl Site<'_> {
                 .as_deref()
                 .map(|h| format!("#{}", slug(h)))
                 .unwrap_or_default();
+            // README.md のように、ページのないファイルから埋め込んだときは、出典をリンクにしない。
+            let from = match self.link(&included.source, &fragment) {
+                Some(href) => format!("<a href=\"{}\">{}</a>", escape(&href), escape(target)),
+                None => escape(target),
+            };
             let _ = writeln!(
                 out,
-                "<div class=\"included\">{html}<p class=\"from\">出典: <a href=\"{}\">{}</a></p></div>",
-                escape(&self.link(&included.source, &fragment, false)),
-                escape(target)
+                "<div class=\"included\">{html}<p class=\"from\">出典: {from}</p></div>"
             );
         }
     }
@@ -737,7 +741,7 @@ impl Site<'_> {
                 let _ = writeln!(
                     out,
                     "<p><img src=\"{}\" alt=\"\"></p>",
-                    escape(&self.link(image, "", true))
+                    escape(&encode_path(&self.file_path(image)))
                 );
             }
             if !group.items.is_empty() {
@@ -858,7 +862,10 @@ impl Site<'_> {
             let reference = item
                 .reference
                 .as_deref()
-                .map(|r| format!("<a href=\"{}\">{}</a>", escape(&self.href(r)), escape(r)))
+                .map(|r| match self.href(r) {
+                    Some(href) => format!("<a href=\"{}\">{}</a>", escape(&href), escape(r)),
+                    None => escape(r),
+                })
                 .unwrap_or_default();
             let _ = writeln!(
                 out,
@@ -918,7 +925,7 @@ impl Site<'_> {
                 escape(&page.source),
                 escape(&serde_json::to_string(&page.tags).unwrap_or_default()),
                 10 + depth * 20,
-                escape(&self.link(&page.source, "", false)),
+                escape(&self.link(&page.source, "").unwrap_or_default()),
                 escape(&page.title),
                 self.tags(page)
             );
@@ -1088,6 +1095,7 @@ impl Site<'_> {
         let mut used: BTreeMap<String, usize> = BTreeMap::new();
         let mut index = 0;
         let mut events = Vec::new();
+        let mut unlinked = false;
         for event in kept {
             let event = match event {
                 Event::Start(Tag::Heading {
@@ -1130,12 +1138,23 @@ impl Site<'_> {
                     dest_url,
                     title,
                     id,
-                }) => Event::Start(Tag::Link {
-                    link_type,
-                    dest_url: self.rewrite(base, &dest_url, false),
-                    title,
-                    id,
-                }),
+                }) => match self.rewrite(base, &dest_url, false) {
+                    Some(dest_url) => Event::Start(Tag::Link {
+                        link_type,
+                        dest_url,
+                        title,
+                        id,
+                    }),
+                    // ページのないファイルへのリンクは、文字だけを残す。リンクは入れ子にならない。
+                    None => {
+                        unlinked = true;
+                        continue;
+                    }
+                },
+                Event::End(TagEnd::Link) if unlinked => {
+                    unlinked = false;
+                    continue;
+                }
                 Event::Start(Tag::Image {
                     link_type,
                     dest_url,
@@ -1143,7 +1162,7 @@ impl Site<'_> {
                     id,
                 }) => Event::Start(Tag::Image {
                     link_type,
-                    dest_url: self.rewrite(base, &dest_url, true),
+                    dest_url: self.rewrite(base, &dest_url, true).unwrap_or(dest_url),
                     title,
                     id,
                 }),
@@ -1162,42 +1181,53 @@ impl Site<'_> {
         (body, toc)
     }
 
-    /// Markdown のリンク先を、HTML から辿れるリンク先にする。
-    fn rewrite<'a>(&self, base: &Path, dest: &CowStr<'a>, image: bool) -> CowStr<'a> {
+    /// Markdown のリンク先を、HTML から辿れるリンク先にする。ルートの中のファイルで、ページのないものは None（リンクにしない）。
+    /// 画像は、元のファイルを出力先から辿れる相対パスで読む。
+    fn rewrite<'a>(&self, base: &Path, dest: &CowStr<'a>, image: bool) -> Option<CowStr<'a>> {
         let Some((target, fragment)) = markdown::resolve_link(base, dest) else {
-            return dest.clone();
+            return Some(dest.clone());
         };
         let target = markdown::slash_path(&target);
+        if image {
+            return Some(CowStr::from(self.file_path(&target)));
+        }
         let fragment = fragment.map(|f| format!("#{f}")).unwrap_or_default();
-        CowStr::from(self.link(&target, &fragment, image))
+        self.link(&target, &fragment).map(CowStr::from)
     }
 
-    /// URL ならそのまま、ルートからのパスならリンクにする。
-    fn href(&self, target: &str) -> String {
+    /// ルートからのパスのファイルの、出力先からのページのパス。ページのないファイルは None。
+    fn page_of(&self, target: &str) -> Option<String> {
+        if self.pages.iter().any(|p| p.source == target) {
+            return Some(doc_page(target));
+        }
+        if let Some(slot) = self.slots.iter().find(|s| s.path == target && has_page(s)) {
+            return Some(page_path(slot));
+        }
+        self.adrs.iter().find(|a| a.path == target).map(adr_page)
+    }
+
+    /// URL ならそのまま、ルートからのパスなら、ページのあるファイルだけリンク先にする。
+    fn href(&self, target: &str) -> Option<String> {
         if slot::is_url(target) {
-            target.to_string()
+            Some(target.to_string())
         } else {
-            self.link(target, "", false)
+            self.link(target, "")
         }
     }
 
-    /// ルートの中のファイルへのリンク。Free ファイルなら、その Free ファイルのページに向ける。
-    /// ほかのファイルは、repository.url があれば GitHub に、なければ出力先から辿れる相対パスにする。
-    fn link(&self, target: &str, fragment: &str, image: bool) -> String {
-        if !image && self.pages.iter().any(|p| p.source == target) {
-            let to = self.out.join(doc_page(target));
-            return format!(
-                "{}{fragment}",
-                encode_path(&relative_path(&self.dir.borrow(), &to))
-            );
-        }
-        if let Some(repo) = &self.project.config.repository {
-            let mode = if image { "raw" } else { "blob" };
-            let url = repo.url.trim_end_matches('/');
-            return format!("{url}/{mode}/{}/{target}{fragment}", repo.branch);
-        }
-        let to = self.project.root.join(target);
-        format!("{}{fragment}", relative_path(&self.dir.borrow(), &to))
+    /// ルートの中のファイルへのリンク先。Free ファイル、Slot ファイル、ADR だけ、そのページに出力先の中の相対パスで向ける。
+    /// HTML は clone したリポジトリで見るので、ほかのファイルはエディタで開けばよく、リンクにしない（None）。
+    fn link(&self, target: &str, fragment: &str) -> Option<String> {
+        let to = self.out.join(self.page_of(target)?);
+        Some(format!(
+            "{}{fragment}",
+            encode_path(&relative_path(&self.dir.borrow(), &to))
+        ))
+    }
+
+    /// ルートの中のファイルの、出力先から辿れる相対パス。画像と、API 仕様書と DB 仕様書の ref の先に使う。
+    fn file_path(&self, target: &str) -> String {
+        relative_path(&self.dir.borrow(), &self.project.root.join(target))
     }
 }
 
@@ -1763,7 +1793,51 @@ mod tests {
     }
 
     #[test]
-    fn links_files_to_repository() {
+    fn links_slot_and_adr_files_to_their_pages() {
+        let (dir, project) = project(&[
+            (
+                "docs/a.md",
+                "---\nmission: q\n---\n# A\n\n[s](../docv/system/system.md#部品) [d](../docv/adr/go.md)\n",
+            ),
+            ("docv/system/system.md", "# システム仕様\n"),
+            (
+                "docv/adr/go.md",
+                "---\ngroup: 言語\ndate: 2026-01-01\n---\n\n# Go にする\n",
+            ),
+        ]);
+        let out = dir.path().join("out");
+        html(&project, &out).unwrap();
+        let page = fs::read_to_string(out.join("プロジェクト詳細/docs/a.html")).unwrap();
+        // Markdown のリンクは、パーセントエンコードして出る。読めるように戻して比べる
+        let bytes = page.as_bytes();
+        let mut decoded = Vec::new();
+        let mut i = 0;
+        while i < bytes.len() {
+            match (bytes[i], page.get(i + 1..i + 3)) {
+                (b'%', Some(hex)) if u8::from_str_radix(hex, 16).is_ok() => {
+                    decoded.push(u8::from_str_radix(hex, 16).unwrap());
+                    i += 3;
+                }
+                (b, _) => {
+                    decoded.push(b);
+                    i += 1;
+                }
+            }
+        }
+        let page = String::from_utf8(decoded).unwrap();
+        // ページのあるファイルは、出力先の中の相対パスで向ける
+        assert!(
+            page.contains("href=\"../../システム仕様/システム仕様.html#部品\""),
+            "{page}"
+        );
+        assert!(
+            page.contains("href=\"../../ADR/言語/Go にする.html\""),
+            "{page}"
+        );
+    }
+
+    #[test]
+    fn does_not_link_files_without_page() {
         let (dir, mut project) = project(&[
             ("docs/a.md", "---\nmission: q\n---\n# A\n"),
             (
@@ -1771,23 +1845,14 @@ mod tests {
                 "# システム仕様\n\n[memo](../../notes.md) ![図](../../a.svg)\n",
             ),
         ]);
-        project.config.repository = Some(crate::config::Repository {
-            url: "https://github.com/o/r/".to_string(),
-            branch: "main".to_string(),
-        });
         project.config.output.commit = false;
         let out = dir.path().join("out");
         html(&project, &out).unwrap();
         let page = fs::read_to_string(out.join("システム仕様/システム仕様.html")).unwrap();
         let detail = fs::read_to_string(out.join(DETAIL_PAGE)).unwrap();
-        assert!(
-            page.contains("href=\"https://github.com/o/r/blob/main/notes.md\""),
-            "{page}"
-        );
-        assert!(
-            page.contains("src=\"https://github.com/o/r/raw/main/a.svg\""),
-            "{page}"
-        );
+        // ページのないファイルは、リンクにせず文字だけを出す。画像は元のファイルを相対パスで読む
+        assert!(page.contains("<p>memo <img src=\"../../a.svg\""), "{page}");
+        assert!(!page.contains("notes.md"), "{page}");
         assert!(
             detail.contains("href=\"プロジェクト詳細/docs/a.html\""),
             "{detail}"

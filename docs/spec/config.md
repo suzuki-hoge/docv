@@ -14,8 +14,6 @@ tags: [仕様, 設定]
 ```yaml
 # yaml-language-server: $schema=https://raw.githubusercontent.com/suzuki-hoge/docv/v1.0.0/schema/docv.schema.json
 title: shop-app
-repository:
-  url: https://github.com/<owner>/shop-app
 
 docs:
   - docs/**/*.md
@@ -47,7 +45,6 @@ format:
 | 項目             | 必須 | 既定         | 意味                                                                                                              |
 | ---------------- | ---- | ------------ | ----------------------------------------------------------------------------------------------------------------- |
 | `title`          |      | ルートの名前 | HTML に出すプロジェクト名                                                                                         |
-| `repository.url` |      |              | GitHub のリポジトリの URL。HTML の中のファイルへのリンクを GitHub に向ける                                        |
 | `docs`           | 必須 |              | 管理対象の Markdown の glob の配列                                                                                |
 | `ignore`         |      |              | 管理対象にも管理外にもしないファイルの glob の配列                                                                |
 | `tags`           |      |              | タグの一覧。書いたときだけ、YAML front matter の `tags` をこの中に限る                                            |

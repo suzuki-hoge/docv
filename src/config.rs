@@ -20,7 +20,6 @@ pub const TAG_RULES: &[&str] = &["no-past-wording", "no-done-task"];
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub title: Option<String>,
-    pub repository: Option<Repository>,
     /// 管理対象のファイルの glob。
     pub docs: Vec<String>,
     #[serde(default)]
@@ -59,13 +58,6 @@ pub struct Override {
 pub enum Requirement {
     Required,
     Optional,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct Repository {
-    pub url: String,
-    #[serde(default = "default_branch")]
-    pub branch: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -147,10 +139,6 @@ pub struct Words {
 pub struct Format {
     #[serde(default)]
     pub enabled: bool,
-}
-
-fn default_branch() -> String {
-    "main".to_string()
 }
 
 fn default_slots_dir() -> String {
