@@ -40,7 +40,7 @@ main > h2.group:first-child { margin-top: 0; }
 h3 { font-size: 1.25em; margin: 32px 0 0; padding-bottom: 2px; border-bottom: 1px solid #d8dee4; }
 h4 { font-size: 1.02em; margin: 20px 0 4px; }
 /* index.html の Slot のカード。まとまりの中で横に並べる。幅は名前の 7 文字が収まる固定で、はみ出たら横にスクロールする */
-.cards { display: flex; gap: 8px; overflow-x: auto; margin: 12px 0 8px; padding-bottom: 4px; }
+.cards { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 8px; }
 .card { flex: none; box-sizing: border-box; width: 170px; display: flex; align-items: center; gap: 6px; padding: 12px 8px; border: 1px solid #d8dee4; border-radius: 8px; color: #1f2328; font-weight: 600; white-space: nowrap; }
 .card .icon { width: 24px; height: 24px; flex: none; color: #0b6bcb; }
 .slot > h1 { display: flex; align-items: center; gap: 12px; }
