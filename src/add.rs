@@ -1,6 +1,7 @@
 //! docv add。Slot ファイルを、決まったパスに作る。docv/service/manual.md の docv add。
 //!
 //! パスは docv が Slot ごとに決めていて、選ぶ余地はない。yaml の Slot には項目のサンプル（テンプレ）を書き、md の Slot は空のファイルを作る。
+//! Doc ガイドの Slot（doc-guide）だけは、ガイドラインの雛形を書く。
 //! yaml と md のどちらでも置ける Slot（API 仕様書、DB 仕様書）は、`api-yaml` と `api-md` のように、名前で形を選ぶ。
 
 use std::fmt::Write as _;
@@ -48,6 +49,22 @@ pub fn list() -> String {
     out
 }
 
+/// Slot ファイルに書く中身。
+fn text(def: &Def, ext: &str) -> &'static str {
+    match ext {
+        "yaml" => slot::template(def.id).expect("yaml の Slot にはテンプレがある"),
+        _ => slot::md_template(def.id).unwrap_or(""),
+    }
+}
+
+/// docv add --print の出力。Slot ファイルを作らずに、書く中身を出す。新しい版の雛形と見比べるため。
+pub fn print(slot: &str) -> Result<&'static str> {
+    let Some((_, def, ext)) = pages().into_iter().find(|(p, ..)| p == slot) else {
+        bail!("{slot} は Slot の名前ではない。docv add --list で作れる Slot の一覧を出す");
+    };
+    Ok(text(def, ext))
+}
+
 /// Slot ファイルを作り、ルートからの相対パスを返す。
 pub fn run(project: &Project, slot: &str) -> Result<String> {
     let Some((_, def, ext)) = pages().into_iter().find(|(p, ..)| p == slot) else {
@@ -63,10 +80,7 @@ pub fn run(project: &Project, slot: &str) -> Result<String> {
         bail!("{existing} がすでにある");
     }
     let rel = format!("{dir}/{}/{}.{ext}", def.group.dir(), def.id);
-    let text = match ext {
-        "yaml" => slot::template(def.id).expect("yaml の Slot にはテンプレがある"),
-        _ => "",
-    };
+    let text = text(def, ext);
     let path = project.root.join(&rel);
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).with_context(|| format!("{} を作れない", parent.display()))?;
@@ -109,6 +123,29 @@ mod tests {
             ""
         );
         assert_eq!(run(&project, "api-md").unwrap(), "docv/system/api.md");
+        // Doc ガイドの Slot は、ガイドラインの雛形を書く
+        assert_eq!(
+            run(&project, "doc-guide").unwrap(),
+            "docv/guide/doc-guide.md"
+        );
+        assert_eq!(
+            fs::read_to_string(dir.path().join("docv/guide/doc-guide.md")).unwrap(),
+            include_str!("../assets/template/doc-guide.md")
+        );
+    }
+
+    #[test]
+    fn prints_without_writing() {
+        assert_eq!(
+            print("doc-guide").unwrap(),
+            include_str!("../assets/template/doc-guide.md")
+        );
+        assert_eq!(
+            print("words").unwrap(),
+            include_str!("../assets/template/words.yaml")
+        );
+        assert_eq!(print("manual").unwrap(), "");
+        assert!(print("api").is_err());
     }
 
     #[test]

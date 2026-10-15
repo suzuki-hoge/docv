@@ -158,6 +158,13 @@ pub const DEFS: &[Def] = &[
         format: Format::Yaml,
     },
     Def {
+        id: "doc-guide",
+        label: "Doc ガイド",
+        group: Group::Developer,
+        question: "このプロジェクトのドキュメントは、どこに何をどう書くか",
+        format: Format::Markdown,
+    },
+    Def {
         id: "infrastructure",
         label: "インフラと環境",
         group: Group::Operate,
@@ -809,7 +816,7 @@ fn trim_separators(markdown: &str) -> String {
     text
 }
 
-/// yaml の Slot のテンプレ。docv add で書く、項目のサンプル。md の Slot は空のファイルを作るので、テンプレを持たない。
+/// yaml の Slot のテンプレ。docv add で書く、項目のサンプル。
 pub fn template(id: &str) -> Option<&'static str> {
     Some(match id {
         "install" => include_str!("../assets/template/install.yaml"),
@@ -824,6 +831,14 @@ pub fn template(id: &str) -> Option<&'static str> {
         "cost" => include_str!("../assets/template/cost.yaml"),
         _ => return None,
     })
+}
+
+/// md の Slot のテンプレ。docv add で書く雛形。Doc ガイドの Slot（doc-guide）だけがガイドラインの雛形を持ち、ほかの md の Slot は空のファイルを作る。
+pub fn md_template(id: &str) -> Option<&'static str> {
+    match id {
+        "doc-guide" => Some(include_str!("../assets/template/doc-guide.md")),
+        _ => None,
+    }
 }
 
 /// yaml の Slot のスキーマ（YAML で書いた JSON Schema）。docv schema で出す。md の Slot はスキーマを持たない。

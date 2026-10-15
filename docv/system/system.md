@@ -50,7 +50,7 @@ Slot は、Markdown とは別に、`slots.dir`（既定は `docv/`）から `<�
 
 Rust で書いた単一のバイナリにし、次のものを埋め込む。利用者に Rust の環境はいらない。
 
-- YAML の Slot のテンプレ（`assets/template/`）
+- Slot のテンプレ（`assets/template/`。YAML の Slot の項目のサンプルと、ドキュメントのガイドラインの雛形）
 - YAML の Slot と `docv.yaml` のスキーマ（`assets/schema/`）
 - docv の概要（`docv desc` が出す `assets/desc.md`。`docv/service/service.md` はこのファイルへのシンボリックリンク）
 - HTML の CSS（`assets/style.css`）

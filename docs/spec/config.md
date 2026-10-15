@@ -42,28 +42,28 @@ format:
   enabled: true
 ```
 
-| 項目             | 必須 | 既定         | 意味                                                                                                              |
-| ---------------- | ---- | ------------ | ----------------------------------------------------------------------------------------------------------------- |
-| `title`          |      | ルートの名前 | HTML に出すプロジェクト名                                                                                         |
-| `docs`           | 必須 |              | 管理対象の Markdown の glob の配列                                                                                |
-| `ignore`         |      |              | 管理対象にも管理外にもしないファイルの glob の配列                                                                |
-| `tags`           |      |              | タグの一覧。書いたときだけ、YAML front matter の `tags` をこの中に限る                                            |
-| `slots.dir`      |      | docv         | Slot ファイルを置くディレクトリ                                                                                   |
-| `output.dir`     |      | `docv/build` | docv build-html と docv build-image の出力先                                                                      |
-| `output.commit`  |      | true         | 出力を git で管理するか（8 章）                                                                                   |
-| `lint.tags`      |      |              | タグごとに、そのタグを持つファイルにかけるルール（[`rule/docs/guideline.md`](../rule/docs/guideline.md) の 4 章） |
-| `lint.style`     |      |              | 太字、章番号などの書式の規則（5 章）                                                                              |
-| `lint.words`     |      |              | 過去の言い回しとして警告する語の足し引き（`add`、`remove`）                                                       |
-| `lint.textlint`  |      |              | textlint を使うか、どのプリセットとルールを使うか（6 章）                                                         |
-| `format.enabled` |      | false        | check と new を整形と連動させるか（7 章）                                                                         |
-| `overrides`      |      |              | パスごとに、道具の設定を上書きする（3 章）                                                                        |
+| 項目             | 必須 | 既定         | 意味                                                                                  |
+| ---------------- | ---- | ------------ | ------------------------------------------------------------------------------------- |
+| `title`          |      | ルートの名前 | HTML に出すプロジェクト名                                                             |
+| `docs`           | 必須 |              | 管理対象の Markdown の glob の配列                                                    |
+| `ignore`         |      |              | 管理対象にも管理外にもしないファイルの glob の配列                                    |
+| `tags`           |      |              | タグの一覧。書いたときだけ、YAML front matter の `tags` をこの中に限る                |
+| `slots.dir`      |      | docv         | Slot ファイルを置くディレクトリ                                                       |
+| `output.dir`     |      | `docv/build` | docv build-html と docv build-image の出力先                                          |
+| `output.commit`  |      | true         | 出力を git で管理するか（8 章）                                                       |
+| `lint.tags`      |      |              | タグごとに、そのタグを持つファイルにかけるルール（[`spec/free.md`](free.md) の 2 章） |
+| `lint.style`     |      |              | 太字、章番号などの書式の規則（5 章）                                                  |
+| `lint.words`     |      |              | 過去の言い回しとして警告する語の足し引き（`add`、`remove`）                           |
+| `lint.textlint`  |      |              | textlint を使うか、どのプリセットとルールを使うか（6 章）                             |
+| `format.enabled` |      | false        | check と new を整形と連動させるか（7 章）                                             |
+| `overrides`      |      |              | パスごとに、道具の設定を上書きする（3 章）                                            |
 
 ---
 
 ## 2. 書くことと書かないこと
 
 - `docv.yaml` には、ツールの設定（`lint`、整形、出力）と、プロジェクト全体で共有する語彙（管理対象の範囲、タグの一覧、Slot の置き場所）だけを書く
-- ファイルごとの設定（問い、タグ）は、そのファイルの YAML front matter に書く（[`rule/docs/guideline.md`](../rule/docs/guideline.md) の 3 章）
+- ファイルごとの設定（問い、タグ）は、そのファイルの YAML front matter に書く（[`spec/free.md`](free.md) の 1 章）
 
 ---
 
@@ -97,7 +97,7 @@ overrides:
 
 - `tags` を書いたときだけ、YAML front matter の `tags` をこの中に限る。書かなければ、どんなタグでも付けられる
 - `lint.tags` のキーには、タグを書く。`tags` を書いたときは、`tags` にあるタグだけを書ける
-- `lint.tags` の値には、ルールの配列を書く。使えるルールは [`rule/docs/guideline.md`](../rule/docs/guideline.md) の 4 章
+- `lint.tags` の値には、ルールの配列を書く。使えるルールは [`spec/free.md`](free.md) の 2 章
 
 ---
 
@@ -140,11 +140,11 @@ lint:
 - リンク元が base の外にあるとき（`README.md` など）は、表示文字をルートからのパスにする
 - 表示文字は、パスと完全に一致していなければならない。ファイル名だけでは、どのディレクトリのファイルか分からないため
 
-| base   | リンク元                     | リンク先                      | 表示文字                 |
-| ------ | ---------------------------- | ----------------------------- | ------------------------ |
-| `docs` | `docs/spec/config.md`        | `docs/spec/slot.md`           | `spec/slot.md`           |
-| `docs` | `docs/rule/writing-style.md` | `docs/rule/docs/guideline.md` | `rule/docs/guideline.md` |
-| `docs` | `README.md`                  | `docs/spec/slot.md`           | `docs/spec/slot.md`      |
+| base   | リンク元              | リンク先                | 表示文字            |
+| ------ | --------------------- | ----------------------- | ------------------- |
+| `docs` | `docs/spec/config.md` | `docs/spec/slot.md`     | `spec/slot.md`      |
+| `docs` | `docs/spec/config.md` | `docs/schema/config.md` | `schema/config.md`  |
+| `docs` | `README.md`           | `docs/spec/slot.md`     | `docs/spec/slot.md` |
 
 </details>
 

@@ -1,4 +1,4 @@
-//! docv check のルール。Free ファイルのルールは docs/rule/docs/guideline.md の 10 章、書式の規則と textlint は docs/spec/config.md。
+//! docv check のルール。Free ファイルのルールは docs/spec/free.md の 3 章、書式の規則と textlint は docs/spec/config.md。
 
 use std::collections::HashSet;
 use std::fs;

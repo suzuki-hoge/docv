@@ -41,6 +41,9 @@ enum Command {
         /// 作れる Slot の一覧を出す
         #[arg(long, conflicts_with = "slot")]
         list: bool,
+        /// Slot ファイルを作らずに、書く中身を出す
+        #[arg(long, requires = "slot")]
+        print: bool,
     },
     /// 管理対象のファイルと Slot がルールに沿っているかを確かめる
     Check {
@@ -94,10 +97,19 @@ fn execute(cli: Cli) -> Result<ExitCode> {
             let path = locate.config_path(&root);
             init::run(&path)?;
             println!("{} を作った", path.display());
+            println!("docv add doc-guide で、ドキュメントのガイドラインの雛形を作る");
             Ok(ExitCode::SUCCESS)
         }
         Command::Add { list: true, .. } => {
             print!("{}", add::list());
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Add {
+            slot: Some(slot),
+            print: true,
+            ..
+        } => {
+            print!("{}", add::print(&slot)?);
             Ok(ExitCode::SUCCESS)
         }
         Command::Desc => {

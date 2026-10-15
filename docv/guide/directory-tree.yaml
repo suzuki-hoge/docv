@@ -6,7 +6,7 @@ entries:
   - path: assets/
     description: 実装から参照して出力するもの。バイナリに埋め込む
   - path: assets/template/
-    description: docv add が書く、YAML の Slot の項目のサンプル
+    description: docv add が書く Slot のテンプレ（YAML の Slot の項目のサンプルと、ドキュメントのガイドラインの雛形）
   - path: assets/schema/
     description: YAML の Slot と `docv.yaml` のスキーマ。`docv schema` で出す。`docv.schema.json` は公開して、エディタの補完に使う
   - path: assets/desc.md
@@ -20,12 +20,8 @@ entries:
   - path: docv/adr/
     description: 決めた経緯（ADR）
   - path: docs/spec/
-    description: docv の規格の詳細（Slot、ADR、`docv.yaml`）
+    description: docv のルールの詳細（Slot、Free ファイル、ADR、`docv.yaml`）
   - path: docs/schema/
     description: "`docv.yaml` と YAML の Slot のスキーマの写し。HTML で公開する"
-  - path: docs/rule/
-    description: このリポジトリのドキュメントの書式
-  - path: docs/rule/docs/guideline.md
-    description: Free ファイルの書き方
   - path: docs/fixme/
     description: まだ決まっていないこと

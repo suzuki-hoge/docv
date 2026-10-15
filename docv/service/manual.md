@@ -19,21 +19,27 @@
 
 `docv.yaml` を作る。
 
+- 作った後に、`docv add doc-guide` でガイドラインの雛形を作るよう案内する
+
 ### docv add
 
 Slot ファイルを、決まったパスに作る。
 
-| オプション | 意味                     |
-| ---------- | ------------------------ |
-| `--list`   | 作れる Slot の一覧を出す |
+| オプション | 意味                                    |
+| ---------- | --------------------------------------- |
+| `--list`   | 作れる Slot の一覧を出す                |
+| `--print`  | Slot ファイルを作らずに、書く中身を出す |
 
 ```sh
-docv add --list        # 作れる Slot の名前と、作るファイルの一覧を出す
-docv add manual        # docv/service/manual.md を作る
-docv add api-md        # docv/system/api.md を作る
+docv add --list            # 作れる Slot の名前と、作るファイルの一覧を出す
+docv add manual            # docv/service/manual.md を作る
+docv add api-md            # docv/system/api.md を作る
+docv add doc-guide         # docv/guide/doc-guide.md に、ガイドラインの雛形を作る
+docv add doc-guide --print # 今の版の雛形を出す。手元のガイドラインと見比べる
 ```
 
 - Slot ファイルの名前は変更できない
+- yaml の Slot には項目のサンプルを書き、md の Slot は空のファイルを作る。Doc ガイド（`doc-guide`）だけは、ガイドラインの雛形を書く
 - `docv/` は `slots.dir` で変更可能
 
 ### docv check

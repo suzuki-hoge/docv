@@ -11,7 +11,7 @@ ignore:
   - CLAUDE.md
   - tmp/**
 
-tags: [仕様, 規約, 未決, ルール, 設定, 出力]
+tags: [仕様, 未決, ルール, 設定, 出力]
 
 slots:
   dir: docv
@@ -23,7 +23,6 @@ output:
 lint:
   tags:
     仕様: [no-past-wording]
-    規約: [no-past-wording]
   style:
     bold: deny
     dollar: deny

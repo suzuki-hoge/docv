@@ -1250,6 +1250,8 @@ fn icon(id: &str) -> String {
         "develop" => {
             r#"<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3"/><path d="M13 15h4"/>"#
         }
+        // 鉛筆
+        "doc-guide" => r#"<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/>"#,
         // 雲
         "infrastructure" => {
             r#"<path d="M7 19a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 9.5a4.5 4.5 0 0 1-.5 9.5z"/>"#

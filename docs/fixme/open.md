@@ -23,7 +23,7 @@ HTML の見出しには GitHub と同じ形のアンカーを付けているの�
 
 ## 3. 過去の言い回しの既定の語は何がいいか
 
-`rule/docs/guideline.md` の 10 章の語を docs にかけて、誤検知と見逃しを見る。
+[`spec/free.md`](../spec/free.md) の 3 章の語を docs にかけて、誤検知と見逃しを見る。
 
 ---
 

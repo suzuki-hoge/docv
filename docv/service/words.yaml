@@ -2,11 +2,22 @@ groups:
   - name: ファイルの種類
     items:
       - en: Slot
-        desc: どのプロジェクトにもある問いに、決まった形で答えるファイル（Slot ファイル）。docv が問いと形を決める。`docv/` に `<まとまり>/<ID>.<拡張子>` の名前で置く。16 の Slot がある
+        desc: どのプロジェクトにもある問いに、決まった形で答えるファイル（Slot ファイル）。docv が問いと形を決める。`docv/` に `<まとまり>/<ID>.<拡張子>` の名前で置く。17 の Slot がある
       - en: Free
         desc: プロジェクトが問いと形を決める Markdown のファイル（Free ファイル）。AI Agent が読み書きし、詳細を記録する。`docs/` に置き、`docv.yaml` の `docs` に当てはまるファイル
       - en: ADR
         desc: 決めたこと 1 つを、背景、選ばなかった案と一緒に残す記録。`docv/adr/` に 1 つの Markdown で置き、決めた後は書き換えない
+  - name: 決まりの種類
+    items:
+      - ja: ルール
+        en: Rule
+        desc: docv の仕組みが決める決まり。Slot と `docv.yaml` のスキーマ、YAML front matter の key、check が確かめることなど。利用側は変えられず、`docv desc` と `docv schema` で見る
+      - ja: ガイドライン
+        en: Guideline
+        desc: 利用側がドキュメントを書くときの方針。調整の余地があり、利用側が自由に直す。Slot の Doc ガイドに書き、`docv add doc-guide` で雛形を作る
+      - ja: 設定
+        en: Config
+        desc: "`docv.yaml` で切り替えること。check のルールや textlint を使うか、出力を git で管理するかなど。`docv schema` で見る"
   - name: ファイルの分類
     items:
       - ja: 管理対象

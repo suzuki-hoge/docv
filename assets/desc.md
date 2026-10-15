@@ -10,7 +10,7 @@ docv の提供するもの
 - およそ普遍的に必要になるドキュメントのテンプレート
 - Free ファイル（`docs/` の Markdown）の YAML front matter
 - それらのビジュアライズ HTML 生成
-- AI Agent に伝えるドキュメント管理のガイドライン
+- AI Agent に伝えるドキュメント管理のガイドラインの雛形
 
 このツールそのものには LLM は含まない
 
@@ -71,7 +71,7 @@ HTML にインデックスするときに組み込まれる
 - `docv schema <slot>`: Slot ファイルのスキーマを確認する
 - `docv {check|fix} [path...]`: ドキュメントを検査する / 自動修正する
 
-新たに導入する場合は `docv init` し、`docv desc` に従い `docv add` と `docv check` で作成・調整を進める
+新たに導入する場合は `docv init` し、`docv add doc-guide` でガイドラインを作り、`docv desc` に従い `docv add` と `docv check` で作成・調整を進める
 
 ## 5. スキーマ ( 設定ファイル )
 
@@ -93,3 +93,11 @@ Slot ファイルのうち、次のページは YAML である
 - `cost`: 費用
 
 これらのスキーマは `docv schema <slot>` で確認する
+
+## 7. ルール、ガイドライン、設定
+
+docv の決まりは、次の 3 つに分かれる
+
+- ルール: docv の仕組みが決める決まり。Slot と `docv.yaml` のスキーマ、YAML front matter の key、check が確かめることなど。利用側は変えられない。この概要と `docv schema <slot>` で確認する
+- ガイドライン: ドキュメントを書くときの方針。`docv add doc-guide` で Doc ガイド（`docv/guide/doc-guide.md`）に雛形を作り、プロジェクトに合わせて自由に直す
+- 設定: `docv.yaml` で切り替えること。check のルールや textlint を使うか、出力を git で管理するかなど。`docv schema` で確認する
