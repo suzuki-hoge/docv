@@ -143,8 +143,6 @@ Slot ファイルのうち、次のページは YAML である
 - `install`: インストール
 - `words`: 用語集
 - `stack`: 技術スタック
-- `api-yaml`: API 仕様書（md でも置ける）
-- `db-yaml`: DB 仕様書（md でも置ける）
 - `directory-tree`: ディレクトリ
 - `setup`: 環境構築
 - `env`: 環境変数

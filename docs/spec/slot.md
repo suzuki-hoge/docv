@@ -26,25 +26,25 @@ tags: [仕様, ルール, 出力]
 
 HTML には、この表の順に、まとまりごとに並べる。
 
-| ファイル                             | Slot           | まとまり         | 答える問い                                                               |
-| ------------------------------------ | -------------- | ---------------- | ------------------------------------------------------------------------ |
-| `service/install.yaml`               | インストール   | サービス仕様     | 利用者はどう入れるか                                                     |
-| `service/service.md`                 | サービス仕様   | サービス仕様     | これは何で、誰のために、何を解決し、どんな部品からなるか                 |
-| `service/manual.md`                  | 利用マニュアル | サービス仕様     | 利用者はどう使うか（CLI のコマンド、GUI の操作など）                     |
-| `service/words.yaml`                 | 用語集         | サービス仕様     | このプロジェクトの言葉は何を意味するか                                   |
-| `system/stack.yaml`                  | 技術スタック   | システム仕様     | 何で作られているか                                                       |
-| `system/system.md`                   | システム仕様   | システム仕様     | システムは、内部でどう動き、どんな決まりに従うか                         |
-| `system/api.yaml` か `system/api.md` | API 仕様書     | システム仕様     | どんな API があり、何を受け取り、何を返すか                              |
-| `system/db.yaml` か `system/db.md`   | DB 仕様書      | システム仕様     | どんなデータを、どこにどう保存しているか                                 |
-| `guide/directory-tree.yaml`          | ディレクトリ   | 開発者向けガイド | どこに何があるか                                                         |
-| `guide/setup.yaml`                   | 環境構築       | 開発者向けガイド | 開発を始めるには、何を用意して何を実行するか                             |
-| `guide/env.yaml`                     | 環境変数       | 開発者向けガイド | システムを動かすのにどんな環境変数が要り、それぞれどこで設定されているか |
-| `guide/develop.yaml`                 | 開発コマンド   | 開発者向けガイド | 開発者はテストやビルドなどをどう実行するか                               |
-| `guide/doc-guide.md`                 | Doc ガイド     | 開発者向けガイド | このプロジェクトのドキュメントは、どこに何をどう書くか                   |
-| `operation/infrastructure.md`        | インフラと環境 | 運用             | どんな環境（本番、ステージング、開発など）があり、それぞれ何に使うか     |
-| `operation/deploy.md`                | デプロイ       | 運用             | 作ったものを、どの環境に、どう反映するか                                 |
-| `operation/release.md`               | リリース       | 運用             | 版をどう決めて、利用者にどう届けるか                                     |
-| `operation/cost.yaml`                | 費用           | 運用             | 何にいくらかかり、費用を理由に何をしていないか                           |
+| ファイル                      | Slot           | まとまり         | 答える問い                                                               |
+| ----------------------------- | -------------- | ---------------- | ------------------------------------------------------------------------ |
+| `service/install.yaml`        | インストール   | サービス仕様     | 利用者はどう入れるか                                                     |
+| `service/service.md`          | サービス仕様   | サービス仕様     | これは何で、誰のために、何を解決し、どんな部品からなるか                 |
+| `service/manual.md`           | 利用マニュアル | サービス仕様     | 利用者はどう使うか（CLI のコマンド、GUI の操作など）                     |
+| `service/words.yaml`          | 用語集         | サービス仕様     | このプロジェクトの言葉は何を意味するか                                   |
+| `system/stack.yaml`           | 技術スタック   | システム仕様     | 何で作られているか                                                       |
+| `system/system.md`            | システム仕様   | システム仕様     | システムは、内部でどう動き、どんな決まりに従うか                         |
+| `system/api.md`               | API 仕様書     | システム仕様     | どんな API があり、何を受け取り、何を返すか                              |
+| `system/db.md`                | DB 仕様書      | システム仕様     | どんなデータを、どこにどう保存しているか                                 |
+| `guide/directory-tree.yaml`   | ディレクトリ   | 開発者向けガイド | どこに何があるか                                                         |
+| `guide/setup.yaml`            | 環境構築       | 開発者向けガイド | 開発を始めるには、何を用意して何を実行するか                             |
+| `guide/env.yaml`              | 環境変数       | 開発者向けガイド | システムを動かすのにどんな環境変数が要り、それぞれどこで設定されているか |
+| `guide/develop.yaml`          | 開発コマンド   | 開発者向けガイド | 開発者はテストやビルドなどをどう実行するか                               |
+| `guide/doc-guide.md`          | Doc ガイド     | 開発者向けガイド | このプロジェクトのドキュメントは、どこに何をどう書くか                   |
+| `operation/infrastructure.md` | インフラと環境 | 運用             | どんな環境（本番、ステージング、開発など）があり、それぞれ何に使うか     |
+| `operation/deploy.md`         | デプロイ       | 運用             | 作ったものを、どの環境に、どう反映するか                                 |
+| `operation/release.md`        | リリース       | 運用             | 版をどう決めて、利用者にどう届けるか                                     |
+| `operation/cost.yaml`         | 費用           | 運用             | 何にいくらかかり、費用を理由に何をしていないか                           |
 
 - Slot の名前に近いパスで置くと、check が slot-unknown で正しいパスを示す。たとえば、まとまりのディレクトリが違う `words.yaml`、番号を付けた `service/03-words.yaml`、拡張子が違う `service/service.yaml`
 - 利用マニュアル（manual）と開発コマンド（develop）を分けるのは、使う人と目的が違うため。利用マニュアルは、リポジトリが CLI や GUI のときの、利用者向けの使い方
@@ -102,16 +102,14 @@ steps:
 </details>
 
 <details>
-<summary>API 仕様書、DB 仕様書、環境変数、費用</summary>
+<summary>環境変数、費用</summary>
 
-| Slot    | 項目             | 中身                                                                                                      |
-| ------- | ---------------- | --------------------------------------------------------------------------------------------------------- |
-| api、db | `ref`            | 外の道具（OpenAPI など）で作った定義のパスか URL。ページを作らず、`index.html` のカードから直接リンクする |
-| env     | `envs`           | `key`、`desc`、`secret`、`local_from`、`release_from` の配列                                              |
-| cost    | `accepted_items` | 費用をかけて使っているもの。`name`、`desc`、`monthly`、`ref` の配列                                       |
-|         | `rejected_items` | 費用を理由にやっていないこと。形は `accepted_items` と同じ                                                |
+| Slot | 項目             | 中身                                                                |
+| ---- | ---------------- | ------------------------------------------------------------------- |
+| env  | `envs`           | `key`、`desc`、`secret`、`local_from`、`release_from` の配列        |
+| cost | `accepted_items` | 費用をかけて使っているもの。`name`、`desc`、`monthly`、`ref` の配列 |
+|      | `rejected_items` | 費用を理由にやっていないこと。形は `accepted_items` と同じ          |
 
-- API 仕様書と DB 仕様書は、YAML なら `ref` の先へ `index.html` のカードから直接リンクし、md ならページにしてそのまま出す。説明を書きたいときは md にする。両方は置かない
 - 環境変数の `secret` は、秘密の値か。`local_from` と `release_from` には、どこで設定しているかを書く
   - `local_from`: ローカル環境（Docker Compose、`.env` など）
   - `release_from`: ステージングや本番（ECS のタスク定義、SSM など）
@@ -119,7 +117,7 @@ steps:
 
 </details>
 
-- API 仕様書と DB 仕様書を除く YAML の Slot には、`body` と `include` も書ける。`body` は Slot の最後に出す Markdown、`include` は埋め込む Markdown の配列（`パス` か `パス#見出し`）
+- YAML の Slot には、`body` と `include` も書ける。`body` は Slot の最後に出す Markdown、`include` は埋め込む Markdown の配列（`パス` か `パス#見出し`）
 - `include` の `パス` はファイル全体を、YAML front matter と h1 を除いて埋め込む。`パス#見出し` は、その見出しの下から、次の同じ深さ以上の見出しの手前までを埋め込む
 - YAML の Slot には、項目の型と意味を書いたスキーマ（YAML で書いた JSON Schema）がある。`docv schema <slot>` で出す。元のファイルは `assets/schema/<ID>.yaml` で、`docs/schema/` に写しを置く
 
@@ -140,7 +138,6 @@ steps:
 | ID                   | 強さ         | 内容                                                                                                                 |
 | -------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------- |
 | slot-unknown         | error        | Slot のディレクトリに、Slot の名前でないファイルがある                                                               |
-| slot-duplicate       | error        | 同じ Slot ファイルが 2 つある（`api.yaml` と `api.md` など）                                                         |
 | slot-invalid         | error        | YAML の Slot の形に合わない。知らない項目、手順の `id` の重なり、`os` のない `item`、`ja` も `en` もない用語も error |
 | slot-path-missing    | error / warn | パスの先がない。directory-tree の `path` は warn、それ以外は error                                                   |
 | slot-include-missing | error        | `include` のファイルか見出しがない                                                                                   |

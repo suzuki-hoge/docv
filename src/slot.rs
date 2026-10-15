@@ -58,8 +58,6 @@ pub enum Format {
     Yaml,
     /// 形を決めない Markdown。HTML にはそのまま出す。
     Markdown,
-    /// YAML（外の定義へのリンクだけ）か Markdown のどちらか。
-    Either,
 }
 
 #[derive(Debug)]
@@ -120,14 +118,14 @@ pub const DEFS: &[Def] = &[
         label: "API 仕様書",
         group: Group::System,
         question: "どんな API があり、何を受け取り、何を返すか",
-        format: Format::Either,
+        format: Format::Markdown,
     },
     Def {
         id: "db",
         label: "DB 仕様書",
         group: Group::System,
         question: "どんなデータを、どこにどう保存しているか",
-        format: Format::Either,
+        format: Format::Markdown,
     },
     Def {
         id: "directory-tree",
@@ -195,43 +193,29 @@ pub const DEFS: &[Def] = &[
 ];
 
 impl Def {
-    /// 置ける拡張子。
-    pub fn extensions(&self) -> &'static [&'static str] {
+    /// 拡張子。
+    pub fn extension(&self) -> &'static str {
         match self.format {
-            Format::Yaml => &["yaml"],
-            Format::Markdown => &["md"],
-            Format::Either => &["yaml", "md"],
+            Format::Yaml => "yaml",
+            Format::Markdown => "md",
         }
     }
 
-    /// Slot ファイルの、slots.dir からの相対パス。拡張子を選べる Slot は、最初の拡張子（yaml）のもの。
+    /// Slot ファイルの、slots.dir からの相対パス。
     pub fn file_name(&self) -> String {
-        format!("{}/{}.{}", self.group.dir(), self.id, self.extensions()[0])
-    }
-
-    /// 置けるファイルの、slots.dir からの相対パスをすべて。
-    pub fn file_names(&self) -> Vec<String> {
-        self.extensions()
-            .iter()
-            .map(|ext| format!("{}/{}.{ext}", self.group.dir(), self.id))
-            .collect()
+        format!("{}/{}.{}", self.group.dir(), self.id, self.extension())
     }
 }
 
-/// slots.dir からの相対パス（`service/words.yaml`）から Slot と拡張子を引く。
-pub fn def_of_file(rel: &str) -> Option<(&'static Def, &'static str)> {
-    DEFS.iter().find_map(|d| {
-        d.extensions()
-            .iter()
-            .find(|ext| format!("{}/{}.{ext}", d.group.dir(), d.id) == rel)
-            .map(|ext| (d, *ext))
-    })
+/// slots.dir からの相対パス（`service/words.yaml`）から Slot を引く。
+pub fn def_of_file(rel: &str) -> Option<&'static Def> {
+    DEFS.iter().find(|d| d.file_name() == rel)
 }
 
 /// Slot ファイルとして置ける名前の一覧。メッセージに使う。
 pub fn file_names() -> String {
     DEFS.iter()
-        .flat_map(|d| d.file_names())
+        .map(|d| d.file_name())
         .collect::<Vec<_>>()
         .join("、")
 }
@@ -246,13 +230,7 @@ pub fn suggest(dir: &str, rel: &str) -> Option<String> {
         .split_once('-')
         .filter(|(n, _)| n.len() == 2 && n.chars().all(|c| c.is_ascii_digit()))
         .map_or(stem, |(_, id)| id);
-    def(id).map(|d| {
-        d.file_names()
-            .iter()
-            .map(|f| format!("{dir}/{f}"))
-            .collect::<Vec<_>>()
-            .join(" か ")
-    })
+    def(id).map(|d| format!("{dir}/{}", d.file_name()))
 }
 
 pub fn def(id: &str) -> Option<&'static Def> {
@@ -369,14 +347,6 @@ pub struct StackGroup {
     pub items: Vec<Tool>,
 }
 
-/// 外の道具で作った定義へのリンク（API 仕様書、DB 仕様書を YAML で置いたとき）。
-#[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Ref {
-    #[serde(rename = "ref")]
-    pub target: String,
-}
-
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Layout {
@@ -447,7 +417,6 @@ pub enum Content {
     Procedure(Procedure),
     Words(Words),
     Stack(Stack),
-    Ref(Ref),
     Layout(Layout),
     Env(Env),
     Cost(Cost),
@@ -456,8 +425,9 @@ pub enum Content {
 }
 
 impl Content {
-    fn parse(id: &str, ext: &str, text: &str) -> serde_yaml_ng::Result<Content> {
-        if ext == "md" {
+    fn parse(def: &Def, text: &str) -> serde_yaml_ng::Result<Content> {
+        let id = def.id;
+        if def.format == Format::Markdown {
             return Ok(Content::Markdown(markdown::split(text).body));
         }
         // 空のファイルは、項目のない Slot として扱う。
@@ -466,7 +436,6 @@ impl Content {
             "install" | "setup" | "develop" => Content::Procedure(serde_yaml_ng::from_str(text)?),
             "words" => Content::Words(serde_yaml_ng::from_str(text)?),
             "stack" => Content::Stack(serde_yaml_ng::from_str(text)?),
-            "api" | "db" => Content::Ref(serde_yaml_ng::from_str(text)?),
             "directory-tree" => Content::Layout(serde_yaml_ng::from_str(text)?),
             "env" => Content::Env(serde_yaml_ng::from_str(text)?),
             "cost" => Content::Cost(serde_yaml_ng::from_str(text)?),
@@ -483,7 +452,7 @@ impl Content {
             Content::Layout(c) => (&c.body, &c.include),
             Content::Env(c) => (&c.body, &c.include),
             Content::Cost(c) => (&c.body, &c.include),
-            Content::Ref(_) | Content::Markdown(_) => return (None, &[]),
+            Content::Markdown(_) => return (None, &[]),
         };
         (body.as_deref(), include)
     }
@@ -499,7 +468,6 @@ impl Content {
                     }
                 }
             }
-            Content::Ref(c) if !is_url(&c.target) => paths.push(("ref", &c.target)),
             Content::Layout(c) => {
                 for e in &c.entries {
                     paths.push(("path", &e.path));
@@ -587,8 +555,8 @@ pub struct Slot {
 /// Slot のディレクトリにあるファイル。
 struct SlotFile {
     path: String,
-    /// Slot と拡張子。Slot の名前でなければ None。
-    def: Option<(&'static Def, &'static str)>,
+    /// Slot。Slot の名前でなければ None。
+    def: Option<&'static Def>,
 }
 
 /// 除外するファイルと、名前がドットで始まるファイルは含まない（Project::slot_dir_files）。
@@ -608,17 +576,14 @@ fn slot_files(project: &Project) -> Result<Vec<SlotFile>> {
         .collect())
 }
 
-/// Slot を DEFS の順に読む。読めない Slot と、同じ Slot の 2 つ目のファイルは飛ばす（check が報告する）。
+/// Slot を DEFS の順に読む。読めない Slot は飛ばす（check が報告する）。
 pub fn load(project: &Project) -> Result<Vec<Slot>> {
     let mut slots: Vec<Slot> = Vec::new();
     for file in slot_files(project)? {
-        let Some((def, ext)) = file.def else { continue };
-        if slots.iter().any(|s| s.def.id == def.id) {
-            continue;
-        }
+        let Some(def) = file.def else { continue };
         let text = fs::read_to_string(project.root.join(&file.path))
             .with_context(|| format!("{} を読めない", file.path))?;
-        if let Ok(content) = Content::parse(def.id, ext, &text) {
+        if let Ok(content) = Content::parse(def, &text) {
             slots.push(Slot {
                 def,
                 path: file.path,
@@ -642,9 +607,8 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
             message,
         });
     };
-    let mut found: Vec<&str> = Vec::new();
     for file in slot_files(project)? {
-        let Some((def, ext)) = file.def else {
+        let Some(def) = file.def else {
             let message = match suggest(&project.slots_dir(), &file.path) {
                 Some(right) => format!("Slot ファイルは {right} に置く"),
                 None => format!(
@@ -655,23 +619,9 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
             push(&file.path, 1, "slot-unknown", Level::Error, message);
             continue;
         };
-        if found.contains(&def.id) {
-            push(
-                &file.path,
-                1,
-                "slot-duplicate",
-                Level::Error,
-                format!(
-                    "{}の Slot ファイルが 2 つある。どちらか 1 つにする",
-                    def.label
-                ),
-            );
-            continue;
-        }
-        found.push(def.id);
         let text = fs::read_to_string(project.root.join(&file.path))
             .with_context(|| format!("{} を読めない", file.path))?;
-        let content = match Content::parse(def.id, ext, &text) {
+        let content = match Content::parse(def, &text) {
             Ok(content) => content,
             Err(e) => {
                 let line = e.location().map_or(1, |l| l.line());
@@ -822,8 +772,6 @@ pub fn template(id: &str) -> Option<&'static str> {
         "install" => include_str!("../assets/template/install.yaml"),
         "words" => include_str!("../assets/template/words.yaml"),
         "stack" => include_str!("../assets/template/stack.yaml"),
-        "api" => include_str!("../assets/template/api.yaml"),
-        "db" => include_str!("../assets/template/db.yaml"),
         "directory-tree" => include_str!("../assets/template/directory-tree.yaml"),
         "setup" => include_str!("../assets/template/setup.yaml"),
         "env" => include_str!("../assets/template/env.yaml"),
@@ -847,8 +795,6 @@ pub fn schema(id: &str) -> Option<&'static str> {
         "install" => include_str!("../assets/schema/install.yaml"),
         "words" => include_str!("../assets/schema/words.yaml"),
         "stack" => include_str!("../assets/schema/stack.yaml"),
-        "api" => include_str!("../assets/schema/api.yaml"),
-        "db" => include_str!("../assets/schema/db.yaml"),
         "directory-tree" => include_str!("../assets/schema/directory-tree.yaml"),
         "setup" => include_str!("../assets/schema/setup.yaml"),
         "env" => include_str!("../assets/schema/env.yaml"),
@@ -900,9 +846,9 @@ mod tests {
 
     #[test]
     fn every_yaml_slot_has_a_template_that_parses() {
-        for def in DEFS.iter().filter(|d| d.extensions().contains(&"yaml")) {
+        for def in DEFS.iter().filter(|d| d.format == Format::Yaml) {
             let text = template(def.id).unwrap();
-            Content::parse(def.id, "yaml", text).unwrap_or_else(|e| panic!("{}: {e}", def.id));
+            Content::parse(def, text).unwrap_or_else(|e| panic!("{}: {e}", def.id));
         }
     }
 
@@ -951,7 +897,7 @@ mod tests {
                 "docv/service/03-words.yaml:1 error slot-unknown",
                 "docv/service/install.yaml:2 error slot-invalid",
                 "docv/service/words.yaml:2 error slot-invalid",
-                "docv/system/api.yaml:1 error slot-duplicate",
+                "docv/system/api.yaml:1 error slot-unknown",
                 "docv/unknown.yaml:1 error slot-unknown",
                 "docv/words.yaml:1 error slot-unknown",
             ]
@@ -959,6 +905,8 @@ mod tests {
         // ディレクトリが違う名前、番号を付けた名前には、正しいパスを示す
         assert!(diagnostics[2].message.contains("docv/service/words.yaml"));
         assert!(diagnostics[7].message.contains("docv/service/words.yaml"));
+        // API 仕様書は md だけ。yaml には、md のパスを示す
+        assert!(diagnostics[5].message.contains("docv/system/api.md"));
     }
 
     #[test]
@@ -977,15 +925,14 @@ mod tests {
 
     #[test]
     fn reads_one_item_or_many() {
+        let install = def("install").unwrap();
         let one = Content::parse(
-            "install",
-            "yaml",
+            install,
             "steps:\n  - id: cargo\n    name: c\n    items:\n      markdown: m\n",
         )
         .unwrap();
         let many = Content::parse(
-            "install",
-            "yaml",
+            install,
             "steps:\n  - id: binary\n    name: b\n    items:\n      - os: windows\n      - os: macos\n",
         )
         .unwrap();

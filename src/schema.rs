@@ -1,6 +1,6 @@
 //! docv schema。docv.yaml と、yaml の Slot のスキーマを出す。docv/service/manual.md の docv schema。
 //!
-//! Slot の名前は docv add と同じ（API 仕様書と DB 仕様書は `api-yaml`、`db-yaml`）。md の Slot はスキーマを持たない。
+//! Slot の名前は docv add と同じ。md の Slot はスキーマを持たない。
 //! 同じスキーマを docs/schema/ の Markdown に写して公開する。写しが元と揃っていることは、このファイルのテストで確かめる。
 
 use anyhow::{Result, bail};
@@ -98,14 +98,13 @@ mod tests {
         assert!(text(None).unwrap().contains("\"docs\""));
         for (name, message) in [
             ("service", "md の Slot"),
-            ("api-md", "md の Slot"),
+            ("api", "md の Slot"),
             ("manual", "md の Slot"),
-            ("api", "Slot の名前ではない"),
+            ("api-yaml", "Slot の名前ではない"),
         ] {
             let error = text(Some(name)).unwrap_err().to_string();
             assert!(error.contains(message), "{name}: {error}");
         }
-        assert!(text(Some("api-yaml")).is_ok());
     }
 
     #[test]

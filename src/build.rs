@@ -118,7 +118,7 @@ pub fn image(project: &Project, out: &Path) -> Result<()> {
         let slots = render(project, &work)?;
         let shots: Vec<(String, String)> = slots
             .iter()
-            .filter(|s| has_page(s) && !matches!(s.content, Content::Markdown(_)))
+            .filter(|s| !matches!(s.content, Content::Markdown(_)))
             .map(|s| (page_path(s), jpg_path(s)))
             .collect();
         let jpg = out.join(JPG_DIR);
@@ -154,7 +154,7 @@ fn render(project: &Project, out: &Path) -> Result<Vec<Slot>> {
         write(&out.join(ADR_PAGE), &site.render_adr_index())?;
     }
     write(&out.join(DETAIL_PAGE), &site.render_detail())?;
-    for slot in slots.iter().filter(|s| has_page(s)) {
+    for slot in &slots {
         write(&out.join(page_path(slot)), &site.render_slot(slot))?;
     }
     for a in &adrs {
@@ -172,11 +172,6 @@ fn finish_out(project: &Project, out: &Path) -> Result<()> {
         write(&out.join(".gitignore"), "*\n")?;
     }
     write(&out.join(MARKER), MARKER_TEXT)
-}
-
-/// Slot のページを作るか。外の定義へのリンク（ref）だけの Slot は、ページを作らず、index.html から直接リンクする。
-fn has_page(slot: &Slot) -> bool {
-    !matches!(slot.content, Content::Ref(_))
 }
 
 /// Slot のページの、出力先からの相対パス。`サービス仕様/利用マニュアル.html`。
@@ -389,11 +384,7 @@ impl Site<'_> {
                     );
                     continue;
                 };
-                let href = match &slot.content {
-                    Content::Ref(c) if slot::is_url(&c.target) => escape(&c.target),
-                    Content::Ref(c) => escape(&encode_path(&self.file_path(&c.target))),
-                    _ => encode_path(&page_path(slot)),
-                };
+                let href = encode_path(&page_path(slot));
                 let _ = writeln!(
                     out,
                     "<a class=\"card\" href=\"{href}\">{}{}</a>",
@@ -534,8 +525,6 @@ impl Site<'_> {
             }
             Content::Words(c) => self.words(out, &c.groups),
             Content::Stack(c) => self.stack(out, &c.stack),
-            // ページを作らない（has_page）。
-            Content::Ref(_) => {}
             Content::Layout(c) => self.layout(out, &c.entries),
             Content::Env(c) => self.envs(out, &c.envs),
             Content::Cost(c) => {
@@ -1170,7 +1159,7 @@ impl Site<'_> {
         if self.pages.iter().any(|p| p.source == target) {
             return Some(doc_page(target));
         }
-        if let Some(slot) = self.slots.iter().find(|s| s.path == target && has_page(s)) {
+        if let Some(slot) = self.slots.iter().find(|s| s.path == target) {
             return Some(page_path(slot));
         }
         self.adrs.iter().find(|a| a.path == target).map(adr_page)
@@ -1195,7 +1184,7 @@ impl Site<'_> {
         ))
     }
 
-    /// ルートの中のファイルの、出力先から辿れる相対パス。画像と、API 仕様書と DB 仕様書の ref の先に使う。
+    /// ルートの中のファイルの、出力先から辿れる相対パス。画像に使う。
     fn file_path(&self, target: &str) -> String {
         relative_path(&self.dir.borrow(), &self.project.root.join(target))
     }
@@ -1647,7 +1636,6 @@ mod tests {
                 "docv/service/manual.md",
                 "# 利用マニュアル\n\n| コマンド | 説明 |\n| --- | --- |\n| [demo run](#demo-run) | 動かす |\n\n## demo run\n\n詳しく\n",
             ),
-            ("docv/system/api.yaml", "ref: openapi.yaml\n"),
             ("docv/system/db.md", "# DB 仕様書\n\n表\n"),
             (
                 "docv/operation/cost.yaml",
@@ -1769,12 +1757,6 @@ mod tests {
             manual.contains("<h2 id=\"demo-run\">demo run</h2>"),
             "{manual}"
         );
-        // ref だけの Slot はページを作らず、カードから定義へ直接リンクする
-        assert!(
-            index.contains("<a class=\"card\" href=\"../openapi.yaml\">"),
-            "{index}"
-        );
-        assert!(!out.join("システム仕様/API 仕様書.html").exists());
         // 名前に空白のある Slot のページは、リンクで空白を %20 にする
         assert!(
             index.contains("href=\"システム仕様/DB%20仕様書.html\""),
@@ -1836,7 +1818,7 @@ mod tests {
         assert_headings(&rust);
 
         // Slot のページは、h1 が 1 つで、見出しの段を飛ばさない
-        for slot in slot::load(&project).unwrap().iter().filter(|s| has_page(s)) {
+        for slot in &slot::load(&project).unwrap() {
             let html = read(&page_path(slot));
             assert_headings(&html);
         }

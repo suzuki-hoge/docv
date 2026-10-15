@@ -33,7 +33,7 @@ Slot ファイルを、決まったパスに作る。
 ```sh
 docv add --list            # 作れる Slot の名前と、作るファイルの一覧を出す
 docv add manual            # docv/service/manual.md を作る
-docv add api-md            # docv/system/api.md を作る
+docv add api               # docv/system/api.md を作る
 docv add doc-guide         # docv/guide/doc-guide.md に、ガイドラインの雛形を作る
 docv add doc-guide --print # 今の版の雛形を出す。手元のガイドラインと見比べる
 ```
@@ -95,8 +95,6 @@ docv schema words     # 用語集 Slot のスキーマを表示
 - [インストール](../../docs/schema/install.md)
 - [用語集](../../docs/schema/words.md)
 - [技術スタック](../../docs/schema/stack.md)
-- [API 仕様書](../../docs/schema/api-yaml.md)
-- [DB 仕様書](../../docs/schema/db-yaml.md)
 - [ディレクトリ](../../docs/schema/directory-tree.md)
 - [環境構築](../../docs/schema/setup.md)
 - [環境変数](../../docs/schema/env.md)

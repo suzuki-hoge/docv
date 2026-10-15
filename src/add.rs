@@ -2,28 +2,19 @@
 //!
 //! パスは docv が Slot ごとに決めていて、選ぶ余地はない。yaml の Slot には項目のサンプル（テンプレ）を書き、md の Slot は空のファイルを作る。
 //! Doc ガイドの Slot（doc-guide）だけは、ガイドラインの雛形を書く。
-//! yaml と md のどちらでも置ける Slot（API 仕様書、DB 仕様書）は、`api-yaml` と `api-md` のように、名前で形を選ぶ。
 
 use std::fmt::Write as _;
 use std::fs;
 
 use anyhow::{Context, Result, bail};
 
-use crate::slot::{self, DEFS, Def, Format};
+use crate::slot::{self, DEFS, Def};
 use crate::workspace::Project;
 
 /// 作れる Slot の名前と、Slot と拡張子の組を、Slot の一覧の順に返す。
 pub fn pages() -> Vec<(String, &'static Def, &'static str)> {
     DEFS.iter()
-        .flat_map(|def| {
-            def.extensions().iter().map(move |ext| {
-                let page = match def.format {
-                    Format::Either => format!("{}-{ext}", def.id),
-                    _ => def.id.to_string(),
-                };
-                (page, def, *ext)
-            })
-        })
+        .map(|def| (def.id.to_string(), def, def.extension()))
         .collect()
 }
 
@@ -70,16 +61,10 @@ pub fn run(project: &Project, slot: &str) -> Result<String> {
     let Some((_, def, ext)) = pages().into_iter().find(|(p, ..)| p == slot) else {
         bail!("{slot} は Slot の名前ではない。docv add --list で作れる Slot の一覧を出す");
     };
-    let dir = project.slots_dir();
-    if let Some(existing) = def
-        .file_names()
-        .into_iter()
-        .map(|f| format!("{dir}/{f}"))
-        .find(|f| project.root.join(f).exists())
-    {
-        bail!("{existing} がすでにある");
+    let rel = format!("{}/{}", project.slots_dir(), def.file_name());
+    if project.root.join(&rel).exists() {
+        bail!("{rel} がすでにある");
     }
-    let rel = format!("{dir}/{}/{}.{ext}", def.group.dir(), def.id);
     let text = text(def, ext);
     let path = project.root.join(&rel);
     if let Some(parent) = path.parent() {
@@ -122,7 +107,7 @@ mod tests {
             fs::read_to_string(dir.path().join("docv/service/service.md")).unwrap(),
             ""
         );
-        assert_eq!(run(&project, "api-md").unwrap(), "docv/system/api.md");
+        assert_eq!(run(&project, "api").unwrap(), "docv/system/api.md");
         // Doc ガイドの Slot は、ガイドラインの雛形を書く
         assert_eq!(
             run(&project, "doc-guide").unwrap(),
@@ -145,18 +130,17 @@ mod tests {
             include_str!("../assets/template/words.yaml")
         );
         assert_eq!(print("manual").unwrap(), "");
-        assert!(print("api").is_err());
+        assert!(print("api-md").is_err());
     }
 
     #[test]
     fn rejects_unknown_and_existing_slots() {
         let (_dir, project) = project();
-        run(&project, "db-yaml").unwrap();
+        run(&project, "db").unwrap();
         for (page, message) in [
-            ("api", "Slot の名前ではない"),
+            ("api-md", "Slot の名前ではない"),
             ("docv/service/words.yaml", "Slot の名前ではない"),
-            ("db-yaml", "docv/system/db.yaml がすでにある"),
-            ("db-md", "docv/system/db.yaml がすでにある"),
+            ("db", "docv/system/db.md がすでにある"),
         ] {
             let error = run(&project, page).unwrap_err().to_string();
             assert!(error.contains(message), "{page}: {error}");
@@ -167,9 +151,8 @@ mod tests {
     fn lists_every_page() {
         let list = list();
         assert!(list.starts_with("install "), "{list}");
-        assert!(list.contains("api-yaml"), "{list}");
-        assert!(list.contains("api-md"), "{list}");
+        assert!(list.contains("system/api.md"), "{list}");
         assert!(list.contains("service/manual.md"), "{list}");
-        assert_eq!(list.lines().count(), DEFS.len() + 2);
+        assert_eq!(list.lines().count(), DEFS.len());
     }
 }

@@ -1,5 +1,0 @@
-# API 仕様書: どんな API があり、何を受け取り、何を返すか
-# 定義は外の道具（OpenAPI など）で作り、ref で指す。ページは作らず、index.html のカードから直接リンクする。
-# 説明を書きたいときは、system/api.yaml の代わりに system/api.md を置く。
-
-ref: docs/api/openapi.yaml
