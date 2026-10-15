@@ -8,7 +8,7 @@ use anyhow::{Context, Result, bail};
 /// 実行した CLI の版のスキーマの URL。
 pub fn schema_url() -> String {
     format!(
-        "https://raw.githubusercontent.com/suzuki-hoge/docv/v{}/schema/docv.schema.json",
+        "https://raw.githubusercontent.com/suzuki-hoge/docv/v{}/assets/schema/docv.schema.json",
         env!("CARGO_PKG_VERSION")
     )
 }

@@ -3,16 +3,16 @@ entries:
     description: このリポジトリの docv の設定
   - path: src/
     description: CLI のソースコード。コマンドごとにファイルを分ける
-  - path: templates/
-    description: docv add が YAML の Slot に書くサンプル。バイナリに埋め込む
-  - path: templates/slot/
-    description: Slot のテンプレ
   - path: assets/
-    description: HTML の CSS、docv desc が出す docv の概要（Slot のサービス仕様と同じファイル）、YAML の Slot のスキーマ。バイナリに埋め込む
+    description: 実装から参照して出力するもの。バイナリに埋め込む
+  - path: assets/template/
+    description: docv add が書く、YAML の Slot の項目のサンプル
   - path: assets/schema/
-    description: YAML の Slot のスキーマ。`docv schema <slot>` で出す
-  - path: schema/
-    description: "`docv.yaml` の JSON Schema。公開して、エディタの補完に使う"
+    description: YAML の Slot と `docv.yaml` のスキーマ。`docv schema` で出す。`docv.schema.json` は公開して、エディタの補完に使う
+  - path: assets/desc.md
+    description: docv desc が出す docv の概要。Slot のサービス仕様と同じファイル
+  - path: assets/style.css
+    description: HTML の CSS
   - path: docs/
     description: このリポジトリのドキュメント。docv 自身で管理する
   - path: docv/

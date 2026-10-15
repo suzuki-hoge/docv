@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=./schema/docv.schema.json
+# yaml-language-server: $schema=./assets/schema/docv.schema.json
 title: docv
 
 docs:
@@ -7,7 +7,6 @@ docs:
 ignore:
   - docs/tmp/**
   - docs/plan/**
-  - templates/**
   - assets/**
   - CLAUDE.md
   - tmp/**

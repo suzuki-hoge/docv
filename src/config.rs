@@ -12,7 +12,7 @@ use serde::Deserialize;
 use serde_json::Value;
 
 pub const FILE_NAME: &str = "docv.yaml";
-pub const SCHEMA: &str = include_str!("../schema/docv.schema.json");
+pub const SCHEMA: &str = include_str!("../assets/schema/docv.schema.json");
 
 /// タグに付けられるルール。docs/rule/docs/guideline.md の 4 章。
 pub const TAG_RULES: &[&str] = &["no-past-wording", "no-done-task"];

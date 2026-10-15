@@ -50,14 +50,14 @@ Slot は、Markdown とは別に、`slots.dir`（既定は `docv/`）から `<�
 
 Rust で書いた単一のバイナリにし、次のものを埋め込む。利用者に Rust の環境はいらない。
 
-- YAML の Slot のテンプレ（`templates/`）
-- YAML の Slot と `docv.yaml` のスキーマ（`assets/schema/`、`schema/docv.schema.json`）
+- YAML の Slot のテンプレ（`assets/template/`）
+- YAML の Slot と `docv.yaml` のスキーマ（`assets/schema/`）
 - docv の概要（`docv desc` が出す `assets/desc.md`。`docv/service/service.md` はこのファイルへのシンボリックリンク）
 - HTML の CSS（`assets/style.css`）
 - Markdown の整形に使う dprint-plugin-markdown
 - コードブロックの色付けに使う syntect と、その構文の定義とテーマ
 
-textlint を使うときだけ Node.js が、JPG を作るときだけ Chrome が要る。`docv.yaml` の JSON Schema（`schema/docv.schema.json`）は、埋め込むほかにリポジトリでも公開し、`docv.yaml` からは版を含む URL で参照する。
+textlint を使うときだけ Node.js が、JPG を作るときだけ Chrome が要る。`docv.yaml` の JSON Schema（`assets/schema/docv.schema.json`）は、埋め込むほかにリポジトリでも公開する。`docv.yaml` からは、版を含む URL で参照する。
 
 ## HTML の作り
 

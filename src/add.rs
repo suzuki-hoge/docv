@@ -101,7 +101,7 @@ mod tests {
         assert_eq!(run(&project, "words").unwrap(), "docv/service/words.yaml");
         assert_eq!(
             fs::read_to_string(dir.path().join("docv/service/words.yaml")).unwrap(),
-            include_str!("../templates/slot/words.yaml")
+            include_str!("../assets/template/words.yaml")
         );
         assert_eq!(run(&project, "service").unwrap(), "docv/service/service.md");
         assert_eq!(

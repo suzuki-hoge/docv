@@ -32,8 +32,8 @@ cargo test
 
 - build の出力は、入力が同じなら毎回同じにする（生成日時・実行したマシンのパス・乱数を入れない、並び順を固定する）。[`docv/system/system.md`](docv/system/system.md) の「毎回同じ出力にする決まり」
 - ファイルを書くコマンドは、[`docv/system/system.md`](docv/system/system.md) の「ファイルを書くコマンド」に書いた範囲の外に書かない
-- `templates/`、`schema/`、`assets/` は製品の一部（バイナリへの埋め込みと公開の対象）。変えるときは Slot と spec と揃える
-- `assets/schema/` と `schema/` のスキーマを変えたら、`docs/schema/` の写しも直す。揃っていないと cargo test が落ちる
+- `assets/` は製品の一部（バイナリへの埋め込みと公開の対象）。実装から参照して出力するものは、すべて `assets/` に置く。変えるときは Slot と spec と揃える
+- `assets/schema/` のスキーマを変えたら、`docs/schema/` の写しも直す。揃っていないと cargo test が落ちる
 
 ---
 

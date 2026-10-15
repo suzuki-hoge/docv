@@ -812,16 +812,16 @@ fn trim_separators(markdown: &str) -> String {
 /// yaml の Slot のテンプレ。docv add で書く、項目のサンプル。md の Slot は空のファイルを作るので、テンプレを持たない。
 pub fn template(id: &str) -> Option<&'static str> {
     Some(match id {
-        "install" => include_str!("../templates/slot/install.yaml"),
-        "words" => include_str!("../templates/slot/words.yaml"),
-        "stack" => include_str!("../templates/slot/stack.yaml"),
-        "api" => include_str!("../templates/slot/api.yaml"),
-        "db" => include_str!("../templates/slot/db.yaml"),
-        "directory-tree" => include_str!("../templates/slot/directory-tree.yaml"),
-        "setup" => include_str!("../templates/slot/setup.yaml"),
-        "env" => include_str!("../templates/slot/env.yaml"),
-        "develop" => include_str!("../templates/slot/develop.yaml"),
-        "cost" => include_str!("../templates/slot/cost.yaml"),
+        "install" => include_str!("../assets/template/install.yaml"),
+        "words" => include_str!("../assets/template/words.yaml"),
+        "stack" => include_str!("../assets/template/stack.yaml"),
+        "api" => include_str!("../assets/template/api.yaml"),
+        "db" => include_str!("../assets/template/db.yaml"),
+        "directory-tree" => include_str!("../assets/template/directory-tree.yaml"),
+        "setup" => include_str!("../assets/template/setup.yaml"),
+        "env" => include_str!("../assets/template/env.yaml"),
+        "develop" => include_str!("../assets/template/develop.yaml"),
+        "cost" => include_str!("../assets/template/cost.yaml"),
         _ => return None,
     })
 }

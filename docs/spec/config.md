@@ -5,14 +5,14 @@ tags: [仕様, 設定]
 
 # 設定ファイル（`docv.yaml`）
 
-リポジトリのルートに置く設定ファイル。型は [`schema/docv.schema.json`](../../schema/docv.schema.json) が正本。1 章は項目の一覧、2 章以降は一覧に書ききれない解釈の決まりと、`docv.yaml` で使うと決めたときだけ動く道具（書式の規則、textlint、整形）。
+リポジトリのルートに置く設定ファイル。型は [`assets/schema/docv.schema.json`](../../assets/schema/docv.schema.json) が正本。1 章は項目の一覧、2 章以降は一覧に書ききれない解釈の決まりと、`docv.yaml` で使うと決めたときだけ動く道具（書式の規則、textlint、整形）。
 
 ---
 
 ## 1. 例
 
 ```yaml
-# yaml-language-server: $schema=https://raw.githubusercontent.com/suzuki-hoge/docv/v1.0.0/schema/docv.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/suzuki-hoge/docv/v1.0.0/assets/schema/docv.schema.json
 title: shop-app
 
 docs:

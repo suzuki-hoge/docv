@@ -70,7 +70,7 @@ mod tests {
         for (page, def) in yaml_pages() {
             let schema = text(Some(&page)).unwrap();
             let template = slot::template(def.id).unwrap();
-            assert!(is_valid(schema, template), "templates: {page}");
+            assert!(is_valid(schema, template), "assets/template: {page}");
             if let Ok(own) = fs::read_to_string(root.join("docv").join(def.file_name())) {
                 assert!(is_valid(schema, &own), "docv/: {page}");
             }
