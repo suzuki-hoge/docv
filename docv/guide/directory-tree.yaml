@@ -10,7 +10,7 @@ entries:
   - path: assets/
     description: HTML の CSS、docv desc が出す docv の概要（Slot のサービス仕様と同じファイル）、YAML の Slot のスキーマ。バイナリに埋め込む
   - path: assets/schema/
-    description: YAML の Slot のスキーマ。docv schema <slot> で出す
+    description: YAML の Slot のスキーマ。`docv schema <slot>` で出す
   - path: schema/
     description: "`docv.yaml` の JSON Schema。公開して、エディタの補完に使う"
   - path: docs/

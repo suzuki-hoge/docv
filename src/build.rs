@@ -746,27 +746,78 @@ impl Site<'_> {
         }
     }
 
+    /// ディレクトリの Slot。表は常に 1 段だけを出し、入れ子は表を分けて出す。
+    /// いちばん上の段の表を先に置き、下の段を持つディレクトリごとに、その下の表を h2 とともに後ろへ並べる。
+    /// 下の段を持つディレクトリの名前は、その表へのページ内リンクにする。折りたたまないのは、画像にしても読めるようにするため。
     fn layout(&self, out: &mut String, entries: &[slot::LayoutEntry]) {
         if entries.is_empty() {
             return;
         }
-        let _ = writeln!(
-            out,
-            "<table>\n<thead><tr><th>パス</th><th>説明</th></tr></thead>\n<tbody>"
-        );
+        let mut roots: Vec<TreeNode> = Vec::new();
         for entry in entries {
             let trimmed = entry.path.trim_end_matches('/');
-            let depth = trimmed.matches('/').count();
-            let name = trimmed.rsplit('/').next().unwrap_or(trimmed);
-            let dir = slot::is_dir(self.project, &entry.path);
+            let names: Vec<&str> = trimmed.split('/').collect();
+            let mut nodes = &mut roots;
+            for (i, name) in names.iter().enumerate() {
+                let at = match nodes.iter().position(|n| n.name == *name) {
+                    Some(at) => at,
+                    None => {
+                        nodes.push(TreeNode {
+                            name: name.to_string(),
+                            path: names[..=i].join("/"),
+                            dir: true,
+                            description: None,
+                            children: Vec::new(),
+                        });
+                        nodes.len() - 1
+                    }
+                };
+                if i + 1 == names.len() {
+                    let node = &mut nodes[at];
+                    node.dir = slot::is_dir(self.project, &entry.path);
+                    node.description
+                        .get_or_insert_with(|| entry.description.clone());
+                }
+                nodes = &mut nodes[at].children;
+            }
+        }
+        self.layout_table(out, &roots);
+        let mut dirs = Vec::new();
+        tree_dirs(&roots, &mut dirs);
+        for dir in dirs {
             let _ = writeln!(
                 out,
-                "<tr><td style=\"padding-left:{}px\"><a href=\"{}\"><code>{}{}</code></a></td><td>{}</td></tr>",
-                10 + depth * 20,
-                escape(&self.link(trimmed, "", false)),
-                escape(name),
-                if dir { "/" } else { "" },
-                self.inline(&entry.description)
+                "<h2 id=\"{}\">{}/</h2>",
+                escape(&tree_anchor(&dir.path)),
+                escape(&dir.path)
+            );
+            self.layout_table(out, &dir.children);
+        }
+    }
+
+    /// ディレクトリの Slot の、1 段の表。
+    fn layout_table(&self, out: &mut String, nodes: &[TreeNode]) {
+        let _ = writeln!(
+            out,
+            "<table class=\"tree\">\n<thead><tr><th>名前</th><th>説明</th></tr></thead>\n<tbody>"
+        );
+        for node in nodes {
+            let name = format!("<code>{}</code>", escape(&node.label()));
+            let name = if node.children.is_empty() {
+                name
+            } else {
+                format!(
+                    "<a href=\"#{}\">{name}</a>",
+                    escape(&tree_anchor(&node.path))
+                )
+            };
+            let _ = writeln!(
+                out,
+                "<tr><td>{name}</td><td>{}</td></tr>",
+                node.description
+                    .as_deref()
+                    .map(|d| self.inline(d))
+                    .unwrap_or_default()
             );
         }
         let _ = writeln!(out, "</tbody>\n</table>");
@@ -1258,6 +1309,39 @@ fn encode_path(path: &str) -> String {
     out
 }
 
+/// ディレクトリの Slot のツリーの、パス 1 つ。兄弟は書いた順に並べる。
+struct TreeNode {
+    name: String,
+    /// ルートからのパス。末尾の `/` は付けない。
+    path: String,
+    dir: bool,
+    /// 説明。entries に書いていない途中のディレクトリは None。
+    description: Option<String>,
+    children: Vec<TreeNode>,
+}
+
+impl TreeNode {
+    /// 表に出す名前。ディレクトリには末尾に `/` を付ける。
+    fn label(&self) -> String {
+        format!("{}{}", self.name, if self.dir { "/" } else { "" })
+    }
+}
+
+/// 下の段を持つディレクトリを、上から順に（親の次にその子を）集める。
+fn tree_dirs<'a>(nodes: &'a [TreeNode], dirs: &mut Vec<&'a TreeNode>) {
+    for node in nodes {
+        if !node.children.is_empty() {
+            dirs.push(node);
+            tree_dirs(&node.children, dirs);
+        }
+    }
+}
+
+/// ディレクトリの Slot の、下の段の表のアンカー。
+fn tree_anchor(path: &str) -> String {
+    format!("dir-{}", encode_path(path))
+}
+
 /// Free ファイルのツリーの、ディレクトリ 1 つ。
 #[derive(Default)]
 struct Dir<'a> {
@@ -1712,6 +1796,41 @@ mod tests {
         assert!(!out.join(ADR_PAGE).exists());
         assert!(!detail.contains("ADR.html"), "{detail}");
         assert_eq!(fs::read_to_string(out.join(".gitignore")).unwrap(), "*\n");
+    }
+
+    #[test]
+    fn splits_directory_tree_into_one_level_tables() {
+        let (dir, project) = project(&[
+            ("src/main.rs", ""),
+            ("docs/a.md", "---\nmission: q\n---\n# A\n"),
+            (
+                "docv/guide/directory-tree.yaml",
+                "entries:\n  - path: src/\n    description: ソース\n  - path: docs/\n    description: \"`docv` の文書\"\n  - path: src/main.rs\n    description: 入口\n  - path: docs/rule/guide.md\n    description: 書き方\n  - path: docs/spec/\n    description: 規格\n",
+            ),
+        ]);
+        let out = dir.path().join("out");
+        html(&project, &out).unwrap();
+        let page = fs::read_to_string(out.join("開発者向けガイド/ディレクトリ.html")).unwrap();
+        let body: String = page
+            .lines()
+            .filter(|l| l.starts_with("<h2") || l.starts_with("<tr><td>"))
+            .map(|l| format!("{l}\n"))
+            .collect();
+        // 表は 1 段だけ。下の段を持つディレクトリは、親の次にその子の順で、表を分けて後ろに並べ、名前からリンクする。表の名前は code にし、h2 は code にしない。
+        // 書いていない途中のディレクトリ（docs/rule/）は説明なしで出す。兄弟は書いた順
+        assert_eq!(
+            body,
+            "<tr><td><a href=\"#dir-src\"><code>src/</code></a></td><td>ソース</td></tr>
+<tr><td><a href=\"#dir-docs\"><code>docs/</code></a></td><td><code>docv</code> の文書</td></tr>
+<h2 id=\"dir-src\">src/</h2>
+<tr><td><code>main.rs</code></td><td>入口</td></tr>
+<h2 id=\"dir-docs\">docs/</h2>
+<tr><td><a href=\"#dir-docs/rule\"><code>rule/</code></a></td><td></td></tr>
+<tr><td><code>spec/</code></td><td>規格</td></tr>
+<h2 id=\"dir-docs/rule\">docs/rule/</h2>
+<tr><td><code>guide.md</code></td><td>書き方</td></tr>
+"
+        );
     }
 
     #[test]

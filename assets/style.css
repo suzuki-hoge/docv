@@ -81,6 +81,10 @@ table.docs td:nth-child(1), table.docs td:nth-child(3) { white-space: nowrap; }
 table.docs td:nth-child(2) { width: 100%; max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 table.docs tr.dir td { padding: 0; }
 table.docs tr.dir div { padding: 5px 9px; background: #eef7fc; color: #3d444d; font-weight: 600; }
+/* ディレクトリの表。表どうしで、名前の列の幅をそろえる。収まらない名前は折り返す */
+table.tree { table-layout: fixed; }
+table.tree th:nth-child(1) { width: 14em; }
+table.tree td:nth-child(1) { overflow-wrap: anywhere; }
 .num { text-align: right; white-space: nowrap; }
 .step-name { font-weight: 600; margin: 0 0 4px; }
 .steps > li { margin-bottom: 12px; }
