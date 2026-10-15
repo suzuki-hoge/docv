@@ -41,15 +41,15 @@ ja-spacing の ja-space-around-code、ja-space-around-link、ja-no-space-around-
 
 ---
 
-## 6. Slot のファイルからスキーマを参照させるか
+## 6. Slot ファイルからスキーマを参照させるか
 
-YAML の Slot のスキーマは `docv schema <slot>` で出せる。`docv.yaml` と同じように、Slot のファイルの先頭に yaml-language-server の書式で URL を書けば、エディタで補完と検証を効かせられる見込みがある。YAML で書いたスキーマをエディタが読めるかは、確かめていない。決まっていないのは、docv add がその行を書くかと、check をスキーマで確かめるか。今の check は Slot の型で確かめていて、スキーマと 2 か所で揃えている。
+YAML の Slot のスキーマは `docv schema <slot>` で出せる。`docv.yaml` と同じように、Slot ファイルの先頭に yaml-language-server の書式で URL を書けば、エディタで補完と検証を効かせられる見込みがある。YAML で書いたスキーマをエディタが読めるかは、確かめていない。決まっていないのは、docv add がその行を書くかと、check をスキーマで確かめるか。今の check は Slot の型で確かめていて、スキーマと 2 か所で揃えている。
 
 ---
 
 ## 7. HTML に全文検索を置くか
 
-HTML には検索がなく、ページ内の検索か、最後の原本のツリーを目で探す。検索を置くには、検索用の索引と JS を出力に含める必要がある。JPG では検索は使えない。
+HTML には検索がなく、ページ内の検索か、最後の Free ファイルのツリーを目で探す。検索を置くには、検索用の索引と JS を出力に含める必要がある。JPG では検索は使えない。
 
 ---
 

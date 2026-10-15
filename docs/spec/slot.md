@@ -11,14 +11,14 @@ tags: [仕様, ルール, 出力]
 
 ## 1. 置き場所と書き方
 
-- Slot のファイルは、`docv.yaml` の `slots.dir`（既定は `docv`）に、`<まとまり>/<Slot>.<拡張子>` の名前で置く。まとまりのディレクトリは `service`（サービス仕様）、`system`（システム仕様）、`guide`（開発者向けガイド）、`operation`（運用）。`docs/` にはプロジェクトが自由に書くファイル（原本）を、`docv/` には docv の規格のファイル（Slot）を置く
-- 拡張子は Slot ごとに決まる。YAML の Slot は決まった項目で書き、md の Slot は自由に書いてそのまま HTML に出す
+- Slot ファイルは、`docv.yaml` の `slots.dir`（既定は `docv`）に、`<まとまり>/<Slot>.<拡張子>` の名前で置く。まとまりのディレクトリは `service`（サービス仕様）、`system`（システム仕様）、`guide`（開発者向けガイド）、`operation`（運用）。`docs/` には Free ファイルを、`docv/` には Slot ファイルを置く
+- 拡張子は Slot ごとに決まる。YAML の Slot は決まった項目で書き、md の Slot は中身の形を決めず、そのまま HTML に出す
 - `docv/adr/` は ADR の置き場所で、Slot としては読まない（[`spec/adr.md`](adr.md)）
 - Slot を置くかどうかは任意。プロジェクトに当てはまらない Slot は作らない（例: 利用者の手元に入れるものがなければ、インストールの Slot はいらない）。`index.html` には置いていない Slot のカードも並べ、グレーにしてリンクにしない
-- Slot の問いに答える詳しいことも、Slot の中に書く。原本へのリンクで済ませない
+- Slot の問いに答える詳しいことも、Slot の中に書く。Free ファイルへのリンクで済ませない
 - ファイルの中のパスは、すべてルートからの相対パスで書く。md の Slot の中のリンクは、ほかの Markdown と同じく、ファイルの場所からの相対パスで書く
 - YAML の文字列の項目には Markdown を書ける
-- `docv add <slot>` で、Slot のファイルを決まったパスに作れる。YAML の Slot には項目のサンプルを書き、md の Slot は空のファイルを作る（`docv add --list` で一覧を出す）
+- `docv add <slot>` で、Slot ファイルを決まったパスに作れる。YAML の Slot には項目のサンプルを書き、md の Slot は空のファイルを作る（`docv add --list` で一覧を出す）
 
 ---
 
@@ -126,9 +126,9 @@ steps:
 
 ## 4. md の Slot
 
-- 中身は自由に書く。YAML front matter は要らない
+- 中身の形は決めない。YAML front matter は要らない
 - HTML では、最初の h1 を除き、いちばん浅い見出しが h2 になるように段を付け直して出す
-- 見出しには、原本のページと同じく、GitHub と同じ形のアンカーを付ける。`[docv init](#docv-init)` のようなページ内リンクが HTML でも GitHub でも飛べる
+- 見出しには、Free ファイルのページと同じく、GitHub と同じ形のアンカーを付ける。`[docv init](#docv-init)` のようなページ内リンクが HTML でも GitHub でも飛べる
 - md の Slot のページは JPG にしない。md は GitHub でそのままプレビューできるため
 
 ---
@@ -138,7 +138,7 @@ steps:
 | ID                   | 強さ         | 内容                                                                                                                 |
 | -------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------- |
 | slot-unknown         | error        | Slot のディレクトリに、Slot の名前でないファイルがある                                                               |
-| slot-duplicate       | error        | 同じ Slot のファイルが 2 つある（`api.yaml` と `api.md` など）                                                       |
+| slot-duplicate       | error        | 同じ Slot ファイルが 2 つある（`api.yaml` と `api.md` など）                                                         |
 | slot-invalid         | error        | YAML の Slot の形に合わない。知らない項目、手順の `id` の重なり、`os` のない `item`、`ja` も `en` もない用語も error |
 | slot-path-missing    | error / warn | パスの先がない。directory-tree の `path` は warn、それ以外は error                                                   |
 | slot-include-missing | error        | `include` のファイルか見出しがない                                                                                   |

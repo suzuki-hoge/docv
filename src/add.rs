@@ -1,4 +1,4 @@
-//! docv add。Slot のファイルを、決まったパスに作る。docv/service/manual.md の docv add。
+//! docv add。Slot ファイルを、決まったパスに作る。docv/service/manual.md の docv add。
 //!
 //! パスは docv が Slot ごとに決めていて、選ぶ余地はない。yaml の Slot には項目のサンプル（テンプレ）を書き、md の Slot は空のファイルを作る。
 //! yaml と md のどちらでも置ける Slot（API 仕様書、DB 仕様書）は、`api-yaml` と `api-md` のように、名前で形を選ぶ。
@@ -48,7 +48,7 @@ pub fn list() -> String {
     out
 }
 
-/// Slot のファイルを作り、ルートからの相対パスを返す。
+/// Slot ファイルを作り、ルートからの相対パスを返す。
 pub fn run(project: &Project, slot: &str) -> Result<String> {
     let Some((_, def, ext)) = pages().into_iter().find(|(p, ..)| p == slot) else {
         bail!("{slot} は Slot の名前ではない。docv add --list で作れる Slot の一覧を出す");

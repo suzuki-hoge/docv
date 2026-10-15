@@ -51,7 +51,7 @@ format:
 | `docs`           | 必須 |              | 管理対象の Markdown の glob の配列                                                                                |
 | `ignore`         |      |              | 管理対象にも管理外にもしないファイルの glob の配列                                                                |
 | `tags`           |      |              | タグの一覧。書いたときだけ、YAML front matter の `tags` をこの中に限る                                            |
-| `slots.dir`      |      | docv         | Slot のファイルを置くディレクトリ                                                                                 |
+| `slots.dir`      |      | docv         | Slot ファイルを置くディレクトリ                                                                                   |
 | `output.dir`     |      | `docv/build` | docv build-html と docv build-image の出力先                                                                      |
 | `output.commit`  |      | true         | 出力を git で管理するか（8 章）                                                                                   |
 | `lint.tags`      |      |              | タグごとに、そのタグを持つファイルにかけるルール（[`rule/docs/guideline.md`](../rule/docs/guideline.md) の 4 章） |
@@ -239,19 +239,19 @@ lint:
 
 ```
 README.md        # 管理外。Slot の include で章を埋め込める
-docs/            # プロジェクトが自由に書くファイル（原本）
+docs/            # Free ファイル
   *.md           # 分類はディレクトリではなくタグで行う
   tmp/           # メモを置く。overrides で textlint などを外すか、ignore に入れる
-docv/            # docv の規格のファイル（Slot）
+docv/            # Slot ファイル
   service/       # サービス仕様。ほかに system/、guide/、operation/
     service.md
   adr/           # ADR
   build/         # docv build-html と docv build-image の出力
 ```
 
-- `docs/` と `docv/` を分けるのは、プロジェクトが自由に決めるものと、docv が形を決めるものを、置き場所で見分けられるようにするため
+- `docs/` と `docv/` を分けるのは、プロジェクトが問いと形を決める Free ファイルと、docv が決める Slot ファイルを、置き場所で見分けられるようにするため
 
-配置は自由に決めてよい。既存のディレクトリに合わせて `docs` を書けばよい。
+配置はプロジェクトが決める。既存のディレクトリに合わせて `docs` を書けばよい。
 
 ---
 

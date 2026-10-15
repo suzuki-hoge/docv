@@ -1,15 +1,15 @@
 # docv
 
-プロジェクトのドキュメントを、AI Agent が読み書きする Markdown（原本）と、人間が全体像を掴む HTML の 2 つの形で扱うためのフレームワーク。ドキュメントのルールと、そのルールを前提にした CLI からなる。
+プロジェクトのドキュメントを、AI Agent が読み書きする Markdown（Free ファイル）と、人間が全体像を掴む HTML の 2 つの形で扱うためのフレームワーク。ドキュメントのルールと、そのルールを前提にした CLI からなる。
 
 ```
-Slot（YAML、docv/）     ── Slot ごとのページ ───▶ HTML（と、その JPG）
-原本（Markdown、docs/） ── 問いとタグのツリー ──▶ プロジェクト詳細.html
-                        └─ mission ─────────────▶ AI Agent
+Slot ファイル（YAML、docv/）     ── Slot ごとのページ ───▶ HTML（と、その JPG）
+Free ファイル（Markdown、docs/） ── 問いとタグのツリー ──▶ プロジェクト詳細.html
+                                 └─ mission ─────────────▶ AI Agent
 ```
 
 - インストール、サービス仕様、利用マニュアルのように、どのプロジェクトにもある問いは「Slot」に、決まった形で書く。HTML には、規格の順にすべての Slot が並び、置いていない Slot はグレーになる
-- 原本は、ファイルごとに答える問いを宣言し、その範囲を超えて書き足さない。分類はタグで行い、タグにルールを付けられる
+- Free ファイルは、ファイルごとに答える問いを宣言し、その範囲を超えて書き足さない。分類はタグで行い、タグにルールを付けられる
 - 図や API の定義は外の道具で作り、Slot からリンクするか埋め込む
 - HTML は、CLI が LLM を使わずに作る。同じ入力からは毎回同じものができる。すべてローカルで完結する
 
@@ -38,7 +38,7 @@ AI Agent には、`CLAUDE.md` などに次のように書いて伝える。
 
 ### docv の規格
 
-- [`docs/rule/docs/guideline.md`](docs/rule/docs/guideline.md) — 原本には何をどう書き、YAML front matter とタグをどう付け、check は何を確かめるか
+- [`docs/rule/docs/guideline.md`](docs/rule/docs/guideline.md) — Free ファイルには何をどう書き、YAML front matter とタグをどう付け、check は何を確かめるか
 - [`docs/spec/slot.md`](docs/spec/slot.md) — Slot にはどんなものがあり、それぞれのファイルに何をどんな形で書き、HTML でどう見せるか
 - [`docs/spec/adr.md`](docs/spec/adr.md) — ADR には何をどんな形で書き、HTML でどう見せるか
 - [`docs/spec/config.md`](docs/spec/config.md) — `docv.yaml` には何を書き、各項目はどう解釈され、check と fix の道具をどう使うか

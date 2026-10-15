@@ -1,10 +1,10 @@
 groups:
   - name: ファイルの種類
     items:
-      - ja: 原本
-        desc: AI Agent が読み書きし、詳細を記録する Markdown。`docs/` に、プロジェクトが自由に書く。`docv.yaml` の `docs` に当てはまるファイル
       - en: Slot
-        desc: どのプロジェクトにもある問いに、決まった形で答える docv の規格のファイル。`docv/` に `<まとまり>/<ID>.<拡張子>` の名前で置く。16 の Slot がある
+        desc: どのプロジェクトにもある問いに、決まった形で答えるファイル（Slot ファイル）。docv が問いと形を決める。`docv/` に `<まとまり>/<ID>.<拡張子>` の名前で置く。16 の Slot がある
+      - en: Free
+        desc: プロジェクトが問いと形を決める Markdown のファイル（Free ファイル）。AI Agent が読み書きし、詳細を記録する。`docs/` に置き、`docv.yaml` の `docs` に当てはまるファイル
       - en: ADR
         desc: 決めたこと 1 つを、背景、選ばなかった案と一緒に残す記録。`docv/adr/` に 1 つの Markdown で置き、決めた後は書き換えない
   - name: ファイルの分類
@@ -17,10 +17,10 @@ groups:
     items:
       - ja: ミッション
         en: Mission
-        desc: 原本のファイルが答えること。YAML front matter に 1 文で書き、中身をその答えだけにする
+        desc: Free ファイルが答えること。YAML front matter に 1 文で書き、中身をその答えだけにする
       - ja: タグ
         en: Tags
-        desc: 原本に付ける分類。1 つのファイルに任意の数を付けられ、タグにルールを付けられる
+        desc: Free ファイルに付ける分類。1 つのファイルに任意の数を付けられ、タグにルールを付けられる
       - ja: 埋め込み
         en: Include
-        desc: Slot に、既にある Markdown のファイルや章を埋め込む指定。Slot の項目の名前は `include`。原本を 1 か所に保ったまま Slot に載せられる
+        desc: Slot に、既にある Markdown のファイルや章を埋め込む指定。Slot の項目の名前は `include`。Free ファイルの中身を 1 か所に保ったまま Slot に載せられる

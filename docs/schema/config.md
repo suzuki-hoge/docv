@@ -71,7 +71,7 @@ tags: [仕様]
       "additionalProperties": false,
       "properties": {
         "dir": {
-          "description": "Slot のファイルを置くディレクトリ。",
+          "description": "Slot ファイルを置くディレクトリ。",
           "type": "string",
           "default": "docv"
         }

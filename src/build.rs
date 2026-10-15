@@ -1,8 +1,8 @@
 //! docv build-html と docv build-image。人間向けの HTML と、Slot のページの JPG を生成する。docv/service/service.md の「HTML の構成」、docv/system/system.md の「HTML の作り」。
 //!
 //! トップは 3 ページに分け、サイドバーで行き来する。
-//! index.html（プロジェクト概要）に docv の規格のファイル（Slot）のページへのカード、ADR.html に決定のつながりの図、
-//! プロジェクト詳細.html にプロジェクトが自由に書いたファイル（原本）のツリーを置く。
+//! index.html（プロジェクト概要）に Slot ファイルのページへのカード、ADR.html に決定のつながりの図、
+//! プロジェクト詳細.html に Free ファイルのツリーを置く。
 //! Slot は 1 つずつ独立したページにし、`<まとまり>/<Slot>.html` に置く。
 //! 画像にしても読めるように、折りたたみは使わない。OS ごとの手順のタブは、印刷の表示（JPG）ではすべて並べる。
 
@@ -65,7 +65,7 @@ impl Nav {
     }
 }
 
-/// 原本のページを置くディレクトリ（出力先からの相対パス）。原本のパスの .md を .html にして、この下に置く。
+/// Free ファイルのページを置くディレクトリ（出力先からの相対パス）。Free ファイルのパスの .md を .html にして、この下に置く。
 const DETAIL_DIR: &str = "プロジェクト詳細";
 
 /// ADR のページを置くディレクトリ（出力先からの相対パス）。決定 1 つを 1 ページにし、`ADR/<まとまり>/<題>.html` に置く。
@@ -75,7 +75,7 @@ const ADR_DIR: &str = "ADR";
 /// 入力欄にいるときと、修飾キーを押しているときは、ブラウザの動きのままにする。
 const ADR_KEYS: &str = "document.addEventListener('keydown',function(e){if(e.altKey||e.ctrlKey||e.metaKey||e.shiftKey||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))return;var side={ArrowLeft:'prev',ArrowRight:'next'}[e.key];var a=side&&document.querySelector('.adr-nav .'+side+' a');if(a)location.href=a.href;});";
 
-/// プロジェクト詳細のタグのトグル。選んだタグのどれかを持つ原本の行と、その上のディレクトリの行だけを出す。
+/// プロジェクト詳細のタグのトグル。選んだタグのどれかを持つ Free ファイルの行と、その上のディレクトリの行だけを出す。
 /// すべて選んでいるときに押したタグは、そのタグだけを選ぶ。それ以外のときは押したタグを切り替え、1 つも残らなければすべて選び直す。
 /// 絞り込んでも列の幅が変わらないように、すべての行を出した状態のファイルとタグの列の幅で固定する。
 const TAG_FILTER: &str = "(function(){var tb=document.querySelector('table.docs');var hs=tb.tHead.rows[0].cells;var w0=hs[0].offsetWidth,w2=hs[2].offsetWidth;hs[0].style.width=w0+'px';hs[2].style.width=w2+'px';tb.style.tableLayout='fixed';var bs=[].slice.call(document.querySelectorAll('.tag-filter button'));var files=[].slice.call(document.querySelectorAll('table.docs tr[data-path]'));var dirs=[].slice.call(document.querySelectorAll('table.docs tr[data-dir]'));function apply(){var on=bs.filter(function(b){return b.getAttribute('aria-pressed')==='true';}).map(function(b){return b.getAttribute('data-tag');});var all=on.length===bs.length;files.forEach(function(r){var t=JSON.parse(r.getAttribute('data-tags'));r.hidden=!all&&!t.some(function(x){return on.indexOf(x)>=0;});});dirs.forEach(function(d){var p=d.getAttribute('data-dir')+'/';d.hidden=!files.some(function(r){return !r.hidden&&r.getAttribute('data-path').indexOf(p)===0;});});}function pressed(b){return b.getAttribute('aria-pressed')==='true';}function set(b,on){b.setAttribute('aria-pressed',on?'true':'false');}bs.forEach(function(b){b.addEventListener('click',function(){if(bs.every(pressed)){bs.forEach(function(x){set(x,x===b);});}else{set(b,!pressed(b));if(!bs.some(pressed)){bs.forEach(function(x){set(x,true);});}}apply();});});})();";
@@ -105,7 +105,7 @@ pub fn html(project: &Project, out: &Path) -> Result<()> {
 
 /// docv build-image。Slot のページを一時的なディレクトリに作り、出力先の jpg/ に JPG だけを書く。
 /// Slot のページごとに 1 枚。見つけやすいように、まとまりと Slot の表示名をパスにする。
-/// Markdown から作るページ（md の Slot、ADR、原本）は、GitHub で md をそのまま見られるので JPG にしない。
+/// Markdown から作るページ（md の Slot、ADR、Free ファイル）は、GitHub で md をそのまま見られるので JPG にしない。
 pub fn image(project: &Project, out: &Path) -> Result<()> {
     let out = prepare_out(out, false)?;
     let work = std::env::temp_dir().join(format!("docv-html-{}", std::process::id()));
@@ -203,7 +203,7 @@ fn read_page(project: &Project, path: &str) -> Result<Page> {
     })
 }
 
-/// 原本のページの、出力先からの相対パス。`プロジェクト詳細/docs/order.html`。
+/// Free ファイルのページの、出力先からの相対パス。`プロジェクト詳細/docs/order.html`。
 fn doc_page(source: &str) -> String {
     format!(
         "{DETAIL_DIR}/{}.html",
@@ -279,7 +279,7 @@ impl Site<'_> {
         )
     }
 
-    /// プロジェクト詳細.html。原本のツリー。
+    /// プロジェクト詳細.html。Free ファイルのツリー。
     fn render_detail(&self) -> String {
         *self.dir.borrow_mut() = self.out.to_path_buf();
         let mut out = String::new();
@@ -295,7 +295,7 @@ impl Site<'_> {
         )
     }
 
-    /// 原本 1 つのページ。原本を Markdown のまま HTML にする。
+    /// Free ファイル 1 つのページ。Free ファイルを Markdown のまま HTML にする。
     fn render_doc(&self, page: &Page) -> String {
         let path = doc_page(&page.source);
         let dir = Path::new(&path).parent().unwrap_or(Path::new(""));
@@ -389,7 +389,7 @@ impl Site<'_> {
         if self.slots.is_empty() {
             let _ = writeln!(
                 out,
-                "<p class=\"note\">Slot のファイルがない。{} に Slot のファイルを置くと、カードから開ける。</p>",
+                "<p class=\"note\">Slot ファイルがない。{} に Slot ファイルを置くと、カードから開ける。</p>",
                 escape(&self.project.slots_dir())
             );
         }
@@ -568,7 +568,7 @@ impl Site<'_> {
                     .parent()
                     .unwrap_or(Path::new(""))
                     .to_path_buf();
-                // md の Slot はページ全体なので、原本と同じく見出しに id を付け、ページ内リンクで飛べるようにする。
+                // md の Slot はページ全体なので、Free ファイルと同じく見出しに id を付け、ページ内リンクで飛べるようにする。
                 let (html, _) = self.markdown_with_toc(text, &base, true, 2);
                 let _ = writeln!(out, "{html}");
             }
@@ -820,7 +820,7 @@ impl Site<'_> {
         let _ = writeln!(out, "</tbody>\n</table>");
     }
 
-    // ---- 原本のツリー ----
+    // ---- Free ファイルのツリー ----
 
     fn docs(&self, out: &mut String) {
         let _ = writeln!(out, "<h2 class=\"group\">ドキュメント</h2>");
@@ -832,7 +832,7 @@ impl Site<'_> {
         for page in self.pages {
             root.insert(page);
         }
-        // すべての原本が 1 つのディレクトリ（docs/ など）の中にあるときは、そのディレクトリの行を出さない。
+        // すべての Free ファイルが 1 つのディレクトリ（docs/ など）の中にあるときは、そのディレクトリの行を出さない。
         let mut top = &root;
         let mut path = String::new();
         while top.files.is_empty() && top.dirs.len() == 1 {
@@ -857,7 +857,7 @@ impl Site<'_> {
         }
     }
 
-    /// 原本をディレクトリのツリーにして出す。ディレクトリの中は、ファイル、ディレクトリの順。
+    /// Free ファイルをディレクトリのツリーにして出す。ディレクトリの中は、ファイル、ディレクトリの順。
     fn docs_tree(&self, out: &mut String, dir: &Dir, path: &str, depth: usize) {
         for page in &dir.files {
             let mission = escape(page.mission.as_deref().unwrap_or(""));
@@ -896,7 +896,7 @@ impl Site<'_> {
         }
     }
 
-    /// 原本の並びで、タグが初めて出てきた順。タグの色とトグルの並びに使う。
+    /// Free ファイルの並びで、タグが初めて出てきた順。タグの色とトグルの並びに使う。
     fn tag_order(&self) -> Vec<&str> {
         let mut order: Vec<&str> = Vec::new();
         for tag in self.pages.iter().flat_map(|p| &p.tags) {
@@ -907,7 +907,7 @@ impl Site<'_> {
         order
     }
 
-    /// タグのトグル。押すと、選んだタグのどれかを持つ原本だけを表に出す。すべて選んでいるときは絞り込まない。
+    /// タグのトグル。押すと、選んだタグのどれかを持つ Free ファイルだけを表に出す。すべて選んでいるときは絞り込まない。
     fn tag_filter(&self, out: &mut String) {
         let order = self.tag_order();
         if order.is_empty() {
@@ -931,7 +931,7 @@ impl Site<'_> {
         let _ = writeln!(out, "</div>");
     }
 
-    /// ページのタグ。タグごとに色を決める。色は 8 色で、原本の並びで初めて出てきた順に割り当て、足りなければ最初から使い直す。
+    /// ページのタグ。タグごとに色を決める。色は 8 色で、Free ファイルの並びで初めて出てきた順に割り当て、足りなければ最初から使い直す。
     fn tags(&self, page: &Page) -> String {
         let order = self.tag_order();
         let mut out = String::new();
@@ -1130,7 +1130,7 @@ impl Site<'_> {
         }
     }
 
-    /// ルートの中のファイルへのリンク。原本なら、その原本のページに向ける。
+    /// ルートの中のファイルへのリンク。Free ファイルなら、その Free ファイルのページに向ける。
     /// ほかのファイルは、repository.url があれば GitHub に、なければ出力先から辿れる相対パスにする。
     fn link(&self, target: &str, fragment: &str, image: bool) -> String {
         if !image && self.pages.iter().any(|p| p.source == target) {
@@ -1258,7 +1258,7 @@ fn encode_path(path: &str) -> String {
     out
 }
 
-/// 原本のツリーの、ディレクトリ 1 つ。
+/// Free ファイルのツリーの、ディレクトリ 1 つ。
 #[derive(Default)]
 struct Dir<'a> {
     files: Vec<&'a Page>,
@@ -1512,12 +1512,12 @@ mod tests {
             "{index}"
         );
         assert!(index.contains("</svg>用語集</span>"), "{index}");
-        // プロジェクト詳細.html に、原本のページへのリンクをツリーに並べる。管理外のファイルは出さない
+        // プロジェクト詳細.html に、Free ファイルのページへのリンクをツリーに並べる。管理外のファイルは出さない
         let plan = detail
             .find("<tr class=\"dir\" data-dir=\"docs/plan\"><td colspan=\"3\"><div style=\"margin-left:0px\">plan/</div></td></tr>")
             .unwrap();
         let spec = detail.find(">spec/</div>").unwrap();
-        // すべての原本が入っている docs/ の行は出さず、ファイル名も出さない。タグには色を付ける
+        // すべての Free ファイルが入っている docs/ の行は出さず、ファイル名も出さない。タグには色を付ける
         assert!(!detail.contains(">docs/</div>"), "{detail}");
         assert!(
             detail.contains("<tr data-path=\"docs/spec/a.md\" data-tags=\"[&quot;仕様&quot;]\"><td style=\"padding-left:30px\"><a href=\"プロジェクト詳細/docs/spec/a.html\">A &lt;仕様&gt;</a></td><td title=\"A は何か\">A は何か</td><td><span class=\"tag c0\">仕様</span></td>"),
@@ -1529,7 +1529,7 @@ mod tests {
             "{detail}"
         );
         assert!(detail.contains("<script>(function(){"), "{detail}");
-        // 原本は 1 つずつ HTML のページにする。見出しは h1 から段を飛ばさない
+        // Free ファイルは 1 つずつ HTML のページにする。見出しは h1 から段を飛ばさない
         let a = fs::read_to_string(out.join("プロジェクト詳細/docs/spec/a.html")).unwrap();
         assert!(a.contains("<h1>A &lt;仕様&gt;</h1>"), "{a}");
         // 見出しには GitHub と同じ形の id を付け、右のサイドバーに目次を置く

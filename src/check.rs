@@ -1,4 +1,4 @@
-//! docv check のルール。原本は docs/rule/docs/guideline.md の 10 章、書式の規則と textlint は docs/spec/config.md。
+//! docv check のルール。Free ファイルのルールは docs/rule/docs/guideline.md の 10 章、書式の規則と textlint は docs/spec/config.md。
 
 use std::collections::HashSet;
 use std::fs;
@@ -62,7 +62,7 @@ pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Ve
             textlint_files.push(path);
         }
     }
-    // Slot のディレクトリの中の .md のファイルには、原本のルールはかけず、整形と textlint だけをかける。
+    // Slot のディレクトリの中の .md のファイルには、Free ファイルのルールはかけず、整形と textlint だけをかける。
     for path in project.slot_markdown()? {
         if !targets.is_empty() && !targets.contains(&path) {
             continue;
@@ -183,7 +183,7 @@ fn check_file(
     cx.diagnostics
 }
 
-/// 整形できないファイルは、原本なら frontmatter-invalid、ADR なら adr-invalid が出ているので、ここでは出さない。
+/// 整形できないファイルは、Free ファイルなら frontmatter-invalid、ADR なら adr-invalid が出ているので、ここでは出さない。
 fn check_format(cx: &mut Checker, text: &str) {
     if cx.project.config.format.enabled
         && cx.settings.format

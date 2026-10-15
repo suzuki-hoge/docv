@@ -1,6 +1,6 @@
 //! Slot。どのプロジェクトにもある問いに、決まった形で答えるファイル。docs/spec/slot.md。
 //!
-//! Slot のファイルは、slots.dir の下の、まとまりのディレクトリに `<まとまり>/<ID>.<拡張子>` の名前で置く。拡張子は Slot ごとに決まる（yaml か md）。
+//! Slot ファイルは、slots.dir の下の、まとまりのディレクトリに `<まとまり>/<ID>.<拡張子>` の名前で置く。拡張子は Slot ごとに決まる（yaml か md）。
 //! ファイルの中のパスは、すべてルートからの相対パス。
 
 use std::fs;
@@ -40,7 +40,7 @@ impl Group {
         }
     }
 
-    /// Slot のファイルを置くディレクトリの名前（slots.dir からの相対パス）。
+    /// Slot ファイルを置くディレクトリの名前（slots.dir からの相対パス）。
     pub fn dir(self) -> &'static str {
         match self {
             Group::Service => "service",
@@ -51,12 +51,12 @@ impl Group {
     }
 }
 
-/// Slot のファイルの形式。
+/// Slot ファイルの形式。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Format {
     /// 決まった項目を持つ YAML。
     Yaml,
-    /// 自由に書く Markdown。HTML にはそのまま出す。
+    /// 形を決めない Markdown。HTML にはそのまま出す。
     Markdown,
     /// YAML（外の定義へのリンクだけ）か Markdown のどちらか。
     Either,
@@ -197,7 +197,7 @@ impl Def {
         }
     }
 
-    /// Slot のファイルの、slots.dir からの相対パス。拡張子を選べる Slot は、最初の拡張子（yaml）のもの。
+    /// Slot ファイルの、slots.dir からの相対パス。拡張子を選べる Slot は、最初の拡張子（yaml）のもの。
     pub fn file_name(&self) -> String {
         format!("{}/{}.{}", self.group.dir(), self.id, self.extensions()[0])
     }
@@ -221,7 +221,7 @@ pub fn def_of_file(rel: &str) -> Option<(&'static Def, &'static str)> {
     })
 }
 
-/// Slot のファイルとして置ける名前の一覧。メッセージに使う。
+/// Slot ファイルとして置ける名前の一覧。メッセージに使う。
 pub fn file_names() -> String {
     DEFS.iter()
         .flat_map(|d| d.file_names())
@@ -623,7 +623,7 @@ pub fn load(project: &Project) -> Result<Vec<Slot>> {
     Ok(slots)
 }
 
-/// Slot のファイルを確かめる。
+/// Slot ファイルを確かめる。
 pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
     let mut diagnostics = Vec::new();
     let mut push = |path: &str, line: usize, rule: &str, level: Level, message: String| {
@@ -639,7 +639,7 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
     for file in slot_files(project)? {
         let Some((def, ext)) = file.def else {
             let message = match suggest(&project.slots_dir(), &file.path) {
-                Some(right) => format!("Slot のファイルは {right} に置く"),
+                Some(right) => format!("Slot ファイルは {right} に置く"),
                 None => format!(
                     "Slot の名前ではない。Slot のディレクトリに置けるのは {}",
                     file_names()
@@ -655,7 +655,7 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
                 "slot-duplicate",
                 Level::Error,
                 format!(
-                    "{}の Slot のファイルが 2 つある。どちらか 1 つにする",
+                    "{}の Slot ファイルが 2 つある。どちらか 1 つにする",
                     def.label
                 ),
             );

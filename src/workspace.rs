@@ -97,7 +97,7 @@ impl Project {
     }
 
     /// Slot のディレクトリの中の .md のファイル（md の Slot と ADR）を、パスの辞書順で返す。
-    /// 原本のルールはかけず、整形と textlint だけをかける。シンボリックリンクは書き換えないので除く。
+    /// Free ファイルのルールはかけず、整形と textlint だけをかける。シンボリックリンクは書き換えないので除く。
     pub fn slot_markdown(&self) -> Result<Vec<String>> {
         Ok(self
             .walk_slots_dir()?
@@ -167,7 +167,7 @@ impl Project {
         self.classify_with(rel, &normalize_dir(&self.config.output.dir))
     }
 
-    /// Slot のディレクトリの中の Markdown は、Slot として読むので、原本にも管理外にもしない。
+    /// Slot のディレクトリの中の Markdown は、Slot ファイルとして読むので、管理対象にも管理外にもしない。
     fn classify_with(&self, rel: &str, output_dir: &str) -> Option<Class> {
         if is_under(rel, output_dir)
             || is_under(rel, &self.slots_dir())

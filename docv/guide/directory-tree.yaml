@@ -16,7 +16,7 @@ entries:
   - path: docs/
     description: このリポジトリのドキュメント。docv 自身で管理する
   - path: docv/
-    description: このリポジトリの Slot のファイル
+    description: このリポジトリの Slot ファイル
   - path: docv/adr/
     description: 決めた経緯（ADR）
   - path: docs/spec/
@@ -26,6 +26,6 @@ entries:
   - path: docs/rule/
     description: このリポジトリのドキュメントの書式
   - path: docs/rule/docs/guideline.md
-    description: 原本の書き方
+    description: Free ファイルの書き方
   - path: docs/fixme/
     description: まだ決まっていないこと

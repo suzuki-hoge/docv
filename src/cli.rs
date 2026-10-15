@@ -33,7 +33,7 @@ struct Cli {
 enum Command {
     /// docv.yaml を作る
     Init,
-    /// Slot のファイルを、決まったパスに作る
+    /// Slot ファイルを、決まったパスに作る
     Add {
         /// 作る Slot（docv add --list で一覧を出す）
         #[arg(required_unless_present = "list", value_name = "slot")]

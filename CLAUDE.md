@@ -10,7 +10,7 @@
 ## 1. ドキュメントを書くとき
 
 - [`docs/rule/docs/guideline.md`](docs/rule/docs/guideline.md)（docv のルール）と [`docs/rule/writing-style.md`](docs/rule/writing-style.md)（このリポジトリの書式）に従う
-- docv の設計は Slot（`docv/`）に書く。サービス仕様、システム仕様、コマンドの挙動（利用マニュアル）などの Slot の問いに答える内容は Slot に、どの Slot にも収まらない規格の詳細だけを `docs/` に書く（Slot、ADR、`docv.yaml` は `docs/spec/`、原本の書き方は `docs/rule/docs/guideline.md`）。同じことを 2 か所に書かない。`docv/` には、docv に当てはまる Slot だけを置く。`docs/` はプロジェクトが自由に書くファイル、`docv/` は docv の規格のファイル。実装の前に Slot と spec を読み、違う実装が必要になったら、実装より先に人間に確認して Slot か spec を直す
+- docv の設計は Slot（`docv/`）に書く。サービス仕様、システム仕様、コマンドの挙動（利用マニュアル）などの Slot の問いに答える内容は Slot に、どの Slot にも収まらない規格の詳細だけを `docs/` に書く（Slot、ADR、`docv.yaml` は `docs/spec/`、Free ファイルの書き方は `docs/rule/docs/guideline.md`）。同じことを 2 か所に書かない。`docv/` には、docv に当てはまる Slot だけを置く。`docs/` には Free ファイル（プロジェクトが問いと形を決めるファイル）を、`docv/` には Slot ファイル（docv が問いと形を決めるファイル）を置く。実装の前に Slot と spec を読み、違う実装が必要になったら、実装より先に人間に確認して Slot か spec を直す
 - 決めたことが変わったら Slot か spec を書き換え、決めた経緯と選ばなかった案は ADR（`docv/adr/`。[`docs/spec/adr.md`](docs/spec/adr.md) の形）に残す。やったことは書かない
 - 決まっていないことは [`docs/fixme/open.md`](docs/fixme/open.md) に足し、決まったら Slot か spec に書いて消す
 - タスクは `docs/plan/` に書き、終わったものは消す。`docs/plan/` は git で管理するが、`docv.yaml` の `ignore` に入れてあり、docv は扱わない（HTML に出さない）

@@ -15,7 +15,7 @@ main { flex: 1; min-width: 0; max-width: 1040px; margin: 0 auto; padding: 32px 4
   .sidebar { position: static; width: auto; height: auto; padding: 12px 16px; border-right: none; border-bottom: 1px solid #d8dee4; }
   .sidebar ul { display: flex; gap: 8px; }
 }
-/* 原本のページの右の目次。幅が足りないときと、印刷の表示では出さない */
+/* Free ファイルのページの右の目次。幅が足りないときと、印刷の表示では出さない */
 .outline { position: sticky; top: 0; flex: none; width: 220px; max-height: 100vh; overflow-y: auto; box-sizing: border-box; padding: 32px 16px; font-size: 0.85em; }
 .outline .outline-title { margin: 0 0 8px; font-weight: 600; color: #656d76; }
 .outline ul { list-style: none; margin: 0; padding: 0 0 0 10px; border-left: 1px solid #d8dee4; }
@@ -70,13 +70,13 @@ h2 { font-size: 1.25em; margin: 28px 0 4px; padding-bottom: 2px; border-bottom: 
 .tag.c5 { background: #fff1e5; border-color: #ffd8b5; }
 .tag.c6 { background: #e6fbf7; border-color: #b3ece2; }
 .tag.c7 { background: #ffeff7; border-color: #ffd3eb; }
-/* 原本のツリー。ディレクトリの行は薄い水色で、ファイルの行と見分ける */
+/* Free ファイルのツリー。ディレクトリの行は薄い水色で、ファイルの行と見分ける */
 /* プロジェクト詳細のタグのトグル。選んでいないタグは薄くする */
 .tag-filter { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 4px; }
 .tag-filter button { font-family: inherit; font-size: 0.85em; line-height: 1.6; padding: 1px 10px; margin: 0; cursor: pointer; }
 .tag-filter button[aria-pressed="false"] { opacity: 0.35; }
 .tag-filter .count { margin-left: 6px; font-weight: 600; }
-/* 原本のツリーの列。ファイルとタグは中身の幅で折り返さず、ミッションは残りの幅に 1 行で収め、はみ出たら … にする */
+/* Free ファイルのツリーの列。ファイルとタグは中身の幅で折り返さず、ミッションは残りの幅に 1 行で収め、はみ出たら … にする */
 table.docs td:nth-child(1), table.docs td:nth-child(3) { white-space: nowrap; }
 table.docs td:nth-child(2) { width: 100%; max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 table.docs tr.dir td { padding: 0; }

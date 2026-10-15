@@ -16,7 +16,7 @@ pub fn text(slot: Option<&str>) -> Result<&'static str> {
         bail!("{name} は Slot の名前ではない。docv add --list で Slot の一覧を出す");
     };
     if ext != "yaml" {
-        bail!("{name} は md の Slot で、スキーマはない。中身は自由に書く");
+        bail!("{name} は md の Slot で、スキーマはない。中身の形は決まっていない");
     }
     Ok(slot::schema(def.id).expect("yaml の Slot にはスキーマがある"))
 }

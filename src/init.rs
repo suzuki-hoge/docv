@@ -23,7 +23,7 @@ docs:
 ignore:
   - docs/tmp/**
 
-# docv の規格のファイル（Slot。概要、コマンドなど）を置くディレクトリ。docs/ はプロジェクトが自由に書く。
+# Slot ファイル（概要、コマンドなど）を置くディレクトリ。docs/ には Free ファイルを置く。
 slots:
   dir: docv
 ",

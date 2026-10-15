@@ -8,7 +8,7 @@ docv の解決したいこと
 docv の提供するもの
 
 - およそ普遍的に必要になるドキュメントのテンプレート
-- 自由に記載する Markdown ファイルの YAML front matter
+- Free ファイル（`docs/` の Markdown）の YAML front matter
 - それらのビジュアライズ HTML 生成
 - AI Agent に伝えるドキュメント管理のガイドライン
 
@@ -26,7 +26,7 @@ docv の提供するもの
 
 ### `docs/`
 
-- `docv/` 以外のドキュメントは `docs/` で自由に Markdown で管理する
+- `docv/` 以外のドキュメントは、Free ファイルとして `docs/` に Markdown で置く
 - ビジュアライズ時は、ファイルは通常の Markdown → HTML 変換のほか、リンク切れチェックや textlint / format ( 設定次第 ) も行われる
 - YAML front matter でタグなどをつけ管理する
 - `docs/` は `docv.yaml` で変更可能
