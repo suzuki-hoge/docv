@@ -8,7 +8,7 @@ use crate::markdown::{Document, Outline};
 pub struct Meta {
     /// h1 の文字列。
     pub title: Option<String>,
-    /// YAML front matter の mission。このファイルが答えること。
+    /// YAML front matter の mission。このファイルを読むと何が分かるか。
     pub mission: Option<String>,
     pub tags: Vec<String>,
 }

@@ -2,9 +2,9 @@ groups:
   - name: ファイルの種類
     items:
       - en: Slot
-        desc: どのプロジェクトにもある問いに、決まった形で答えるファイル（Slot ファイル）。docv が問いと形を決める。`docv/` に `<まとまり>/<ID>.<拡張子>` の名前で置く。17 の Slot がある
+        desc: どのプロジェクトにも要るドキュメントを書くファイル（Slot ファイル）。docv がミッションと形を決める。`docv/` に `<まとまり>/<ID>.<拡張子>` の名前で置く。17 の Slot がある
       - en: Free
-        desc: プロジェクトが問いと形を決める Markdown のファイル（Free ファイル）。AI Agent が読み書きし、詳細を記録する。`docs/` に置き、`docv.yaml` の `docs` に当てはまるファイル
+        desc: プロジェクトがミッションと形を決める Markdown のファイル（Free ファイル）。AI Agent が読み書きし、詳細を記録する。`docs/` に置き、`docv.yaml` の `docs` に当てはまるファイル
       - en: ADR
         desc: 決めたこと 1 つを、背景、選ばなかった案と一緒に残す記録。`docv/adr/` に 1 つの Markdown で置き、決めた後は書き換えない
   - name: 決まりの種類
@@ -28,7 +28,7 @@ groups:
     items:
       - ja: ミッション
         en: Mission
-        desc: Free ファイルが答えること。YAML front matter に 1 文で書き、中身をその答えだけにする
+        desc: そのファイルを読むと何が分かるか。Slot のミッションは docv が決め、Free ファイルのミッションは YAML front matter の `mission` に 1 文で書く。中身は、ミッションに収まることだけにする
       - ja: タグ
         en: Tags
         desc: Free ファイルに付ける分類。1 つのファイルに任意の数を付けられ、タグにルールを付けられる

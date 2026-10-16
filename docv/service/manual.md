@@ -60,7 +60,7 @@ docv check docs/spec/order.md
 
 ### docv slot list
 
-Slot の名前、作るファイル、答える問いの一覧を表示する。
+Slot の名前、作るファイル、ミッションの一覧を表示する。
 
 ### docv slot gen
 
@@ -78,7 +78,7 @@ docv slot gen doc-guide --print # 今の版の雛形を出す。手元のガイ�
 ```
 
 - yaml の Slot には、項目のサンプルを書く
-- md の Slot は空のファイルを作り、中身の形は自由で、Slot の問いに答える Markdown を書けばよいことを表示する
+- md の Slot は空のファイルを作り、中身の形は自由で、Slot のミッションに沿って Markdown を書けばよいことを表示する
 - Doc ガイド（`doc-guide`）だけは、ガイドラインの雛形を書く
 - Slot ファイルの名前は変更できない。`docv/` は `slots.dir` で変更可能
 

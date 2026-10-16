@@ -1,5 +1,5 @@
 ---
-mission: ディレクトリ（guide/directory-tree.yaml）には、どんな項目をどんな形で書くか
+mission: ディレクトリ（guide/directory-tree.yaml）の項目と、それぞれの形
 tags: [仕様]
 ---
 
@@ -8,7 +8,7 @@ tags: [仕様]
 ```yaml
 $schema: https://json-schema.org/draft/2020-12/schema
 title: ディレクトリ（guide/directory-tree.yaml）
-description: どこに何があるか
+description: ディレクトリごとの役割
 type: object
 additionalProperties: false
 properties:

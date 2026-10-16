@@ -296,10 +296,10 @@ mod tests {
 
     #[test]
     fn splits_frontmatter() {
-        let doc = split("---\nquestion: q\ntopics: [a]\n---\n\n# T\n");
+        let doc = split("---\nmission: q\ntopics: [a]\n---\n\n# T\n");
         let fm = doc.frontmatter.as_ref().unwrap();
         assert!(fm.closed);
-        assert_eq!(fm.yaml, "question: q\ntopics: [a]\n");
+        assert_eq!(fm.yaml, "mission: q\ntopics: [a]\n");
         assert_eq!(fm.line_of_key("topics"), 3);
         assert_eq!(doc.body, "\n# T\n");
         assert_eq!(doc.body_start_line, 5);
@@ -314,13 +314,13 @@ mod tests {
 
     #[test]
     fn marks_unclosed_frontmatter() {
-        let doc = split("---\nquestion: q\n");
+        let doc = split("---\nmission: q\n");
         assert!(!doc.frontmatter.unwrap().closed);
     }
 
     #[test]
     fn collects_outline_with_file_lines() {
-        let text = "---\nquestion: q\n---\n\n# T `code`\n\n以前は [a](a.md) `以前は`\n\n```\n以前は\n```\n\n- [x] done\n- [ ] todo\n\n![img](i.png)\n";
+        let text = "---\nmission: q\n---\n\n# T `code`\n\n以前は [a](a.md) `以前は`\n\n```\n以前は\n```\n\n- [x] done\n- [ ] todo\n\n![img](i.png)\n";
         let outline = outline(&split(text));
         assert_eq!(
             outline.headings,

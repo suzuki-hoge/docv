@@ -1,6 +1,6 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: 技術スタック（system/stack.yaml）
-description: 何で作られているか
+description: 作るのに使っている言語、ライブラリ、サービス
 type: object
 additionalProperties: false
 properties:

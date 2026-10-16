@@ -1,5 +1,5 @@
 ---
-mission: ADR には何をどんな形で書き、HTML でどう見せるか
+mission: ADR に書くことと形、HTML での見せ方
 tags: [仕様, ルール, 出力]
 ---
 

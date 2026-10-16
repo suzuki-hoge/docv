@@ -69,7 +69,7 @@ enum Command {
 
 #[derive(Debug, Subcommand)]
 enum SlotCommand {
-    /// Slot の名前、ファイル、答える問いの一覧を出す
+    /// Slot の名前、ファイル、ミッションの一覧を出す
     List,
     /// Slot ファイルを、決まったパスに作る
     Gen {

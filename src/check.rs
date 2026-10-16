@@ -260,7 +260,7 @@ fn check_frontmatter(cx: &mut Checker, document: &Document) {
             1,
             "mission-missing",
             Level::Error,
-            "mission がない。このファイルが答えることを 1 文で書く",
+            "mission がない。このファイルを読むと何が分かるかを 1 文で書く",
         ),
         None => {}
     }
@@ -451,7 +451,7 @@ overrides:
         assert_eq!(
             without_c,
             [
-                "docs/spec/a.md:1: error mission-missing mission がない。このファイルが答えることを 1 文で書く".to_string(),
+                "docs/spec/a.md:1: error mission-missing mission がない。このファイルを読むと何が分かるかを 1 文で書く".to_string(),
                 "docs/spec/b.md:2: error mission-multiline mission は 1 行で書く".to_string(),
                 "docs/spec/b.md:5: error tag-unknown タグ z は docv.yaml の tags にない".to_string(),
             ]

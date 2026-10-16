@@ -1,6 +1,6 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: インストール（service/install.yaml）
-description: 利用者はどう入れるか
+description: 利用者がこれを入れる手順
 type: object
 additionalProperties: false
 properties:

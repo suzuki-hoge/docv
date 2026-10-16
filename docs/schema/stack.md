@@ -1,5 +1,5 @@
 ---
-mission: 技術スタック（system/stack.yaml）には、どんな項目をどんな形で書くか
+mission: 技術スタック（system/stack.yaml）の項目と、それぞれの形
 tags: [仕様]
 ---
 
@@ -8,7 +8,7 @@ tags: [仕様]
 ```yaml
 $schema: https://json-schema.org/draft/2020-12/schema
 title: 技術スタック（system/stack.yaml）
-description: 何で作られているか
+description: 作るのに使っている言語、ライブラリ、サービス
 type: object
 additionalProperties: false
 properties:

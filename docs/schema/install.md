@@ -1,5 +1,5 @@
 ---
-mission: インストール（service/install.yaml）には、どんな項目をどんな形で書くか
+mission: インストール（service/install.yaml）の項目と、それぞれの形
 tags: [仕様]
 ---
 
@@ -8,7 +8,7 @@ tags: [仕様]
 ```yaml
 $schema: https://json-schema.org/draft/2020-12/schema
 title: インストール（service/install.yaml）
-description: 利用者はどう入れるか
+description: 利用者がこれを入れる手順
 type: object
 additionalProperties: false
 properties:

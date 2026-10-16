@@ -33,7 +33,7 @@ docv の提供するもの
 
 ## 2. Slot
 
-`docv slot list` で一覧と、それぞれの Slot が答える問いを確認でき、作成したい場合は `docv slot gen <slot>` で作成する
+`docv slot list` で一覧と、それぞれの Slot のミッションを確認でき、作成したい場合は `docv slot gen <slot>` で作成する
 
 ## 3. YAML front matter
 
@@ -41,7 +41,7 @@ docv の提供するもの
 
 ```yaml
 ---
-mission: 注文の処理は、どの注文をいつ確定し、失敗したときにどう扱うか
+mission: 注文を確定するタイミングと、失敗したときの扱い
 tags: [ 仕様, 注文 ]
 ---
 ```

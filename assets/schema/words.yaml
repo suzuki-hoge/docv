@@ -1,6 +1,6 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: 用語集（service/words.yaml）
-description: このプロジェクトの言葉は何を意味するか
+description: このプロジェクトの言葉の意味
 type: object
 additionalProperties: false
 properties:

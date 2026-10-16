@@ -1,5 +1,5 @@
 ---
-mission: 費用（operation/cost.yaml）には、どんな項目をどんな形で書くか
+mission: 費用（operation/cost.yaml）の項目と、それぞれの形
 tags: [仕様]
 ---
 
@@ -8,7 +8,7 @@ tags: [仕様]
 ```yaml
 $schema: https://json-schema.org/draft/2020-12/schema
 title: 費用（operation/cost.yaml）
-description: 何にいくらかかり、費用を理由に何をしていないか
+description: かかっている費用と、費用を理由にやっていないこと
 type: object
 additionalProperties: false
 properties:

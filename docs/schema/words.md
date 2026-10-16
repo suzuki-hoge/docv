@@ -1,5 +1,5 @@
 ---
-mission: 用語集（service/words.yaml）には、どんな項目をどんな形で書くか
+mission: 用語集（service/words.yaml）の項目と、それぞれの形
 tags: [仕様]
 ---
 
@@ -8,7 +8,7 @@ tags: [仕様]
 ```yaml
 $schema: https://json-schema.org/draft/2020-12/schema
 title: 用語集（service/words.yaml）
-description: このプロジェクトの言葉は何を意味するか
+description: このプロジェクトの言葉の意味
 type: object
 additionalProperties: false
 properties:

@@ -1,5 +1,5 @@
 ---
-mission: 開発コマンド（guide/develop.yaml）には、どんな項目をどんな形で書くか
+mission: 開発コマンド（guide/develop.yaml）の項目と、それぞれの形
 tags: [仕様]
 ---
 
@@ -8,7 +8,7 @@ tags: [仕様]
 ```yaml
 $schema: https://json-schema.org/draft/2020-12/schema
 title: 開発コマンド（guide/develop.yaml）
-description: 開発者はテストやビルドなどをどう実行するか
+description: テストやビルドなど、開発者が実行するコマンド
 type: object
 additionalProperties: false
 properties:

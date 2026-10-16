@@ -1,4 +1,4 @@
-//! Slot。どのプロジェクトにもある問いに、決まった形で答えるファイル。docs/spec/slot.md。
+//! Slot。どのプロジェクトにも要るドキュメントを、docv が決めたミッションと形で書くファイル。docs/spec/slot.md。
 //!
 //! Slot ファイルは、slots.dir の下の、まとまりのディレクトリに `<まとまり>/<ID>.<拡張子>` の名前で置く。拡張子は Slot ごとに決まる（yaml か md）。
 //! ファイルの中のパスは、すべてルートからの相対パス。
@@ -65,7 +65,8 @@ pub struct Def {
     pub id: &'static str,
     pub label: &'static str,
     pub group: Group,
-    pub question: &'static str,
+    /// ミッション。この Slot を読むと何が分かるか。
+    pub mission: &'static str,
     pub format: Format,
 }
 
@@ -75,119 +76,119 @@ pub const DEFS: &[Def] = &[
         id: "install",
         label: "インストール",
         group: Group::Service,
-        question: "利用者はどう入れるか",
+        mission: "利用者がこれを入れる手順",
         format: Format::Yaml,
     },
     Def {
         id: "service",
         label: "サービス仕様",
         group: Group::Service,
-        question: "これは何で、誰のために、何を解決し、どんな部品からなるか",
+        mission: "これの目的、利用者、解決すること、部品の構成",
         format: Format::Markdown,
     },
     Def {
         id: "manual",
         label: "利用マニュアル",
         group: Group::Service,
-        question: "利用者はどう使うか（CLI のコマンド、GUI の操作など）",
+        mission: "利用者の使い方（CLI のコマンド、GUI の操作など）",
         format: Format::Markdown,
     },
     Def {
         id: "words",
         label: "用語集",
         group: Group::Service,
-        question: "このプロジェクトの言葉は何を意味するか",
+        mission: "このプロジェクトの言葉の意味",
         format: Format::Yaml,
     },
     Def {
         id: "stack",
         label: "技術スタック",
         group: Group::System,
-        question: "何で作られているか",
+        mission: "作るのに使っている言語、ライブラリ、サービス",
         format: Format::Yaml,
     },
     Def {
         id: "system",
         label: "システム仕様",
         group: Group::System,
-        question: "システムは、内部でどう動き、どんな決まりに従うか",
+        mission: "システムの内部の動きと、従う決まり",
         format: Format::Markdown,
     },
     Def {
         id: "api",
         label: "API 仕様書",
         group: Group::System,
-        question: "どんな API があり、何を受け取り、何を返すか",
+        mission: "API の一覧と、それぞれが受け取るものと返すもの",
         format: Format::Markdown,
     },
     Def {
         id: "db",
         label: "DB 仕様書",
         group: Group::System,
-        question: "どんなデータを、どこにどう保存しているか",
+        mission: "保存しているデータと、その保存先と形",
         format: Format::Markdown,
     },
     Def {
         id: "directory-tree",
         label: "ディレクトリ",
         group: Group::Developer,
-        question: "どこに何があるか",
+        mission: "ディレクトリごとの役割",
         format: Format::Yaml,
     },
     Def {
         id: "setup",
         label: "環境構築",
         group: Group::Developer,
-        question: "開発を始めるには、何を用意して何を実行するか",
+        mission: "開発を始めるのに用意するものと、実行するコマンド",
         format: Format::Yaml,
     },
     Def {
         id: "env",
         label: "環境変数",
         group: Group::Developer,
-        question: "システムを動かすのにどんな環境変数が要り、それぞれどこで設定されているか",
+        mission: "システムを動かすのに要る環境変数と、それぞれを設定している場所",
         format: Format::Yaml,
     },
     Def {
         id: "develop",
         label: "開発コマンド",
         group: Group::Developer,
-        question: "開発者はテストやビルドなどをどう実行するか",
+        mission: "テストやビルドなど、開発者が実行するコマンド",
         format: Format::Yaml,
     },
     Def {
         id: "doc-guide",
         label: "Doc ガイド",
         group: Group::Developer,
-        question: "このプロジェクトのドキュメントは、どこに何をどう書くか",
+        mission: "このプロジェクトのドキュメントの置き場所と書き方",
         format: Format::Markdown,
     },
     Def {
         id: "infrastructure",
         label: "インフラと環境",
         group: Group::Operate,
-        question: "どんな環境（本番、ステージング、開発など）があり、それぞれ何に使うか",
+        mission: "環境（本番、ステージング、開発など）の一覧と、それぞれの用途",
         format: Format::Markdown,
     },
     Def {
         id: "deploy",
         label: "デプロイ",
         group: Group::Operate,
-        question: "作ったものを、どの環境に、どう反映するか",
+        mission: "作ったものを環境に反映する手順",
         format: Format::Markdown,
     },
     Def {
         id: "release",
         label: "リリース",
         group: Group::Operate,
-        question: "版をどう決めて、利用者にどう届けるか",
+        mission: "版の決め方と、利用者への届け方",
         format: Format::Markdown,
     },
     Def {
         id: "cost",
         label: "費用",
         group: Group::Operate,
-        question: "何にいくらかかり、費用を理由に何をしていないか",
+        mission: "かかっている費用と、費用を理由にやっていないこと",
         format: Format::Yaml,
     },
 ];
@@ -947,7 +948,7 @@ mod tests {
     fn includes_a_section_or_a_whole_file() {
         let (_dir, project) = project(&[(
             "docs/a.md",
-            "---\nquestion: q\n---\n\n# A\n\n前書き\n\n---\n\n## 1. 入れ方\n\n手順\n\n### 細かく\n\n細部\n\n---\n\n## 2. 次\n\n次の章\n",
+            "---\nmission: q\n---\n\n# A\n\n前書き\n\n---\n\n## 1. 入れ方\n\n手順\n\n### 細かく\n\n細部\n\n---\n\n## 2. 次\n\n次の章\n",
         )]);
         let section = resolve_include(&project, "docs/a.md#入れ方").unwrap();
         assert_eq!(section.markdown, "手順\n\n### 細かく\n\n細部\n");

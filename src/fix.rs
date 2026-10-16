@@ -82,9 +82,9 @@ mod tests {
             "docv.yaml",
             "docs: [docs/spec/*.md]\nignore: [docs/tmp/**]\n",
         );
-        write(root, "docs/spec/a.md", "---\nquestion: q\n---\n# A\n* x\n");
+        write(root, "docs/spec/a.md", "---\nmission: q\n---\n# A\n* x\n");
         write(root, "docs/spec/b.md", "# B\n");
-        write(root, "docs/spec/c.md", "---\nquestion: q\n");
+        write(root, "docs/spec/c.md", "---\nmission: q\n");
         write(root, "docs/tmp/e.md", "* x\n");
         write(root, "notes.md", "* x\n");
         write(
@@ -100,7 +100,7 @@ mod tests {
         assert_eq!(report.failed[0].0, "docs/spec/c.md");
         assert_eq!(
             fs::read_to_string(root.join("docs/spec/a.md")).unwrap(),
-            "---\nquestion: q\n---\n\n# A\n\n- x\n"
+            "---\nmission: q\n---\n\n# A\n\n- x\n"
         );
         assert_eq!(
             fs::read_to_string(root.join("docv/service/manual.md")).unwrap(),

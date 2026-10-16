@@ -65,8 +65,8 @@ mod tests {
 
     #[test]
     fn formats_body_and_keeps_frontmatter() {
-        let text = "---\r\nquestion:  q  \r\ntopics: [a]\r\n---\r\n# T\r\nあいう _em_ __strong__\r\n\r\n\r\n\r\n* a\r\n* b\r\n\r\n| 種類 | x |\r\n|---|---|\r\n| ああ | b |\r\n\r\nSetext\r\n===\r\n\r\n```rust\r\nfn  main(){}\r\n```\r\n長い 行は 折り返さない。長い 行は 折り返さない。長い 行は 折り返さない。長い 行は 折り返さない。";
-        let expected = "---\nquestion:  q  \ntopics: [a]\n---\n\n# T\n\nあいう *em* **strong**\n\n- a\n- b\n\n| 種類 | x |\n| ---- | - |\n| ああ | b |\n\n# Setext\n\n```rust\nfn  main(){}\n```\n\n長い 行は 折り返さない。長い 行は 折り返さない。長い 行は 折り返さない。長い 行は 折り返さない。\n";
+        let text = "---\r\nmission:  q  \r\ntopics: [a]\r\n---\r\n# T\r\nあいう _em_ __strong__\r\n\r\n\r\n\r\n* a\r\n* b\r\n\r\n| 種類 | x |\r\n|---|---|\r\n| ああ | b |\r\n\r\nSetext\r\n===\r\n\r\n```rust\r\nfn  main(){}\r\n```\r\n長い 行は 折り返さない。長い 行は 折り返さない。長い 行は 折り返さない。長い 行は 折り返さない。";
+        let expected = "---\nmission:  q  \ntopics: [a]\n---\n\n# T\n\nあいう *em* **strong**\n\n- a\n- b\n\n| 種類 | x |\n| ---- | - |\n| ああ | b |\n\n# Setext\n\n```rust\nfn  main(){}\n```\n\n長い 行は 折り返さない。長い 行は 折り返さない。長い 行は 折り返さない。長い 行は 折り返さない。\n";
         let formatted = format(text).unwrap();
         assert_eq!(formatted, expected);
         assert_eq!(format(&formatted).unwrap(), formatted);
@@ -75,11 +75,11 @@ mod tests {
     #[test]
     fn handles_empty_body_and_unclosed_frontmatter() {
         assert_eq!(
-            format("---\nquestion: q\n---").unwrap(),
-            "---\nquestion: q\n---\n"
+            format("---\nmission: q\n---").unwrap(),
+            "---\nmission: q\n---\n"
         );
         assert_eq!(format("").unwrap(), "");
-        assert!(format("---\nquestion: q\n").is_err());
+        assert!(format("---\nmission: q\n").is_err());
     }
 
     #[test]

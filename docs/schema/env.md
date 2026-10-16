@@ -1,5 +1,5 @@
 ---
-mission: 環境変数（guide/env.yaml）には、どんな項目をどんな形で書くか
+mission: 環境変数（guide/env.yaml）の項目と、それぞれの形
 tags: [仕様]
 ---
 
@@ -8,7 +8,7 @@ tags: [仕様]
 ```yaml
 $schema: https://json-schema.org/draft/2020-12/schema
 title: 環境変数（guide/env.yaml）
-description: システムを動かすのにどんな環境変数が要り、それぞれどこで設定されているか
+description: システムを動かすのに要る環境変数と、それぞれを設定している場所
 type: object
 additionalProperties: false
 properties:

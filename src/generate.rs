@@ -11,7 +11,7 @@ use anyhow::{Context, Result, bail};
 use crate::slot::{self, DEFS, Def, Format};
 use crate::workspace::Project;
 
-/// docv slot list の出力。名前、作るファイル（slots.dir からの相対パス）、Slot の名前と問いを 1 行ずつ並べる。
+/// docv slot list の出力。名前、作るファイル（slots.dir からの相対パス）、Slot の名前とミッションを 1 行ずつ並べる。
 pub fn list() -> String {
     let name_width = DEFS.iter().map(|d| d.id.len()).max().unwrap_or(0);
     let file_width = DEFS.iter().map(|d| d.file_name().len()).max().unwrap_or(0);
@@ -23,7 +23,7 @@ pub fn list() -> String {
             def.id,
             def.file_name(),
             def.label,
-            def.question
+            def.mission
         );
     }
     out
@@ -50,8 +50,8 @@ fn md_note(def: &Def) -> Option<String> {
         return None;
     }
     Some(format!(
-        "{}は md の Slot で、中身の形は決めていない。「{}」に答える Markdown を自由に書く\n",
-        def.label, def.question
+        "{}は md の Slot で、中身の形は決めていない。ミッション「{}」に沿って、Markdown を自由に書く\n",
+        def.label, def.mission
     ))
 }
 
@@ -126,7 +126,7 @@ mod tests {
         let api = run(&project, "api", false).unwrap();
         assert_eq!(api.path, "docv/system/api.md");
         assert_eq!(read(&dir, &api.path), "");
-        assert!(api.note.unwrap().contains("どんな API があり"));
+        assert!(api.note.unwrap().contains("API の一覧と"));
         // Doc ガイドの Slot は、ガイドラインの雛形を書く
         let guide = run(&project, "doc-guide", false).unwrap();
         assert_eq!(guide.path, "docv/guide/doc-guide.md");
@@ -172,11 +172,11 @@ mod tests {
     }
 
     #[test]
-    fn lists_every_slot_with_its_question() {
+    fn lists_every_slot_with_its_mission() {
         let list = list();
         assert!(list.starts_with("install "), "{list}");
         assert!(
-            list.contains("service/manual.md            利用マニュアル: 利用者はどう使うか"),
+            list.contains("service/manual.md            利用マニュアル: 利用者の使い方"),
             "{list}"
         );
         assert_eq!(list.lines().count(), DEFS.len());

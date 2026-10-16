@@ -1,5 +1,5 @@
 ---
-mission: docv.yaml には、どんな項目をどんな形で書くか
+mission: docv.yaml の項目と、それぞれの形
 tags: [仕様]
 ---
 

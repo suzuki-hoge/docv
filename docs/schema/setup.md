@@ -1,5 +1,5 @@
 ---
-mission: 環境構築（guide/setup.yaml）には、どんな項目をどんな形で書くか
+mission: 環境構築（guide/setup.yaml）の項目と、それぞれの形
 tags: [仕様]
 ---
 
@@ -8,7 +8,7 @@ tags: [仕様]
 ```yaml
 $schema: https://json-schema.org/draft/2020-12/schema
 title: 環境構築（guide/setup.yaml）
-description: 開発を始めるには、何を用意して何を実行するか
+description: 開発を始めるのに用意するものと、実行するコマンド
 type: object
 additionalProperties: false
 properties:

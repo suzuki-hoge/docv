@@ -55,7 +55,7 @@ mod tests {
                 "{}",
                 def.id
             );
-            assert_eq!(schema["description"], def.question, "{}", def.id);
+            assert_eq!(schema["description"], def.mission, "{}", def.id);
             validator(text);
         }
     }
