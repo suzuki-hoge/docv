@@ -2,16 +2,16 @@
 
 ## コマンド一覧
 
-| コマンド                                | 説明                                                                       | 実行ディレクトリ               |
-| --------------------------------------- | -------------------------------------------------------------------------- | ------------------------------ |
-| [`docv init`](#docv-init)               | `docv.yaml` を作る                                                         | 任意                           |
-| [`docv add <slot>`](#docv-add)          | Slot ファイルを、決まったパスに作る                                        | `docv.yaml` のあるディレクトリ |
-| [`docv check [path...]`](#docv-check)   | 管理対象のファイルと Slot がルールに沿っているかを確かめる                 | `docv.yaml` のあるディレクトリ |
-| [`docv fix [path...]`](#docv-fix)       | 管理対象のファイルと `docv/` の md を整形し、textlint で直せるところを直す | `docv.yaml` のあるディレクトリ |
-| [`docv build-html`](#docv-build-html)   | 人間向けの HTML を作る                                                     | `docv.yaml` のあるディレクトリ |
-| [`docv build-image`](#docv-build-image) | Slot のページを JPG にする                                                 | `docv.yaml` のあるディレクトリ |
-| [`docv desc`](#docv-desc)               | docv の概要を出す                                                          | 任意                           |
-| [`docv schema [slot]`](#docv-schema)    | `docv.yaml` か、YAML の Slot のスキーマを出す                              | 任意                           |
+| コマンド                                       | 説明                                                                       | 実行ディレクトリ               |
+| ---------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------ |
+| [`docv init`](#docv-init)                      | `docv.yaml` を作る                                                         | 任意                           |
+| [`docv desc`](#docv-desc)                      | docv の概要を出す                                                          | 任意                           |
+| [`docv check [path...]`](#docv-check)          | 管理対象のファイルと Slot がルールに沿っているかを確かめる                 | `docv.yaml` のあるディレクトリ |
+| [`docv fix [path...]`](#docv-fix)              | 管理対象のファイルと `docv/` の md を整形し、textlint で直せるところを直す | `docv.yaml` のあるディレクトリ |
+| [`docv build`](#docv-build)                    | 人間向けの HTML を作る                                                     | `docv.yaml` のあるディレクトリ |
+| [`docv slot list`](#docv-slot-list)            | Slot の一覧を出す                                                          | 任意                           |
+| [`docv slot gen <slot>`](#docv-slot-gen)       | Slot ファイルを、決まったパスに作る                                        | `docv.yaml` のあるディレクトリ |
+| [`docv slot schema <slot>`](#docv-slot-schema) | YAML の Slot のスキーマを出す                                              | 任意                           |
 
 ## コマンド詳細
 
@@ -19,28 +19,17 @@
 
 `docv.yaml` を作る。
 
-- 作った後に、`docv add doc-guide` でガイドラインの雛形を作るよう案内する
+| オプション | 意味                                   |
+| ---------- | -------------------------------------- |
+| `--print`  | `docv.yaml` を作らずに、書く中身を出す |
+| `--force`  | `docv.yaml` がすでにあっても書き直す   |
 
-### docv add
+- すべての項目を、既定の値でコメントに載せる。`docv init --print` で、使える項目を確認できる
+- 作った後に、`docv slot gen doc-guide` でガイドラインの雛形を作るよう案内する
 
-Slot ファイルを、決まったパスに作る。
+### docv desc
 
-| オプション | 意味                                    |
-| ---------- | --------------------------------------- |
-| `--list`   | 作れる Slot の一覧を出す                |
-| `--print`  | Slot ファイルを作らずに、書く中身を出す |
-
-```sh
-docv add --list            # 作れる Slot の名前と、作るファイルの一覧を出す
-docv add manual            # docv/service/manual.md を作る
-docv add api               # docv/system/api.md を作る
-docv add doc-guide         # docv/guide/doc-guide.md に、ガイドラインの雛形を作る
-docv add doc-guide --print # 今の版の雛形を出す。手元のガイドラインと見比べる
-```
-
-- Slot ファイルの名前は変更できない
-- yaml の Slot には項目のサンプルを書き、md の Slot は空のファイルを作る。Doc ガイド（`doc-guide`）だけは、ガイドラインの雛形を書く
-- `docv/` は `slots.dir` で変更可能
+docv の概要を表示する。
 
 ### docv check
 
@@ -62,31 +51,43 @@ docv check docs/spec/order.md
 
 ドキュメントファイルの自動修正できるところを変更する。
 
-### docv build-html
+### docv build
 
 人間向けの HTML を生成する。
 
 - 出力先は `docv.yaml` で指定された `output.dir`
+- `output.image` が true なら、Slot のページを JPG にする。Google Chrome または Chromium が必要
 
-### docv build-image
+### docv slot list
 
-HTML を JPG にする。
+Slot の名前、作るファイル、答える問いの一覧を表示する。
 
-- 実行には Google Chrome または Chromium が必要
+### docv slot gen
 
-### docv desc
+Slot ファイルを、決まったパスに作る。
 
-docv の概要を表示する。
-
-- `docv.yaml` がなくても動く
-
-### docv schema
-
-`docv.yaml` か、Slot のスキーマを表示する。
+| オプション | 意味                                    |
+| ---------- | --------------------------------------- |
+| `--print`  | Slot ファイルを作らずに、書く中身を出す |
+| `--force`  | Slot ファイルがすでにあっても書き直す   |
 
 ```sh
-docv schema           # 設定ファイル ( docv.yaml ) のスキーマを表示
-docv schema words     # 用語集 Slot のスキーマを表示
+docv slot gen manual            # docv/service/manual.md を作る
+docv slot gen doc-guide         # docv/guide/doc-guide.md に、ガイドラインの雛形を作る
+docv slot gen doc-guide --print # 今の版の雛形を出す。手元のガイドラインと見比べる
+```
+
+- yaml の Slot には、項目のサンプルを書く
+- md の Slot は空のファイルを作り、中身の形は自由で、Slot の問いに答える Markdown を書けばよいことを表示する
+- Doc ガイド（`doc-guide`）だけは、ガイドラインの雛形を書く
+- Slot ファイルの名前は変更できない。`docv/` は `slots.dir` で変更可能
+
+### docv slot schema
+
+YAML の Slot のスキーマを表示する。md の Slot はスキーマを持たない。
+
+```sh
+docv slot schema words # 用語集のスキーマを表示
 ```
 
 ## スキーマ一覧

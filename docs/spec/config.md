@@ -49,13 +49,14 @@ format:
 | `ignore`         |      |              | 管理対象にも管理外にもしないファイルの glob の配列                                    |
 | `tags`           |      |              | タグの一覧。書いたときだけ、YAML front matter の `tags` をこの中に限る                |
 | `slots.dir`      |      | docv         | Slot ファイルを置くディレクトリ                                                       |
-| `output.dir`     |      | `docv/build` | docv build-html と docv build-image の出力先                                          |
+| `output.dir`     |      | `docv/build` | docv build の出力先                                                                   |
 | `output.commit`  |      | true         | 出力を git で管理するか（8 章）                                                       |
+| `output.image`   |      | false        | docv build で、Slot のページを JPG にするか。true なら Chrome が要る                  |
 | `lint.tags`      |      |              | タグごとに、そのタグを持つファイルにかけるルール（[`spec/free.md`](free.md) の 2 章） |
 | `lint.style`     |      |              | 太字、章番号などの書式の規則（5 章）                                                  |
 | `lint.words`     |      |              | 過去の言い回しとして警告する語の足し引き（`add`、`remove`）                           |
 | `lint.textlint`  |      |              | textlint を使うか、どのプリセットとルールを使うか（6 章）                             |
-| `format.enabled` |      | false        | check と new を整形と連動させるか（7 章）                                             |
+| `format.enabled` |      | false        | check で、整形が要るファイルを error にするか（7 章）                                 |
 | `overrides`      |      |              | パスごとに、道具の設定を上書きする（3 章）                                            |
 
 ---
@@ -243,7 +244,7 @@ docv/            # Slot ファイル
   service/       # サービス仕様。ほかに system/、guide/、operation/
     service.md
   adr/           # ADR
-  build/         # docv build-html と docv build-image の出力
+  build/         # docv build の出力
 ```
 
 - `docs/` と `docv/` を分けるのは、プロジェクトが問いと形を決める Free ファイルと、docv が決める Slot ファイルを、置き場所で見分けられるようにするため
@@ -256,4 +257,4 @@ docv/            # Slot ファイル
 
 - `docv.yaml` の先頭に、yaml-language-server の書式でスキーマの URL を書くと、エディタで補完と検証が効く
 - URL には docv の版を含める。`docv init` は、実行した CLI の版の URL を書く
-- `docv schema` で、スキーマを出す。`docs/schema/config.md` に写しを置く
+- `docv init --print` で、すべての項目を既定の値でコメントにした `docv.yaml` を出す。スキーマの写しは `docs/schema/config.md` に置く

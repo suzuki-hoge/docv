@@ -62,7 +62,7 @@ tags: [仕様]
       "additionalProperties": false,
       "properties": {
         "dir": {
-          "description": "docv build-html と docv build-image の出力先。",
+          "description": "docv build の出力先。",
           "type": "string",
           "default": "docv/build"
         },
@@ -70,6 +70,11 @@ tags: [仕様]
           "description": "出力を git で管理するか。false なら出力先に `.gitignore` を置く。",
           "type": "boolean",
           "default": true
+        },
+        "image": {
+          "description": "docv build で、Slot のページを JPG にするか。true なら Chrome が要る。",
+          "type": "boolean",
+          "default": false
         }
       }
     },
@@ -110,7 +115,7 @@ tags: [仕様]
       "additionalProperties": false,
       "properties": {
         "enabled": {
-          "description": "check と new を整形と連動させるか。",
+          "description": "check で、整形が要るファイルを error にするか。",
           "type": "boolean",
           "default": false
         }

@@ -6,9 +6,9 @@ entries:
   - path: assets/
     description: 実装から参照して出力するもの。バイナリに埋め込む
   - path: assets/template/
-    description: docv add が書く Slot のテンプレ（YAML の Slot の項目のサンプルと、ドキュメントのガイドラインの雛形）
+    description: docv slot gen が書く Slot のテンプレ（YAML の Slot の項目のサンプルと、ドキュメントのガイドラインの雛形）
   - path: assets/schema/
-    description: YAML の Slot と `docv.yaml` のスキーマ。`docv schema` で出す。`docv.schema.json` は公開して、エディタの補完に使う
+    description: YAML の Slot と `docv.yaml` のスキーマ。`docv slot schema` で出す。`docv.schema.json` は公開して、エディタの補完に使う
   - path: assets/desc.md
     description: docv desc が出す docv の概要。Slot のサービス仕様と同じファイル
   - path: assets/style.css

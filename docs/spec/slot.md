@@ -18,7 +18,7 @@ tags: [仕様, ルール, 出力]
 - Slot の問いに答える詳しいことも、Slot の中に書く。Free ファイルへのリンクで済ませない
 - ファイルの中のパスは、すべてルートからの相対パスで書く。md の Slot の中のリンクは、ほかの Markdown と同じく、ファイルの場所からの相対パスで書く
 - YAML の文字列の項目には Markdown を書ける
-- `docv add <slot>` で、Slot ファイルを決まったパスに作れる。YAML の Slot には項目のサンプルを書き、md の Slot は空のファイルを作る（`docv add --list` で一覧を出す）
+- `docv slot gen <slot>` で、Slot ファイルを決まったパスに作れる。YAML の Slot には項目のサンプルを書き、md の Slot は空のファイルを作る（`docv slot list` で一覧と問いを出す）
 
 ---
 
@@ -119,14 +119,14 @@ steps:
 
 - YAML の Slot には、`body` と `include` も書ける。`body` は Slot の最後に出す Markdown、`include` は埋め込む Markdown の配列（`パス` か `パス#見出し`）
 - `include` の `パス` はファイル全体を、YAML front matter と h1 を除いて埋め込む。`パス#見出し` は、その見出しの下から、次の同じ深さ以上の見出しの手前までを埋め込む
-- YAML の Slot には、項目の型と意味を書いたスキーマ（YAML で書いた JSON Schema）がある。`docv schema <slot>` で出す。元のファイルは `assets/schema/<ID>.yaml` で、`docs/schema/` に写しを置く
+- YAML の Slot には、項目の型と意味を書いたスキーマ（YAML で書いた JSON Schema）がある。`docv slot schema <slot>` で出す。元のファイルは `assets/schema/<ID>.yaml` で、`docs/schema/` に写しを置く
 
 ---
 
 ## 4. md の Slot
 
 - 中身の形は決めない。YAML front matter は要らない
-- `docv add` は空のファイルを作る。Doc ガイド（`guide/doc-guide.md`）だけは、docv が勧めるガイドラインを書いた雛形を作る。作った雛形はプロジェクトのもので、自由に直してよい。docv の版を上げても書き換えない
+- `docv slot gen` は空のファイルを作り、中身の形は自由だと表示する。Doc ガイド（`guide/doc-guide.md`）だけは、docv が勧めるガイドラインを書いた雛形を作る。作った雛形はプロジェクトのもので、自由に直してよい。docv の版を上げても書き換えない
 - HTML では、最初の h1 を除き、いちばん浅い見出しが h2 になるように段を付け直して出す
 - 見出しには、Free ファイルのページと同じく、GitHub と同じ形のアンカーを付ける。`[docv init](#docv-init)` のようなページ内リンクが HTML でも GitHub でも飛べる
 - md の Slot のページは JPG にしない。md は GitHub でそのままプレビューできるため

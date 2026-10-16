@@ -766,7 +766,7 @@ fn trim_separators(markdown: &str) -> String {
     text
 }
 
-/// yaml の Slot のテンプレ。docv add で書く、項目のサンプル。
+/// yaml の Slot のテンプレ。docv slot gen で書く、項目のサンプル。
 pub fn template(id: &str) -> Option<&'static str> {
     Some(match id {
         "install" => include_str!("../assets/template/install.yaml"),
@@ -781,7 +781,7 @@ pub fn template(id: &str) -> Option<&'static str> {
     })
 }
 
-/// md の Slot のテンプレ。docv add で書く雛形。Doc ガイドの Slot（doc-guide）だけがガイドラインの雛形を持ち、ほかの md の Slot は空のファイルを作る。
+/// md の Slot のテンプレ。docv slot gen で書く雛形。Doc ガイドの Slot（doc-guide）だけがガイドラインの雛形を持ち、ほかの md の Slot は空のファイルを作る。
 pub fn md_template(id: &str) -> Option<&'static str> {
     match id {
         "doc-guide" => Some(include_str!("../assets/template/doc-guide.md")),
@@ -789,7 +789,7 @@ pub fn md_template(id: &str) -> Option<&'static str> {
     }
 }
 
-/// yaml の Slot のスキーマ（YAML で書いた JSON Schema）。docv schema で出す。md の Slot はスキーマを持たない。
+/// yaml の Slot のスキーマ（YAML で書いた JSON Schema）。docv slot schema で出す。md の Slot はスキーマを持たない。
 pub fn schema(id: &str) -> Option<&'static str> {
     Some(match id {
         "install" => include_str!("../assets/schema/install.yaml"),

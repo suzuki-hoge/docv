@@ -19,6 +19,7 @@ slots:
 output:
   dir: tmp/html
   commit: false
+  image: true
 
 lint:
   tags:

@@ -18,13 +18,12 @@ steps:
         ```
 
         Node.js がないときは、`--no-textlint` を付ける。
-  - id: build-html
+  - id: build
     name: HTML と JPG を作って見る
     items:
       markdown: |
-        `docv.yaml` の `output.dir` で、コミットしない `tmp/html/` に出す。JPG を作るときは Chrome が要る。
+        `docv.yaml` の `output.dir` で、コミットしない `tmp/html/` に出す。`output.image` を true にしてあるので、Chrome が要る。
 
         ```sh
-        ./target/release/docv build-html
-        ./target/release/docv build-image
+        ./target/release/docv build
         ```

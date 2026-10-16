@@ -1,4 +1,3 @@
-pub mod add;
 pub mod adr;
 pub mod build;
 pub mod check;
@@ -8,6 +7,7 @@ pub mod desc;
 pub mod diagnostic;
 pub mod fix;
 pub mod format;
+pub mod generate;
 pub mod init;
 pub mod jpg;
 pub mod markdown;

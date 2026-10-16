@@ -32,6 +32,7 @@ pre { background: #f6f8fa; padding: 10px 12px; border-radius: 6px; line-height: 
 table { border-collapse: collapse; width: 100%; margin: 8px 0 16px; font-size: 0.93em; }
 th, td { border: 1px solid #d8dee4; padding: 5px 9px; text-align: left; vertical-align: top; }
 th { background: #f6f8fa; white-space: nowrap; }
+td code { white-space: nowrap; }
 img { max-width: 100%; }
 
 h1 { font-size: 2em; margin: 0 0 8px; }

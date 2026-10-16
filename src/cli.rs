@@ -9,7 +9,7 @@ use clap::{Parser, Subcommand};
 use crate::check::Options;
 use crate::diagnostic::Level;
 use crate::workspace::{Locate, Project};
-use crate::{add, build, check, desc, fix, init, schema};
+use crate::{build, check, desc, fix, generate, init, schema};
 
 /// 終了コード。docv/system/system.md の「終了コード」。
 pub const EXIT_FAILURE: u8 = 1;
@@ -32,19 +32,16 @@ struct Cli {
 #[derive(Debug, Subcommand)]
 enum Command {
     /// docv.yaml を作る
-    Init,
-    /// Slot ファイルを、決まったパスに作る
-    Add {
-        /// 作る Slot（docv add --list で一覧を出す）
-        #[arg(required_unless_present = "list", value_name = "slot")]
-        slot: Option<String>,
-        /// 作れる Slot の一覧を出す
-        #[arg(long, conflicts_with = "slot")]
-        list: bool,
-        /// Slot ファイルを作らずに、書く中身を出す
-        #[arg(long, requires = "slot")]
+    Init {
+        /// docv.yaml を作らずに、書く中身を出す
+        #[arg(long, conflicts_with = "force")]
         print: bool,
+        /// docv.yaml がすでにあっても書き直す
+        #[arg(long)]
+        force: bool,
     },
+    /// docv の概要を出す
+    Desc,
     /// 管理対象のファイルと Slot がルールに沿っているかを確かめる
     Check {
         /// 確かめるファイル。省略すると管理対象のファイルをすべて確かめる
@@ -63,17 +60,34 @@ enum Command {
         #[arg(long)]
         no_textlint: bool,
     },
-    /// 人間向けの HTML を作る
-    BuildHtml,
-    /// Slot のページを JPG にする
-    BuildImage,
-    /// docv の概要を出す
-    Desc,
-    /// docv.yaml か、yaml の Slot のスキーマを出す
-    Schema {
-        /// スキーマを出す yaml の Slot（docv add --list の名前）。省略すると docv.yaml のスキーマを出す
+    /// 人間向けの HTML を作る。output.image が true なら、Slot のページを JPG にする
+    Build,
+    /// Slot の一覧を出し、Slot ファイルを作り、YAML の Slot のスキーマを出す
+    #[command(subcommand)]
+    Slot(SlotCommand),
+}
+
+#[derive(Debug, Subcommand)]
+enum SlotCommand {
+    /// Slot の名前、ファイル、答える問いの一覧を出す
+    List,
+    /// Slot ファイルを、決まったパスに作る
+    Gen {
+        /// 作る Slot（docv slot list の名前）
         #[arg(value_name = "slot")]
-        slot: Option<String>,
+        slot: String,
+        /// Slot ファイルを作らずに、書く中身を出す
+        #[arg(long, conflicts_with = "force")]
+        print: bool,
+        /// Slot ファイルがすでにあっても書き直す
+        #[arg(long)]
+        force: bool,
+    },
+    /// YAML の Slot のスキーマを出す
+    Schema {
+        /// スキーマを出す YAML の Slot（docv slot list の名前）
+        #[arg(value_name = "slot")]
+        slot: String,
     },
 }
 
@@ -93,31 +107,33 @@ fn execute(cli: Cli) -> Result<ExitCode> {
     let root = std::env::current_dir()?;
     let locate = Locate { config: cli.config };
     match cli.command {
-        Command::Init => {
+        Command::Init { print: true, .. } => {
+            print!("{}", init::config_text());
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Init { force, .. } => {
             let path = locate.config_path(&root);
-            init::run(&path)?;
+            init::run(&path, force)?;
             println!("{} を作った", path.display());
-            println!("docv add doc-guide で、ドキュメントのガイドラインの雛形を作る");
+            println!("docv slot gen doc-guide で、ドキュメントのガイドラインの雛形を作る");
             Ok(ExitCode::SUCCESS)
         }
-        Command::Add { list: true, .. } => {
-            print!("{}", add::list());
+        Command::Slot(SlotCommand::List) => {
+            print!("{}", generate::list());
             Ok(ExitCode::SUCCESS)
         }
-        Command::Add {
-            slot: Some(slot),
-            print: true,
-            ..
-        } => {
-            print!("{}", add::print(&slot)?);
+        Command::Slot(SlotCommand::Gen {
+            slot, print: true, ..
+        }) => {
+            print!("{}", generate::print(&slot)?);
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Slot(SlotCommand::Schema { slot }) => {
+            print!("{}", schema::text(&slot)?);
             Ok(ExitCode::SUCCESS)
         }
         Command::Desc => {
             print!("{}", desc::TEXT);
-            Ok(ExitCode::SUCCESS)
-        }
-        Command::Schema { slot } => {
-            print!("{}", schema::text(slot.as_deref())?);
             Ok(ExitCode::SUCCESS)
         }
         command => {
@@ -129,11 +145,12 @@ fn execute(cli: Cli) -> Result<ExitCode> {
 
 fn execute_in_project(project: &Project, command: Command) -> Result<ExitCode> {
     match command {
-        Command::Add {
-            slot: Some(slot), ..
-        } => {
-            let rel = add::run(project, &slot)?;
-            println!("{rel} を作った");
+        Command::Slot(SlotCommand::Gen { slot, force, .. }) => {
+            let generated = generate::run(project, &slot, force)?;
+            println!("{} を作った", generated.path);
+            if let Some(note) = generated.note {
+                print!("{note}");
+            }
             Ok(ExitCode::SUCCESS)
         }
         Command::Check { paths, no_textlint } => {
@@ -171,19 +188,15 @@ fn execute_in_project(project: &Project, command: Command) -> Result<ExitCode> {
             println!("{} ファイルを書き換えた", report.changed.len());
             Ok(failure_if(!report.failed.is_empty()))
         }
-        Command::BuildHtml => {
+        Command::Build => {
             let out = project.out_dir();
-            build::html(project, &out)?;
+            build::run(project, &out)?;
             println!("{} に出力した", out.display());
             Ok(ExitCode::SUCCESS)
         }
-        Command::BuildImage => {
-            let out = project.out_dir();
-            build::image(project, &out)?;
-            println!("{} に出力した", out.join(build::JPG_DIR).display());
-            Ok(ExitCode::SUCCESS)
-        }
-        Command::Init | Command::Add { .. } | Command::Desc | Command::Schema { .. } => {
+        Command::Init { .. }
+        | Command::Desc
+        | Command::Slot(SlotCommand::List | SlotCommand::Schema { .. }) => {
             unreachable!("docv.yaml を読まずに実行するコマンド")
         }
     }

@@ -249,7 +249,7 @@ impl Project {
         normalize_dir(&self.config.slots.dir)
     }
 
-    /// build-html と build-image の出力先。
+    /// docv build の出力先。
     pub fn out_dir(&self) -> PathBuf {
         self.root.join(&self.config.output.dir)
     }

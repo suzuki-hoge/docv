@@ -1,4 +1,4 @@
-//! docv build-html と docv build-image。人間向けの HTML と、Slot のページの JPG を生成する。docv/service/service.md の「HTML の構成」、docv/system/system.md の「HTML の作り」。
+//! docv build。人間向けの HTML と、設定で有効なら Slot のページの JPG を生成する。docv/system/system.md の「HTML の作り」。
 //!
 //! トップは 3 ページに分け、サイドバーで行き来する。
 //! index.html（プロジェクト概要）に Slot ファイルのページへのカード、ADR.html に決定のつながりの図、
@@ -32,7 +32,7 @@ const STYLE: &str = include_str!("../assets/style.css");
 
 /// docv が作った出力先であることを示すファイル。これがない出力先は消さない。
 const MARKER: &str = ".docv";
-const MARKER_TEXT: &str = "docv build-html と docv build-image の出力。このディレクトリは docv build-html のたびに作り直す。\n";
+const MARKER_TEXT: &str = "docv build の出力。このディレクトリは docv build のたびに作り直す。\n";
 
 /// トップの 3 ページ。サイドバーに、この順で並べる。
 const PAGE: &str = "index.html";
@@ -93,42 +93,23 @@ struct Page {
     body: String,
 }
 
-/// JPG を置くディレクトリ（出力先からの相対パス）。build-image だけが書き、build-html は残す。
+/// JPG を置くディレクトリ（出力先からの相対パス）。
 pub const JPG_DIR: &str = "jpg";
 
-/// docv build-html。出力先の中を、jpg/ を除いて作り直す。
-pub fn html(project: &Project, out: &Path) -> Result<()> {
-    let out = prepare_out(out, true)?;
-    render(project, &out)?;
-    finish_out(project, &out)
-}
-
-/// docv build-image。Slot のページを一時的なディレクトリに作り、出力先の jpg/ に JPG だけを書く。
-/// Slot のページごとに 1 枚。見つけやすいように、まとまりと Slot の表示名をパスにする。
+/// docv build。出力先の中を作り直す。output.image が true なら、Slot のページを JPG にして jpg/ に置く。
+/// JPG は Slot のページごとに 1 枚。見つけやすいように、まとまりと Slot の表示名をパスにする。
 /// Markdown から作るページ（md の Slot、ADR、Free ファイル）は、GitHub で md をそのまま見られるので JPG にしない。
-pub fn image(project: &Project, out: &Path) -> Result<()> {
-    let out = prepare_out(out, false)?;
-    let work = std::env::temp_dir().join(format!("docv-html-{}", std::process::id()));
-    if work.exists() {
-        fs::remove_dir_all(&work).with_context(|| format!("{} を消せない", work.display()))?;
-    }
-    fs::create_dir_all(&work).with_context(|| format!("{} を作れない", work.display()))?;
-    let result = (|| {
-        let work = work.canonicalize()?;
-        let slots = render(project, &work)?;
+pub fn run(project: &Project, out: &Path) -> Result<()> {
+    let out = prepare_out(out)?;
+    let slots = render(project, &out)?;
+    if project.config.output.image {
         let shots: Vec<(String, String)> = slots
             .iter()
             .filter(|s| !matches!(s.content, Content::Markdown(_)))
             .map(|s| (page_path(s), jpg_path(s)))
             .collect();
-        let jpg = out.join(JPG_DIR);
-        if jpg.exists() {
-            fs::remove_dir_all(&jpg).with_context(|| format!("{} を消せない", jpg.display()))?;
-        }
-        jpg::capture(&work, &out, &shots)
-    })();
-    let _ = fs::remove_dir_all(&work);
-    result?;
+        jpg::capture(&out, &out, &shots)?;
+    }
     finish_out(project, &out)
 }
 
@@ -206,9 +187,9 @@ fn doc_page(source: &str) -> String {
     )
 }
 
-/// 出力先を用意する。clear なら、jpg/ を除いて中を消す。
+/// 出力先を用意する。目印を除いて中を消す。目印を残すので、途中で止まっても、次の build で作り直せる。
 /// docv が作った目印のない、空でないディレクトリには書かずにエラーにする。
-fn prepare_out(out: &Path, clear: bool) -> Result<PathBuf> {
+fn prepare_out(out: &Path) -> Result<PathBuf> {
     if out.exists() {
         let is_empty = fs::read_dir(out)?.next().is_none();
         if !is_empty && !out.join(MARKER).is_file() {
@@ -217,19 +198,17 @@ fn prepare_out(out: &Path, clear: bool) -> Result<PathBuf> {
                 out.display()
             );
         }
-        if clear {
-            for entry in fs::read_dir(out)? {
-                let path = entry?.path();
-                if path.file_name().is_some_and(|n| n == JPG_DIR) {
-                    continue;
-                }
-                let removed = if path.is_dir() {
-                    fs::remove_dir_all(&path)
-                } else {
-                    fs::remove_file(&path)
-                };
-                removed.with_context(|| format!("{} を消せない", path.display()))?;
+        for entry in fs::read_dir(out)? {
+            let path = entry?.path();
+            if path.file_name().is_some_and(|n| n == MARKER) {
+                continue;
             }
+            let removed = if path.is_dir() {
+                fs::remove_dir_all(&path)
+            } else {
+                fs::remove_file(&path)
+            };
+            removed.with_context(|| format!("{} を消せない", path.display()))?;
         }
     }
     fs::create_dir_all(out).with_context(|| format!("{} を作れない", out.display()))?;
@@ -1643,7 +1622,7 @@ mod tests {
             ),
         ]);
         let out = dir.path().join("out");
-        html(&project, &out).unwrap();
+        run(&project, &out).unwrap();
 
         // トップは 3 ページ。index.html（プロジェクト概要）には、Slot のページへのカードだけを置く
         let index = fs::read_to_string(out.join(PAGE)).unwrap();
@@ -1823,7 +1802,7 @@ mod tests {
             assert_headings(&html);
         }
 
-        html(&project, &out).unwrap();
+        run(&project, &out).unwrap();
         assert_eq!(read(PAGE), index);
         assert_eq!(read(DETAIL_PAGE), detail);
         assert_eq!(read(ADR_PAGE), adr_index);
@@ -1861,7 +1840,7 @@ mod tests {
             ),
         ]);
         let out = dir.path().join("out");
-        html(&project, &out).unwrap();
+        run(&project, &out).unwrap();
         let page = fs::read_to_string(out.join("プロジェクト詳細/docs/a.html")).unwrap();
         // Markdown のリンクは、パーセントエンコードして出る。読めるように戻して比べる
         let bytes = page.as_bytes();
@@ -1902,7 +1881,7 @@ mod tests {
         ]);
         project.config.output.commit = false;
         let out = dir.path().join("out");
-        html(&project, &out).unwrap();
+        run(&project, &out).unwrap();
         let page = fs::read_to_string(out.join("システム仕様/システム仕様.html")).unwrap();
         let detail = fs::read_to_string(out.join(DETAIL_PAGE)).unwrap();
         // ページのないファイルは、リンクにせず文字だけを出す。画像は元のファイルを相対パスで読む
@@ -1929,7 +1908,7 @@ mod tests {
             ),
         ]);
         let out = dir.path().join("out");
-        html(&project, &out).unwrap();
+        run(&project, &out).unwrap();
         let page = fs::read_to_string(out.join("開発者向けガイド/ディレクトリ.html")).unwrap();
         let body: String = page
             .lines()
@@ -1958,7 +1937,7 @@ mod tests {
         let (dir, project) = project(&[]);
         let out = dir.path().join("docs");
         write_file(dir.path(), "docs/keep.txt", "keep");
-        let error = html(&project, &out).unwrap_err();
+        let error = run(&project, &out).unwrap_err();
         assert!(
             error
                 .to_string()
@@ -1968,15 +1947,18 @@ mod tests {
     }
 
     #[test]
-    fn keeps_jpg_when_rebuilding_html() {
+    fn rebuilds_everything_but_the_marker() {
         let (dir, project) = project(&[]);
         let out = dir.path().join("docv/build");
-        html(&project, &out).unwrap();
+        run(&project, &out).unwrap();
         write_file(&out, "jpg/a.jpg", "jpg");
         write_file(&out, "old.html", "old");
-        html(&project, &out).unwrap();
-        assert!(out.join("jpg/a.jpg").is_file());
+        // 途中で止まって index.html などがない出力先でも、目印があれば作り直せる
+        fs::remove_file(out.join(PAGE)).unwrap();
+        run(&project, &out).unwrap();
+        assert!(!out.join("jpg").exists());
         assert!(!out.join("old.html").exists());
+        assert!(out.join(PAGE).is_file());
     }
 
     #[test]

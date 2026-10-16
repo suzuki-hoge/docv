@@ -10,17 +10,16 @@
 
 ## ファイルを書くコマンド
 
-| コマンド    | 書くもの                                                                                                                 |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------ |
-| init        | `docv.yaml` だけ                                                                                                         |
-| add         | 指定した Slot ファイルだけ                                                                                               |
-| fix         | 管理対象のファイルと、`slots.dir` の中の Markdown（md の Slot と ADR）だけ。整形と textlint の自動修正以外の変更はしない |
-| build-html  | `output.dir` の中だけ。`jpg/` には触らない                                                                               |
-| build-image | `output.dir` の `jpg/` と目印だけ。撮る HTML は OS の一時ディレクトリに作り、撮り終えたら消す                            |
+| コマンド | 書くもの                                                                                                         |
+| -------- | ---------------------------------------------------------------------------------------------------------------- |
+| init     | `docv.yaml` だけ。`--print` のときは書かない                                                                     |
+| slot gen | 指定した Slot ファイルだけ。`--print` のときは書かない                                                           |
+| fix      | 管理対象のファイルと、`slots.dir` の中の Markdown（md の Slot と ADR）だけ。整形と textlint の自動修正だけをする |
+| build    | `output.dir` の中だけ。目印の `.docv` を残して中を消し、作り直す                                                 |
 
-- それ以外のコマンドはファイルを書かない
-- `CLAUDE.md`、リポジトリのルートの `.gitignore`、hook の設定には、どのコマンドも触らない
-- build-html と build-image は、出力先に `.docv`（docv が作った目印）がなく、空でもないときは、何も書かずにエラーで終わる。`output.dir` を間違えて既存のディレクトリを指しても消さないため
+- ほかのコマンドは、ファイルを書かない
+- `CLAUDE.md`、リポジトリのルートの `.gitignore`、hook の設定は、どのコマンドも書かない
+- build は、出力先に `.docv`（docv が作った目印）がなく、空でもないときは、何も書かずにエラーで終わる。`output.dir` を間違えて既存のディレクトリを指しても消さないため
 
 ## ファイルの分類
 
@@ -44,7 +43,7 @@ Slot は、Markdown とは別に、`slots.dir`（既定は `docv/`）から `<�
 | 読み込み | `src/workspace.rs`、`src/config.rs`、`src/markdown.rs`、`src/meta.rs`、`src/slot.rs`、`src/adr.rs` |
 | 検査     | `src/check.rs`、`src/style.rs`、`src/textlint.rs`、`src/diagnostic.rs`                             |
 | 出力     | `src/build.rs`、`src/jpg.rs`、`src/desc.rs`、`src/schema.rs`                                       |
-| 書き換え | `src/fix.rs`、`src/format.rs`、`src/add.rs`、`src/init.rs`                                         |
+| 書き換え | `src/fix.rs`、`src/format.rs`、`src/generate.rs`、`src/init.rs`                                    |
 
 ## バイナリに埋め込むもの
 
@@ -67,6 +66,7 @@ textlint を使うときだけ Node.js が、JPG を作るときだけ Chrome �
 - フェンスのコードブロックは、フェンスに書いた言語（`yaml` など）に合わせて、build のときに色を付ける。色は HTML の中に埋め込み、JS は使わない。言語がないか、syntect が知らない言語なら、色を付けずに出す
 - リンクは、Free ファイル、Slot ファイル、ADR のページにだけ、出力先の中の相対パスで張る（ツリー、Slot ファイルや Free ファイルの本文の中のリンク）。file:// で開けば file:// のまま、ホスティングすればその中で辿れる。HTML は clone したリポジトリで見るので、ほかのファイル（コード、管理外のファイルなど）はエディタで開けばよく、リンクにせず文字だけを出す
 - 画像は、元のファイルを出力先から辿れる相対パスで読む
+- 表のセルの中のインラインコードは、折り返さない。コマンドやパスが途中で切れないようにするため
 
 ## 毎回同じ出力にする決まり
 
@@ -77,7 +77,7 @@ textlint を使うときだけ Node.js が、JPG を作るときだけ Chrome �
 
 ## JPG の撮り方
 
-ローカルの Chrome をヘッドレスで起動し、DevTools Protocol で HTML を開いて撮る。幅は 1280 CSS ピクセル、画質は 80。印刷の表示にし、ページの高さに画面を合わせて、Slot のページを 1 枚ずつ撮る。Chrome は、環境変数 DOCV_CHROME、OS ごとの標準のインストール先、PATH にある chrome と chromium の順に探し、見つからなければ error で終わる。
+`output.image` が true のときだけ、build の最後に撮る。ローカルの Chrome をヘッドレスで起動し、DevTools Protocol で出力先の HTML を開いて撮る。幅は 1280 CSS ピクセル、画質は 80。印刷の表示にし、ページの高さに画面を合わせて、Slot のページを 1 枚ずつ撮る。Chrome は、環境変数 DOCV_CHROME、OS ごとの標準のインストール先、PATH にある chrome と chromium の順に探し、見つからなければ error で終わる。
 
 ## 終了コード
 

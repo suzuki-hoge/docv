@@ -20,7 +20,7 @@ docv の提供するもの
 
 - プロジェクトの `docv/` ディレクトリに docv 指定のファイルを配置するとビジュアライズされ HTML で閲覧できる
 - 環境構築や用語集などそれぞれのページを Slot といい、Slot ごとに所定の書式がある
-- HTML に加え JPG 画像を出力することも可能
+- 設定すれば、HTML に加え JPG 画像も出力する
     - GitHub で直接ドキュメントを閲覧できるようにするため
 - `docv/` は `docv.yaml` で変更可能
 
@@ -33,7 +33,7 @@ docv の提供するもの
 
 ## 2. Slot
 
-`docv add --list` で確認でき、作成したい場合は `docv add <slot>` で作成する
+`docv slot list` で一覧と、それぞれの Slot が答える問いを確認でき、作成したい場合は `docv slot gen <slot>` で作成する
 
 ## 3. YAML front matter
 
@@ -125,16 +125,20 @@ CLI は Rust で書く
 すべてのコマンドは `docv --help` で確認
 
 - `docv init`: `docv.yaml` を作る
-- `docv add --list`: Slot 一覧を見る
-- `docv add <slot>`: Slot ファイルを作る
-- `docv schema <slot>`: Slot ファイルのスキーマを確認する
+- `docv desc`: docv の概要を見る
 - `docv {check|fix} [path...]`: ドキュメントを検査する / 自動修正する
+- `docv build`: HTML ( 設定次第で JPG も ) を作る
+- `docv slot list`: Slot 一覧を見る
+- `docv slot gen <slot>`: Slot ファイルを作る
+- `docv slot schema <slot>`: YAML の Slot のスキーマを確認する
 
-新たに導入する場合は `docv init` し、`docv add doc-guide` でガイドラインを作り、`docv desc` に従い `docv add` と `docv check` で作成・調整を進める
+新たに導入する場合は `docv init` し、`docv slot gen doc-guide` でガイドラインを作り、`docv slot gen` と `docv check` で作成・調整を進める
 
 ## 6. スキーマ ( 設定ファイル )
 
-設定ファイル ( `docv.yaml` ) のスキーマは `docv schema` で確認する
+設定ファイル ( `docv.yaml` ) の項目は `docv init --print` で確認する
+
+すべての項目が、既定の値でコメントとして載っている
 
 ## 7. スキーマ ( docv ファイル )
 
@@ -149,12 +153,12 @@ Slot ファイルのうち、次のページは YAML である
 - `develop`: 開発コマンド
 - `cost`: 費用
 
-これらのスキーマは `docv schema <slot>` で確認する
+これらのスキーマは `docv slot schema <slot>` で確認する
 
 ## 8. ルール、ガイドライン、設定
 
 docv の決まりは、次の 3 つに分かれる
 
-- ルール: docv の仕組みが決める決まり。Slot と `docv.yaml` のスキーマ、YAML front matter の key、check が確かめることなど。利用側は変えられない。この概要と `docv schema <slot>` で確認する
-- ガイドライン: ドキュメントを書くときの方針。`docv add doc-guide` で Doc ガイド（`docv/guide/doc-guide.md`）に雛形を作り、プロジェクトに合わせて自由に直す
-- 設定: `docv.yaml` で切り替えること。check のルールや textlint を使うか、出力を git で管理するかなど。`docv schema` で確認する
+- ルール: docv の仕組みが決める決まり。Slot と `docv.yaml` のスキーマ、YAML front matter の key、check が確かめることなど。利用側は変えられない。この概要と `docv slot schema <slot>` で確認する
+- ガイドライン: ドキュメントを書くときの方針。`docv slot gen doc-guide` で Doc ガイド（`docv/guide/doc-guide.md`）に雛形を作り、プロジェクトに合わせて自由に直す
+- 設定: `docv.yaml` で切り替えること。check のルールや textlint を使うか、出力を git で管理するかなど。`docv init --print` で確認する

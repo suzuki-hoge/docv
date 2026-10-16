@@ -2,7 +2,7 @@
 
 このリポジトリのドキュメントを書く・直すときの方針。人間と AI Agent の両方が従う。
 
-このファイルは、`docv add doc-guide` の雛形をもとに、このリポジトリに合わせて直したもの。`docv add doc-guide` が出す内容とは一致しない。雛形は `docv add doc-guide --print` で確認する。
+このファイルは、`docv slot gen doc-guide` の雛形をもとに、このリポジトリに合わせて直したもの。`docv slot gen doc-guide` が出す内容とは一致しない。雛形は `docv slot gen doc-guide --print` で確認する。
 
 docv の決まりは、[ルール](../service/words.yaml#決まりの種類)、[設定](../service/words.yaml#決まりの種類)、[ガイドライン](../service/words.yaml#決まりの種類) に分かれる。このページは、ガイドラインを書く。
 
@@ -71,7 +71,7 @@ docv の決まりは、[ルール](../service/words.yaml#決まりの種類)、[
 ## 6. コードとドキュメント
 
 - コードのコメントは、実装が従う Slot か spec を、パスと章で指す（例: `docs/spec/free.md の 3 章`）。ドキュメントを動かしたら、コメントも直す
-- AI Agent は、ADR を決めた理由を聞かれたときだけ読み、`docv build-html` と `docv build-image` の出力は読まない
+- AI Agent は、ADR を決めた理由を聞かれたときだけ読み、`docv build` の出力は読まない
 
 ---
 

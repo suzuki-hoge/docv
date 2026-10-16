@@ -80,6 +80,9 @@ pub struct Output {
     pub dir: String,
     #[serde(default = "default_true")]
     pub commit: bool,
+    /// docv build で、Slot のページを JPG にするか。
+    #[serde(default)]
+    pub image: bool,
 }
 
 impl Default for Output {
@@ -87,6 +90,7 @@ impl Default for Output {
         Output {
             dir: default_output_dir(),
             commit: true,
+            image: false,
         }
     }
 }

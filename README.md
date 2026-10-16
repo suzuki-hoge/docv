@@ -17,14 +17,14 @@ Free ファイル（Markdown、docs/） ── 問いとタグのツリー ─�
 
 ```sh
 docv init                          # docv.yaml を作る
-docv add --list                    # 作れる Slot の一覧を出す
-docv add service                   # Slot を決まったパスに作る
-docv add doc-guide                 # ドキュメントのガイドラインの雛形を作る
-docv fix                           # 空行や表の余白を整形し、textlint で直せるところを直す
+docv desc                          # docv の概要を出す
 docv check                         # ルールに沿っているかを確かめる
-docv build-html                    # HTML を作る
-docv build-image                   # Slot のページを JPG にする
-docv schema install                # YAML の Slot のスキーマを出す（省略すると docv.yaml のスキーマ）
+docv fix                           # 空行や表の余白を整形し、textlint で直せるところを直す
+docv build                         # HTML を作る（output.image が true なら JPG も）
+docv slot list                     # Slot の一覧と、答える問いを出す
+docv slot gen service              # Slot を決まったパスに作る
+docv slot gen doc-guide            # ドキュメントのガイドラインの雛形を作る
+docv slot schema install           # YAML の Slot のスキーマを出す
 ```
 
 AI Agent には、`CLAUDE.md` などに次のように書いて伝える。
@@ -34,7 +34,7 @@ AI Agent には、`CLAUDE.md` などに次のように書いて伝える。
 - ドキュメントを書く前に、`docv/guide/doc-guide.md`（ガイドライン）を読むこと
 ```
 
-このリポジトリのサービス仕様、利用マニュアル、開発者向けガイドなどは、Slot（[`docv/`](docv)）に書いてある。`docv build-html` で HTML（`tmp/html/`）にして見られる。
+このリポジトリのサービス仕様、利用マニュアル、開発者向けガイドなどは、Slot（[`docv/`](docv)）に書いてある。`docv build` で HTML（`tmp/html/`）にして見られる。
 
 ## ドキュメント
 
@@ -44,7 +44,7 @@ AI Agent には、`CLAUDE.md` などに次のように書いて伝える。
 - [`docs/spec/slot.md`](docs/spec/slot.md) — Slot にはどんなものがあり、それぞれのファイルに何をどんな形で書き、HTML でどう見せるか
 - [`docs/spec/adr.md`](docs/spec/adr.md) — ADR には何をどんな形で書き、HTML でどう見せるか
 - [`docs/spec/config.md`](docs/spec/config.md) — `docv.yaml` には何を書き、各項目はどう解釈され、check と fix の道具をどう使うか
-- [`docs/schema/`](docs/schema) — `docv.yaml` と YAML の Slot のスキーマ（`docv schema` が出すものの写し）
+- [`docs/schema/`](docs/schema) — `docv.yaml` と YAML の Slot のスキーマ（`docv slot schema` が出すものと、`docv.yaml` の JSON Schema の写し）
 
 ### これからと経緯
 
