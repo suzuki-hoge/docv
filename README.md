@@ -48,6 +48,5 @@ AI Agent には、`CLAUDE.md` などに次のように書いて伝える。
 
 ### これからと経緯
 
-- [`docs/fixme/open.md`](docs/fixme/open.md) — docv の設計で、まだ決まっていないこと
-- `docs/plan/` — やると決めたタスク（終わったら消すので、ないこともある）
+- `docs/plan/` — やると決めたタスクと、まだ決まっていないこと（終わったら、決まったら消すので、ないこともある）
 - [`docv/adr/`](docv/adr) — 決めた経緯（ADR）

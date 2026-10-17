@@ -23,5 +23,3 @@ entries:
     description: docv のルールの詳細（Slot、Free ファイル、ADR、`docv.yaml`）
   - path: docs/schema/
     description: "`docv.yaml` と YAML の Slot のスキーマの写し。HTML で公開する"
-  - path: docs/fixme/
-    description: まだ決まっていないこと

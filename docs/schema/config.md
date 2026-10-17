@@ -99,7 +99,7 @@ tags: [仕様]
       }
     },
     "lint": {
-      "description": "check の規則。項目の意味は `docs/spec/config.md` の 4 章と 5 章を参照。",
+      "description": "check の規則。項目の意味は `docs/spec/config.md` を参照。",
       "type": "object",
       "additionalProperties": false,
       "properties": {

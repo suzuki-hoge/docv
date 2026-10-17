@@ -14,8 +14,6 @@ ignore:
 tags:
   - name: 仕様
     color: blue
-  - name: 未決
-    color: red
   - name: ルール
     color: green
   - name: 設定

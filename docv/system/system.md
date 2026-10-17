@@ -35,16 +35,6 @@ Slot は、Markdown とは別に、`dir.slots`（既定は `docv/`）から `<�
 
 `dir.slots` の中の Markdown（md の Slot と ADR）には、Free ファイルのルール（YAML front matter、書式の規則など）はかけない。整形と textlint だけを、管理対象のファイルと同じくかける。
 
-## ソースの構成
-
-| 部品     | ファイル                                                                                           |
-| -------- | -------------------------------------------------------------------------------------------------- |
-| 入口     | `src/main.rs`、`src/cli.rs`                                                                        |
-| 読み込み | `src/workspace.rs`、`src/config.rs`、`src/markdown.rs`、`src/meta.rs`、`src/slot.rs`、`src/adr.rs` |
-| 検査     | `src/check.rs`、`src/style.rs`、`src/textlint.rs`、`src/diagnostic.rs`                             |
-| 出力     | `src/build.rs`、`src/jpg.rs`、`src/desc.rs`、`src/schema.rs`、`src/config_view.rs`                 |
-| 書き換え | `src/fix.rs`、`src/format.rs`、`src/generate.rs`、`src/init.rs`                                    |
-
 ## バイナリに埋め込むもの
 
 Rust で書いた単一のバイナリにし、次のものを埋め込む。利用者に Rust の環境はいらない。

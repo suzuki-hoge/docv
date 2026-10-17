@@ -5,7 +5,7 @@ tags: [仕様, 設定]
 
 # 設定ファイル（`docv.yaml`）
 
-リポジトリのルートに置く設定ファイル。型は [`assets/schema/docv.schema.json`](../../assets/schema/docv.schema.json) が正本。1 章は項目の一覧、2 章以降は一覧に書ききれない解釈の決まりと、`docv.yaml` で使うと決めたときだけ動く道具（書式の規則、textlint、整形）。
+リポジトリのルートに置く設定ファイル。型は [`assets/schema/docv.schema.json`](../../assets/schema/docv.schema.json) が正本。最初の章で項目を一覧にし、続く章で、一覧に書ききれない解釈の決まりと、`docv.yaml` で使うと決めたときだけ動く道具（書式の規則、textlint、整形）を書く。
 
 ---
 
@@ -26,8 +26,8 @@ tags:
     color: blue
   - name: 手順
     color: green
-  - name: 未決
-    color: red
+  - name: 規約
+    color: yellow
 
 lint:
   bold: deny
@@ -39,24 +39,24 @@ format:
 | 項目             | 必須 | 既定         | 意味                                                                                                            |
 | ---------------- | ---- | ------------ | --------------------------------------------------------------------------------------------------------------- |
 | `title`          |      | ルートの名前 | HTML に出すプロジェクト名                                                                                       |
-| `dir.free`       |      | `docs`       | 管理対象の Markdown（Free ファイル）を置くディレクトリ（3 章）                                                  |
+| `dir.free`       |      | `docs`       | 管理対象の Markdown（Free ファイル）を置くディレクトリ（「管理対象と管理外」の章）                              |
 | `dir.slots`      |      | `docv`       | Slot ファイルを置くディレクトリ                                                                                 |
 | `dir.html`       |      | `docv/build` | docv build が HTML を出すディレクトリ                                                                           |
 | `dir.image`      |      |              | docv build が Slot のページの JPG を出すディレクトリ。書かなければ JPG を作らない。JPG を作るには Chrome が要る |
 | `ignore`         |      |              | 管理対象にも管理外にもしないファイルの glob の配列                                                              |
-| `tags`           |      |              | 使うタグの一覧。タグごとに `name` と、HTML の色の `color` を書く（[`spec/free.md`](free.md) の 2 章）           |
-| `lint.bold`      |      | allow        | 太字を使ってよいか（4 章）                                                                                      |
-| `lint.italic`    |      | allow        | 斜体を使ってよいか（4 章）                                                                                      |
-| `lint.dollar`    |      | allow        | コードの外の 1 行に `$` を 2 つ以上書いてよいか（4 章）                                                         |
-| `lint.textlint`  |      | disable      | textlint で文章を校正するか（5 章）                                                                             |
-| `format.enabled` |      | false        | check で、整形が要るファイルを error にするか（6 章）                                                           |
+| `tags`           |      |              | 使うタグの一覧。タグごとに `name` と、HTML の色の `color` を書く（[`spec/free.md`](free.md) の「タグ」の章）    |
+| `lint.bold`      |      | allow        | 太字を使ってよいか（「書式の規則」の章）                                                                        |
+| `lint.italic`    |      | allow        | 斜体を使ってよいか（「書式の規則」の章）                                                                        |
+| `lint.dollar`    |      | allow        | コードの外の 1 行に `$` を 2 つ以上書いてよいか（「書式の規則」の章）                                           |
+| `lint.textlint`  |      | disable      | textlint で文章を校正するか（「textlint」の章）                                                                 |
+| `format.enabled` |      | false        | check で、整形が要るファイルを error にするか（「整形との連動」の章）                                           |
 
 ---
 
 ## 2. 書くことと書かないこと
 
 - `docv.yaml` には、ツールの設定（`lint`、整形、出力）と、プロジェクト全体で共有する語彙（管理対象の範囲、タグの一覧、Slot の置き場所）だけを書く
-- ファイルごとの設定（ミッション、タグ）は、そのファイルの YAML front matter に書く（[`spec/free.md`](free.md) の 1 章）
+- ファイルごとの設定（ミッション、タグ）は、そのファイルの YAML front matter に書く（[`spec/free.md`](free.md) の「YAML front matter」の章）
 
 ---
 
@@ -83,7 +83,7 @@ format:
 
 - 既定はどれも `allow`（確かめない）
 - コードブロックとインラインコードの中は見ない
-- 章番号とリンクの表示文字は、設定によらず常に確かめる（[`spec/free.md`](free.md) の 3 章）
+- 章番号とリンクの表示文字は、設定によらず常に確かめる（[`spec/free.md`](free.md) の「check のルール」の章）
 
 ---
 
@@ -216,5 +216,5 @@ docv/            # Slot ファイル
 - 書いていない項目は、既定の値で出す。値のない項目は `-` を出す
 - 配列の項目は、要素を箇条書きにする
 - 選ぶ項目（true か false、allow か deny など）は、候補を横に並べ、選んでいる候補に色を付ける
-- 表の後に、textlint の検査項目と非検査項目（5 章）を、それぞれ表で並べる
+- 表の後に、textlint の検査項目と非検査項目（「textlint」の章）を、それぞれ表で並べる
 - Slot ファイルや Free ファイルから `docv.yaml` へのリンクは、HTML ではこのページに向ける

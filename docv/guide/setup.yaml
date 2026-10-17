@@ -4,21 +4,16 @@ requirements:
     purpose: ビルドとテスト
     url: https://rustup.rs/
   - name: Node.js
-    purpose: textlint を含めた docv check を試すとき
+    purpose: make fix で textlint をかける
+  - name: Google Chrome
+    purpose: make fix で JPG を作る
 steps:
-  - id: build
-    name: ビルドする
+  - id: install
+    name: ビルドして手元に入れる
     items:
       markdown: |
         ```sh
-        cargo build --release
-        ```
-  - id: try
-    name: このリポジトリのドキュメントで試す
-    items:
-      markdown: |
-        ```sh
-        ./target/release/docv check --no-textlint
+        make install
         ```
 
-        このリポジトリのドキュメントは docv 自身で管理している。コードを変えたら、ここで動きを確かめる。
+        このリポジトリのドキュメントは docv 自身で管理している。コードかドキュメントを変えたら、開発コマンドの `make fix` で確かめる。
