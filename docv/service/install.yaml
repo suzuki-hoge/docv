@@ -13,13 +13,13 @@ steps:
     items:
       - os: windows
         body_markdown: |
-          GitHub Release から `docv-1.0.0-x86_64-pc-windows-msvc.zip` を取り、展開した docv.exe を PATH の通った場所に置く。
+          GitHub Release から `docv-1.0.1-x86_64-pc-windows-msvc.zip` を取り、展開した docv.exe を PATH の通った場所に置く。
       - os: macos
         body_markdown: |
           GitHub Release からバイナリを取り、パスの通った場所に置く。arm64 の例。
 
           ```sh
-          curl -L https://github.com/suzuki-hoge/docv/releases/download/v1.0.0/docv-1.0.0-aarch64-apple-darwin.tar.gz | tar xz
+          curl -L https://github.com/suzuki-hoge/docv/releases/download/v1.0.1/docv-1.0.1-aarch64-apple-darwin.tar.gz | tar xz
           mv docv /usr/local/bin/
           ```
 
@@ -29,7 +29,7 @@ steps:
           GitHub Release からバイナリを取り、パスの通った場所に置く。x86_64 の例。
 
           ```sh
-          curl -L https://github.com/suzuki-hoge/docv/releases/download/v1.0.0/docv-1.0.0-x86_64-unknown-linux-musl.tar.gz | tar xz
+          curl -L https://github.com/suzuki-hoge/docv/releases/download/v1.0.1/docv-1.0.1-x86_64-unknown-linux-musl.tar.gz | tar xz
           mv docv /usr/local/bin/
           ```
   - id: cargo
