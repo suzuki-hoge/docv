@@ -3,7 +3,7 @@ title: docv
 
 dir:
   free: docs
-  slots: docv
+  slot: docv
   html: output/docv/html
   image: output/docv/image
 

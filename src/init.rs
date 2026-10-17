@@ -21,11 +21,11 @@ dir:
   # 管理対象の Markdown（Free ファイル）を置くディレクトリ。各ファイルの YAML front matter に mission を書く
   free: docs
   # Slot ファイルを置くディレクトリ
-  slots: docv
+  slot: docv
   # docv build が HTML を出すディレクトリ
-  html: docv/build
+  html: output/docv/html
   # docv build が Slot のページの JPG を出すディレクトリ。書かなければ JPG を作らない。JPG を作るには Chrome が要る
-  # image: docv/build/jpg
+  # image: output/docv/image
 
 # 管理対象にも管理外にもしないファイルの glob
 ignore:
@@ -85,7 +85,7 @@ mod tests {
         )));
         let config = config::parse(&text).unwrap();
         assert_eq!(config.free_dir(), "docs");
-        assert_eq!(config.slots_dir(), "docv");
+        assert_eq!(config.slot_dir(), "docv");
         assert_eq!(config.image_dir(), None);
         let error = run(&path, false).unwrap_err().to_string();
         assert!(error.contains("すでにある"), "{error}");

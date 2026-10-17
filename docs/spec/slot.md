@@ -11,7 +11,7 @@ tags: [仕様, ルール, 出力]
 
 ## 1. 置き場所と書き方
 
-- Slot ファイルは、`docv.yaml` の `dir.slots`（既定は `docv`）に、`<まとまり>/<Slot>.<拡張子>` の名前で置く。まとまりのディレクトリは `service`（サービス仕様）、`system`（システム仕様）、`guide`（開発者向けガイド）、`operation`（運用）。`docs/` には Free ファイルを、`docv/` には Slot ファイルを置く
+- Slot ファイルは、`docv.yaml` の `dir.slot`（既定は `docv`）に、`<まとまり>/<Slot>.<拡張子>` の名前で置く。まとまりのディレクトリは `service`（サービス仕様）、`system`（システム仕様）、`guide`（開発者向けガイド）、`operation`（運用）。`docs/` には Free ファイルを、`docv/` には Slot ファイルを置く
 - 拡張子は Slot ごとに決まる。YAML の Slot は決まった項目で書き、md の Slot は中身の形を決めず、そのまま HTML に出す
 - `docv/adr/` は ADR の置き場所で、Slot としては読まない（[`spec/adr.md`](adr.md)）
 - Slot を置くかどうかは任意。プロジェクトに当てはまらない Slot は作らない（例: 利用者の手元に入れるものがなければ、インストールの Slot はいらない）。`index.html` には置いていない Slot のカードも並べ、グレーにしてリンクにしない

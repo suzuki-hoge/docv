@@ -90,7 +90,7 @@ impl Project {
     /// Free ファイルのルールはかけず、整形と textlint だけをかける。シンボリックリンクは書き換えないので除く。
     pub fn slot_markdown(&self) -> Result<Vec<String>> {
         Ok(self
-            .walk_slots_dir()?
+            .walk_slot_dir()?
             .into_iter()
             .filter(|(rel, symlink)| !symlink && rel.ends_with(".md"))
             .map(|(rel, _)| rel)
@@ -98,11 +98,11 @@ impl Project {
     }
 
     /// Slot のディレクトリの中のファイル（Slot と ADR の候補）を、パスの辞書順で返す。シンボリックリンクも含む。
-    /// 除外するもの（.gitignore に書かれている、dir.html の中にある、ignore に当てはまる）と、
+    /// 除外するもの（.gitignore に書かれている、ignore に当てはまる）と、
     /// 名前がドットで始まるファイルとディレクトリ（.DS_Store など）は除く。
     pub fn slot_dir_files(&self) -> Result<Vec<String>> {
         Ok(self
-            .walk_slots_dir()?
+            .walk_slot_dir()?
             .into_iter()
             .map(|(rel, _)| rel)
             .collect())
@@ -112,7 +112,7 @@ impl Project {
     /// targets が空ならすべて、そうでなければそのパス（ルートからの相対パス）だけ。
     pub fn yaml_targets(&self, targets: &[String]) -> Result<Vec<String>> {
         let mut files: Vec<String> = self
-            .walk_slots_dir()?
+            .walk_slot_dir()?
             .into_iter()
             .filter(|(rel, symlink)| !symlink && (rel.ends_with(".yaml") || rel.ends_with(".yml")))
             .map(|(rel, _)| rel)
@@ -126,12 +126,11 @@ impl Project {
     }
 
     /// Slot のディレクトリの中のファイルと、それがシンボリックリンクか。
-    fn walk_slots_dir(&self) -> Result<Vec<(String, bool)>> {
-        let dir = self.root.join(self.slots_dir());
+    fn walk_slot_dir(&self) -> Result<Vec<(String, bool)>> {
+        let dir = self.root.join(self.slot_dir());
         if !dir.is_dir() {
             return Ok(Vec::new());
         }
-        let output_dirs = self.output_dirs();
         let mut files = Vec::new();
         for entry in walker(&dir) {
             let entry = entry?;
@@ -142,7 +141,7 @@ impl Project {
                 continue;
             }
             let rel = relative(&self.root, entry.path())?;
-            if output_dirs.iter().any(|d| is_under(&rel, d)) || self.ignore.is_match(&rel) {
+            if self.ignore.is_match(&rel) {
                 continue;
             }
             files.push((rel, file_type.is_symlink()));
@@ -184,7 +183,7 @@ impl Project {
     /// Slot のディレクトリの中の Markdown は、Slot ファイルとして読むので、管理対象にも管理外にもしない。
     fn classify_with(&self, rel: &str, output_dirs: &[String]) -> Option<Class> {
         if output_dirs.iter().any(|d| is_under(rel, d))
-            || is_under(rel, &self.slots_dir())
+            || is_under(rel, &self.slot_dir())
             || self.ignore.is_match(rel)
         {
             return None;
@@ -226,8 +225,8 @@ impl Project {
     }
 
     /// Slot のディレクトリ（ルートからの相対パス）。
-    pub fn slots_dir(&self) -> String {
-        self.config.slots_dir()
+    pub fn slot_dir(&self) -> String {
+        self.config.slot_dir()
     }
 
     /// docv build の HTML の出力先。
@@ -321,7 +320,7 @@ ignore:
             "notes.md",
             "secret.md",
             "tmp/work.md",
-            "docv/build/index.md",
+            "output/docv/html/index.md",
             "docv/adr/rust.md",
             "docv/service/secret.md",
         ] {

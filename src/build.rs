@@ -501,7 +501,7 @@ impl Site<'_> {
             let _ = writeln!(
                 out,
                 "<p class=\"note\">Slot ファイルがない。{} に Slot ファイルを置くと、カードから開ける。</p>",
-                escape(&self.project.slots_dir())
+                escape(&self.project.slot_dir())
             );
         }
         for group in Group::ALL {
@@ -1842,7 +1842,7 @@ mod tests {
             "{config}"
         );
         assert!(
-            config.contains("<tr><td><code>dir.free</code></td><td><code>docs</code></td></tr>\n<tr><td><code>dir.slots</code></td><td><code>docv</code></td></tr>")
+            config.contains("<tr><td><code>dir.free</code></td><td><code>docs</code></td></tr>\n<tr><td><code>dir.slot</code></td><td><code>docv</code></td></tr>")
                 && config.contains("<tr><td><code>dir.image</code></td><td>-</td></tr>"),
             "{config}"
         );
@@ -2184,7 +2184,7 @@ mod tests {
     #[test]
     fn rebuilds_everything_but_the_marker() {
         let (dir, project) = project(&[]);
-        let out = dir.path().join("docv/build");
+        let out = dir.path().join("output/docv/html");
         run(&project, &out, None).unwrap();
         write_file(&out, "jpg/a.jpg", "jpg");
         write_file(&out, "old.html", "old");

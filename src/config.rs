@@ -63,8 +63,8 @@ pub struct Dirs {
     #[serde(default = "default_free")]
     pub free: String,
     /// Slot ファイルを置くディレクトリ。
-    #[serde(default = "default_slots")]
-    pub slots: String,
+    #[serde(default = "default_slot")]
+    pub slot: String,
     /// docv build が HTML を出すディレクトリ。
     #[serde(default = "default_html")]
     pub html: String,
@@ -76,7 +76,7 @@ impl Default for Dirs {
     fn default() -> Self {
         Dirs {
             free: default_free(),
-            slots: default_slots(),
+            slot: default_slot(),
             html: default_html(),
             image: None,
         }
@@ -124,12 +124,12 @@ fn default_free() -> String {
     "docs".to_string()
 }
 
-fn default_slots() -> String {
+fn default_slot() -> String {
     "docv".to_string()
 }
 
 fn default_html() -> String {
-    "docv/build".to_string()
+    "output/docv/html".to_string()
 }
 
 /// `./` と末尾の `/` を除く。
@@ -151,8 +151,8 @@ impl Config {
         normalize_dir(&self.dir.free)
     }
 
-    pub fn slots_dir(&self) -> String {
-        normalize_dir(&self.dir.slots)
+    pub fn slot_dir(&self) -> String {
+        normalize_dir(&self.dir.slot)
     }
 
     pub fn html_dir(&self) -> String {
@@ -211,19 +211,28 @@ fn validate_semantics(config: &Config) -> Result<()> {
 
     let is_root = |dir: &str| dir.is_empty() || dir == ".";
     let under = |path: &str, dir: &str| path == dir || path.starts_with(&format!("{dir}/"));
-    if is_root(&config.free_dir()) {
-        errors.push("/dir/free: ルートは書けない。Markdown を置くディレクトリを書く".to_string());
+    // dir の 4 つは、どれも別々のディレクトリにする。同じか、どれかがどれかを含めば error。
+    let mut dirs = vec![
+        ("free", config.free_dir()),
+        ("slot", config.slot_dir()),
+        ("html", config.html_dir()),
+    ];
+    dirs.extend(config.image_dir().map(|dir| ("image", dir)));
+    for (key, dir) in &dirs {
+        if is_root(dir) {
+            errors.push(format!("/dir/{key}: ルートは書けない"));
+        }
     }
-    if is_root(&config.html_dir()) {
-        errors.push("/dir/html: ルートは書けない".to_string());
-    }
-    if let Some(image) = config.image_dir() {
-        if is_root(&image) {
-            errors.push("/dir/image: ルートは書けない".to_string());
-        } else if under(&config.html_dir(), &image) {
-            errors.push(
-                "/dir/image: dir.html と同じか、dir.html を含むディレクトリは書けない".to_string(),
-            );
+    for (i, (a, dir_a)) in dirs.iter().enumerate() {
+        for (b, dir_b) in &dirs[i + 1..] {
+            if is_root(dir_a) || is_root(dir_b) {
+                continue;
+            }
+            if under(dir_a, dir_b) || under(dir_b, dir_a) {
+                errors.push(format!(
+                    "/dir/{b}: dir.{a} と同じか、含むか、含まれるディレクトリは書けない"
+                ));
+            }
         }
     }
     let mut names = std::collections::BTreeSet::new();
@@ -262,8 +271,8 @@ mod tests {
     fn fills_defaults() {
         let config = parse("{}\n").unwrap();
         assert_eq!(config.free_dir(), "docs");
-        assert_eq!(config.slots_dir(), "docv");
-        assert_eq!(config.html_dir(), "docv/build");
+        assert_eq!(config.slot_dir(), "docv");
+        assert_eq!(config.html_dir(), "output/docv/html");
         assert_eq!(config.image_dir(), None);
         assert!(!config.format.enabled);
         assert!(config.tags.is_empty());
@@ -299,9 +308,27 @@ mod tests {
         assert_eq!(config.image_dir().as_deref(), Some("out/jpg"));
         let error = error_of("dir:\n  free: .\n");
         assert!(error.contains("/dir/free: ルートは書けない"), "{error}");
+        assert!(parse("dir:\n  html: out/html\n  image: out/jpg\n").is_ok());
+    }
+
+    #[test]
+    fn rejects_nested_dirs() {
+        // 同じディレクトリ
         let error = error_of("dir:\n  html: out\n  image: out\n");
+        assert!(
+            error.contains("/dir/image: dir.html と同じか、含むか、含まれるディレクトリは書けない"),
+            "{error}"
+        );
+        // 後ろの項目が前の項目を含む
+        let error = error_of("dir:\n  html: out/html\n  image: out\n");
         assert!(error.contains("/dir/image: dir.html と同じか"), "{error}");
-        assert!(parse("dir:\n  html: out\n  image: out/jpg\n").is_ok());
+        // 後ろの項目が前の項目の中にある
+        let error = error_of("dir:\n  slot: docv\n  html: docv/build\n");
+        assert!(error.contains("/dir/html: dir.slot と同じか"), "{error}");
+        let error = error_of("dir:\n  free: docs\n  slot: docs/docv\n");
+        assert!(error.contains("/dir/slot: dir.free と同じか"), "{error}");
+        // 名前の頭が同じだけなら、含まない
+        assert!(parse("dir:\n  free: docs\n  slot: docs-slot\n").is_ok());
     }
 
     #[test]

@@ -457,14 +457,10 @@ lint:
     }
 
     #[test]
-    fn skips_excluded_and_dot_files_in_slots_dir() {
+    fn skips_excluded_and_dot_files_in_slot_dir() {
         let result = check(&[
             (".gitignore", "memo.txt\n"),
             ("docv/service/words.yaml", "groups: []\n"),
-            // dir.html の既定は docv/build
-            ("docv/build/.docv", ""),
-            ("docv/build/index.html", "<html></html>\n"),
-            ("docv/build/jpg/サービス仕様/用語集.jpg", ""),
             ("docv/service/.DS_Store", ""),
             ("docv/.cache/a.yaml", "a: 1\n"),
             ("docv/service/memo.txt", "メモ\n"),

@@ -29,7 +29,7 @@ pub fn rows(config: &Config, title: &str) -> Vec<Row> {
     vec![
         row("title", Cell::Value(title.to_string())),
         row("dir.free", Cell::Value(config.free_dir())),
-        row("dir.slots", Cell::Value(config.slots_dir())),
+        row("dir.slot", Cell::Value(config.slot_dir())),
         row("dir.html", Cell::Value(config.html_dir())),
         // dir.image を書いていなければ、値のない項目として `-` を出す。
         row(
@@ -108,7 +108,7 @@ mod tests {
   - name: 仕様
     color: red
 dir:
-  image: docv/build/jpg
+  image: out/jpg
 lint:
   bold: deny
   textlint: enable
@@ -122,12 +122,12 @@ title
   repo
 dir.free
   docs
-dir.slots
+dir.slot
   docv
 dir.html
-  docv/build
+  output/docv/html
 dir.image
-  docv/build/jpg
+  out/jpg
 ignore
 tags
   - 仕様

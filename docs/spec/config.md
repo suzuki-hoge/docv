@@ -17,7 +17,7 @@ title: shop-app
 
 dir:
   free: docs
-  image: docv/build/jpg
+  image: output/docv/image
 ignore:
   - docs/tmp/**
 
@@ -36,20 +36,20 @@ format:
   enabled: true
 ```
 
-| 項目             | 必須 | 既定         | 意味                                                                                                            |
-| ---------------- | ---- | ------------ | --------------------------------------------------------------------------------------------------------------- |
-| `title`          |      | ルートの名前 | HTML に出すプロジェクト名                                                                                       |
-| `dir.free`       |      | `docs`       | 管理対象の Markdown（Free ファイル）を置くディレクトリ（「管理対象と管理外」の章）                              |
-| `dir.slots`      |      | `docv`       | Slot ファイルを置くディレクトリ                                                                                 |
-| `dir.html`       |      | `docv/build` | docv build が HTML を出すディレクトリ                                                                           |
-| `dir.image`      |      |              | docv build が Slot のページの JPG を出すディレクトリ。書かなければ JPG を作らない。JPG を作るには Chrome が要る |
-| `ignore`         |      |              | 管理対象にも管理外にもしないファイルの glob の配列                                                              |
-| `tags`           |      |              | 使うタグの一覧。タグごとに `name` と、HTML の色の `color` を書く（[`spec/free.md`](free.md) の「タグ」の章）    |
-| `lint.bold`      |      | allow        | 太字を使ってよいか（「書式の規則」の章）                                                                        |
-| `lint.italic`    |      | allow        | 斜体を使ってよいか（「書式の規則」の章）                                                                        |
-| `lint.dollar`    |      | allow        | コードの外の 1 行に `$` を 2 つ以上書いてよいか（「書式の規則」の章）                                           |
-| `lint.textlint`  |      | disable      | textlint で文章を校正するか（「textlint」の章）                                                                 |
-| `format.enabled` |      | false        | check で、整形が要るファイルを error にするか（「整形との連動」の章）                                           |
+| 項目             | 必須 | 既定               | 意味                                                                                                            |
+| ---------------- | ---- | ------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `title`          |      | ルートの名前       | HTML に出すプロジェクト名                                                                                       |
+| `dir.free`       |      | `docs`             | 管理対象の Markdown（Free ファイル）を置くディレクトリ（「管理対象と管理外」の章）                              |
+| `dir.slot`       |      | `docv`             | Slot ファイルを置くディレクトリ                                                                                 |
+| `dir.html`       |      | `output/docv/html` | docv build が HTML を出すディレクトリ                                                                           |
+| `dir.image`      |      |                    | docv build が Slot のページの JPG を出すディレクトリ。書かなければ JPG を作らない。JPG を作るには Chrome が要る |
+| `ignore`         |      |                    | 管理対象にも管理外にもしないファイルの glob の配列                                                              |
+| `tags`           |      |                    | 使うタグの一覧。タグごとに `name` と、HTML の色の `color` を書く（[`spec/free.md`](free.md) の「タグ」の章）    |
+| `lint.bold`      |      | allow              | 太字を使ってよいか（「書式の規則」の章）                                                                        |
+| `lint.italic`    |      | allow              | 斜体を使ってよいか（「書式の規則」の章）                                                                        |
+| `lint.dollar`    |      | allow              | コードの外の 1 行に `$` を 2 つ以上書いてよいか（「書式の規則」の章）                                           |
+| `lint.textlint`  |      | disable            | textlint で文章を校正するか（「textlint」の章）                                                                 |
+| `format.enabled` |      | false              | check で、整形が要るファイルを error にするか（「整形との連動」の章）                                           |
 
 ---
 
@@ -63,6 +63,7 @@ format:
 ## 3. 管理対象と管理外
 
 - `dir.free` に書いたディレクトリの下の `.md` のファイルが、管理対象になる。check、fix、HTML の対象になる。`dir.free` は 1 つだけ書け、ルートは書けない
+- `dir.free`、`dir.slot`、`dir.html`、`dir.image`（書いたとき）は、どの 2 つも同じディレクトリにできず、一方が他方を含むこともできない。ルートも書けない。違反すると、`docv.yaml` が正しくないとして、check、fix、build などの `docv.yaml` を読むコマンドが、何もせずに終了コード 2 で終わる
 - `dir.free` の外にあり、`ignore` にも当てはまらない `.md` のファイルは管理外になる。中身は見ない
 - `ignore` に当てはまるファイルは、check と HTML のどちらにも出さない
 - `.gitignore` に書かれたファイルと、`dir.html` と `dir.image` の中は、`ignore` に書かなくても常に除く
@@ -91,7 +92,7 @@ format:
 
 文章の校正に textlint を使う仕組み。AI Agent が書く文章のぶれをなくすのが目的なので、使うルールとその値は docv が決める。利用者は、使うかどうか（`enable`、`disable`）だけを決める。
 
-- 既定では使わない。`enable` にしたときだけ、`docv check` が textlint をかけ、`docv fix` が自動修正できるところを直す。かけるのは、管理対象のファイルと、`dir.slots` の中の Markdown（md の Slot と ADR）
+- 既定では使わない。`enable` にしたときだけ、`docv check` が textlint をかけ、`docv fix` が自動修正できるところを直す。かけるのは、管理対象のファイルと、`dir.slot` の中の Markdown（md の Slot と ADR）
 - textlint は Node.js で動くので、使うときだけ Node.js（npx）が必要になる。docv のバイナリには textlint を入れない。`enable` なのに Node.js が見つからないときは、終了コード 2 で終わる
 - 結果は、ほかのルールと同じ形の error で出す。ルール ID は `textlint/<プリセット>/<ルール>`（例: textlint/ja-technical-writing/sentence-length）。下の表では、プリセットごとにルールの名前だけを書く
 - `--no-textlint` で、textlint だけを飛ばせる
@@ -163,7 +164,7 @@ docv は、次のルールを使わない。
 
 ## 6. 整形との連動（`format.enabled`）
 
-整形の形は docv が決め、設定では変えない。設定で決めるのは、check を整形と連動させるかだけ。整形は、管理対象のファイルと、`dir.slots` の中の Markdown（md の Slot と ADR）にかける。`docv.yaml` と YAML の Slot は、末尾の改行を 1 つにすることだけをする。
+整形の形は docv が決め、設定では変えない。設定で決めるのは、check を整形と連動させるかだけ。整形は、管理対象のファイルと、`dir.slot` の中の Markdown（md の Slot と ADR）にかける。`docv.yaml` と YAML の Slot は、末尾の改行を 1 つにすることだけをする。
 
 - 表は、列ごとに縦の線の位置を揃える。幅は、全角の文字（Unicode の East Asian Width が W か F の文字）を 2、それ以外の文字を 1 と数える
 - エディタの表の揃え方は、この数え方と違うことがある。手で揃えず、`docv fix` の結果を正とする
@@ -191,7 +192,8 @@ docv/            # Slot ファイル
   service/       # サービス仕様。ほかに system/、guide/、operation/
     service.md
   adr/           # ADR
-  build/         # docv build の出力
+output/docv/     # docv build の出力
+  html/
 ```
 
 - `docs/` と `docv/` を分けるのは、プロジェクトがミッションと形を決める Free ファイルと、docv が決める Slot ファイルを、置き場所で見分けられるようにするため

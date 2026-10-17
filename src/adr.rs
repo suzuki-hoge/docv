@@ -1,6 +1,6 @@
 //! ADR（意思決定の記録）。docs/spec/adr.md。
 //!
-//! dir.slots の下の adr/ に、決定 1 つを 1 つの Markdown で置く。ファイル名（.md を除く）が id。
+//! dir.slot の下の adr/ に、決定 1 つを 1 つの Markdown で置く。ファイル名（.md を除く）が id。
 //! システムが使う項目は YAML front matter に、決定の中身（背景、決めたこと、選ばなかった案など）は本文に書く。題は本文の h1。
 //! 状態は持たない。打ち消されたかどうかは、つながりからわかる。
 //! 過去の決定を打ち消すときは、新しい決定の supersedes から過去の決定の id を指す（未来から過去を参照する）。
@@ -16,7 +16,7 @@ use crate::diagnostic::Diagnostic;
 use crate::markdown;
 use crate::workspace::Project;
 
-/// ADR を置くディレクトリの名前（dir.slots からの相対パス）。
+/// ADR を置くディレクトリの名前（dir.slot からの相対パス）。
 pub const DIR: &str = "adr";
 
 /// group を書かなかった ADR のまとまり。
@@ -93,7 +93,7 @@ impl Adr {
 
 /// ADR のディレクトリ（ルートからの相対パス）。
 pub fn dir(project: &Project) -> String {
-    format!("{}/{DIR}", project.slots_dir())
+    format!("{}/{DIR}", project.slot_dir())
 }
 
 /// ADR のパス（ルートからの相対パス）から id を取る。

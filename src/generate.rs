@@ -12,7 +12,7 @@ use crate::schema;
 use crate::slot::{self, DEFS, Def, Format};
 use crate::workspace::Project;
 
-/// docv slot list の出力。名前、作るファイル（dir.slots からの相対パス）、Slot の名前とミッションを 1 行ずつ並べる。
+/// docv slot list の出力。名前、作るファイル（dir.slot からの相対パス）、Slot の名前とミッションを 1 行ずつ並べる。
 pub fn list() -> String {
     let name_width = DEFS.iter().map(|d| d.id.len()).max().unwrap_or(0);
     let file_width = DEFS.iter().map(|d| d.file_name().len()).max().unwrap_or(0);
@@ -78,7 +78,7 @@ pub struct Generated {
 /// Slot ファイルを作る。すでにあれば、force のときだけ書き直す。
 pub fn run(project: &Project, slot: &str, force: bool) -> Result<Generated> {
     let def = find(slot)?;
-    let rel = format!("{}/{}", project.slots_dir(), def.file_name());
+    let rel = format!("{}/{}", project.slot_dir(), def.file_name());
     let path = project.root.join(&rel);
     if path.exists() && !force {
         bail!("{rel} がすでにある。書き直すなら --force を付ける");

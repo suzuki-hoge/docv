@@ -10,12 +10,12 @@
 
 ## ファイルを書くコマンド
 
-| コマンド | 書くもの                                                                                                                                                                 |
-| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| init     | `docv.yaml` だけ。`--print` のときは書かない                                                                                                                             |
-| slot gen | 指定した Slot ファイルだけ。`--print` のときは書かない                                                                                                                   |
-| fix      | 管理対象のファイルと、`dir.slots` の中の Markdown（md の Slot と ADR）だけ。整形と textlint の自動修正だけをする。`docv.yaml` と YAML の Slot は、末尾の改行だけを整える |
-| build    | `dir.html` と `dir.image` の中だけ。目印の `.docv` を残して中を消し、作り直す。`--no-image` のときは `dir.image` に触れない                                              |
+| コマンド | 書くもの                                                                                                                                                                |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| init     | `docv.yaml` だけ。`--print` のときは書かない                                                                                                                            |
+| slot gen | 指定した Slot ファイルだけ。`--print` のときは書かない                                                                                                                  |
+| fix      | 管理対象のファイルと、`dir.slot` の中の Markdown（md の Slot と ADR）だけ。整形と textlint の自動修正だけをする。`docv.yaml` と YAML の Slot は、末尾の改行だけを整える |
+| build    | `dir.html` と `dir.image` の中だけ。目印の `.docv` を残して中を消し、作り直す。`--no-image` のときは `dir.image` に触れない                                             |
 
 - ほかのコマンドは、ファイルを書かない
 - `CLAUDE.md`、リポジトリのルートの `.gitignore`、hook の設定は、どのコマンドも書かない
@@ -29,11 +29,13 @@
 | 管理対象 | `dir.free` のディレクトリの下の Markdown                                                 |
 | 管理外   | それ以外の Markdown。中身は見ない                                                        |
 
-Slot は、Markdown とは別に、`dir.slots`（既定は `docv/`）から `<まとまり>/<ID>.<拡張子>` の名前のファイルだけを読む。拡張子は Slot ごとに決まる（YAML か md）。知らない項目があれば、読めない Slot として check が error にする。
+Slot は、Markdown とは別に、`dir.slot`（既定は `docv/`）から `<まとまり>/<ID>.<拡張子>` の名前のファイルだけを読む。拡張子は Slot ごとに決まる（YAML か md）。知らない項目があれば、読めない Slot として check が error にする。
 
-`dir.slots` の中でも、除外に当たるファイルと、名前がドットで始まるファイルとディレクトリ（`.DS_Store` など）は読まない。`dir.html` の既定の `docv/build` は `dir.slots` の中にあるが、出力は Slot として読まない。それ以外で Slot の名前でないファイルは、check が slot-unknown の error にする。
+`dir.slot` の中でも、除外に当たるファイルと、名前がドットで始まるファイルとディレクトリ（`.DS_Store` など）は読まない。それ以外で Slot の名前でないファイルは、check が slot-unknown の error にする。
 
-`dir.slots` の中の Markdown（md の Slot と ADR）には、Free ファイルのルール（YAML front matter、書式の規則など）はかけない。整形と textlint だけを、管理対象のファイルと同じくかける。
+`dir.free`、`dir.slot`、`dir.html`、`dir.image`（書いたとき）は、どの 2 つも同じディレクトリにも、一方が他方を含む関係にもできない。`docv.yaml` を読むときに確かめ、違反していれば、どのコマンドもファイルを読み書きせずに終了コード 2 で終わる。
+
+`dir.slot` の中の Markdown（md の Slot と ADR）には、Free ファイルのルール（YAML front matter、書式の規則など）はかけない。整形と textlint だけを、管理対象のファイルと同じくかける。
 
 ## バイナリに埋め込むもの
 

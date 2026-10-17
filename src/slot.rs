@@ -1,6 +1,6 @@
 //! Slot。どのプロジェクトにも要るドキュメントを、docv が決めたミッションと形で書くファイル。docs/spec/slot.md。
 //!
-//! Slot ファイルは、dir.slots の下の、まとまりのディレクトリに `<まとまり>/<ID>.<拡張子>` の名前で置く。拡張子は Slot ごとに決まる（yaml か md）。
+//! Slot ファイルは、dir.slot の下の、まとまりのディレクトリに `<まとまり>/<ID>.<拡張子>` の名前で置く。拡張子は Slot ごとに決まる（yaml か md）。
 //! ファイルの中のパスは、すべてルートからの相対パス。
 
 use std::fs;
@@ -40,7 +40,7 @@ impl Group {
         }
     }
 
-    /// Slot ファイルを置くディレクトリの名前（dir.slots からの相対パス）。
+    /// Slot ファイルを置くディレクトリの名前（dir.slot からの相対パス）。
     pub fn dir(self) -> &'static str {
         match self {
             Group::Service => "service",
@@ -202,13 +202,13 @@ impl Def {
         }
     }
 
-    /// Slot ファイルの、dir.slots からの相対パス。
+    /// Slot ファイルの、dir.slot からの相対パス。
     pub fn file_name(&self) -> String {
         format!("{}/{}.{}", self.group.dir(), self.id, self.extension())
     }
 }
 
-/// dir.slots からの相対パス（`service/words.yaml`）から Slot を引く。
+/// dir.slot からの相対パス（`service/words.yaml`）から Slot を引く。
 pub fn def_of_file(rel: &str) -> Option<&'static Def> {
     DEFS.iter().find(|d| d.file_name() == rel)
 }
@@ -223,7 +223,7 @@ pub fn file_names() -> String {
 
 /// Slot の名前に近いパス（ディレクトリが違う `words.yaml`、番号が付いた `service/03-words.yaml`、
 /// 拡張子が違う `service/service.yaml`）なら、正しいパスを返す。
-/// dir は dir.slots。返すパスはルートからの相対パス。
+/// dir は dir.slot。返すパスはルートからの相対パス。
 pub fn suggest(dir: &str, rel: &str) -> Option<String> {
     let name = rel.rsplit('/').next().unwrap_or(rel);
     let (stem, _) = name.rsplit_once('.')?;
@@ -562,7 +562,7 @@ struct SlotFile {
 
 /// 除外するファイルと、名前がドットで始まるファイルは含まない（Project::slot_dir_files）。
 fn slot_files(project: &Project) -> Result<Vec<SlotFile>> {
-    let dir = project.slots_dir();
+    let dir = project.slot_dir();
     let prefix = format!("{dir}/");
     // adr/ は ADR のディレクトリ。Slot としては読まない（docs/spec/adr.md）。
     let adr_dir = format!("{prefix}{}/", crate::adr::DIR);
@@ -609,7 +609,7 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
     };
     for file in slot_files(project)? {
         let Some(def) = file.def else {
-            let message = match suggest(&project.slots_dir(), &file.path) {
+            let message = match suggest(&project.slot_dir(), &file.path) {
                 Some(right) => format!("Slot ファイルは {right} に置く"),
                 None => format!(
                     "Slot の名前ではない。Slot のディレクトリに置けるのは {}",
