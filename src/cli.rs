@@ -60,7 +60,11 @@ enum Command {
         no_textlint: bool,
     },
     /// 人間向けの HTML を作る。dir.image を書いていれば、Slot のページを JPG にする
-    Build,
+    Build {
+        /// dir.image を書いていても JPG を作らない。dir.image の中には触れない
+        #[arg(long)]
+        no_image: bool,
+    },
     /// Slot の一覧を出し、Slot ファイルを作り、YAML の Slot のスキーマを出す
     #[command(subcommand)]
     Slot(SlotCommand),
@@ -182,9 +186,10 @@ fn execute_in_project(project: &Project, command: Command) -> Result<ExitCode> {
             println!("{} ファイルを書き換えた", report.changed.len());
             Ok(failure_if(!report.failed.is_empty()))
         }
-        Command::Build => {
+        Command::Build { no_image } => {
             let out = project.out_dir();
-            build::run(project, &out, project.image_dir().as_deref())?;
+            let image = project.image_dir().filter(|_| !no_image);
+            build::run(project, &out, image.as_deref())?;
             println!("{} に出力した", out.display());
             Ok(ExitCode::SUCCESS)
         }

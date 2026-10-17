@@ -73,6 +73,11 @@ docv check docs/spec/order.md
 - 出力先は `docv.yaml` で指定された `dir.html`
 - `docv.yaml` で `dir.image` を指定すると、Slot のページを JPG にしてそこに出す
   - 要 Google Chrome または Chromium
+  - JPG はマシンのフォントで変わる。チームで共有するなら、GitHub Actions などの決まった環境で作る
+
+| オプション   | 意味                                                         |
+| ------------ | ------------------------------------------------------------ |
+| `--no-image` | `dir.image` を指定していても JPG を作らない。HTML だけを作る |
 
 ### docv slot list
 

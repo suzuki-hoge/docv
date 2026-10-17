@@ -15,7 +15,7 @@
 | init     | `docv.yaml` だけ。`--print` のときは書かない                                                                                                                             |
 | slot gen | 指定した Slot ファイルだけ。`--print` のときは書かない                                                                                                                   |
 | fix      | 管理対象のファイルと、`dir.slots` の中の Markdown（md の Slot と ADR）だけ。整形と textlint の自動修正だけをする。`docv.yaml` と YAML の Slot は、末尾の改行だけを整える |
-| build    | `dir.html` と `dir.image` の中だけ。目印の `.docv` を残して中を消し、作り直す                                                                                            |
+| build    | `dir.html` と `dir.image` の中だけ。目印の `.docv` を残して中を消し、作り直す。`--no-image` のときは `dir.image` に触れない                                              |
 
 - ほかのコマンドは、ファイルを書かない
 - `CLAUDE.md`、リポジトリのルートの `.gitignore`、hook の設定は、どのコマンドも書かない
@@ -63,11 +63,11 @@ textlint を使うときだけ Node.js が、JPG を作るときだけ Chrome �
 - 生成日時、実行したマシンのパス、乱数を出力に入れない
 - 並び順を固定する。Slot は規格の順、Free ファイルはディレクトリのツリーの順、Slot の中の項目は書いた順、ADR は日付と id の順
 - 入力（管理対象のファイル、Slot、ADR、`docv.yaml`、docv の版）が同じなら、HTML はバイト単位で同じになる
-- JPG は、同じマシン・同じ Chrome・同じフォントなら同じになる
+- JPG は、同じマシン・同じ Chrome・同じフォントなら同じになる。違うマシンで同じにすることはしない。チームで JPG を共有するなら、GitHub Actions などの決まった環境で作る
 
 ## JPG の撮り方
 
-`dir.image` を書いたときだけ、build の最後に撮り、`dir.image` に `<まとまり>/<Slot>.jpg` の名前で置く。ローカルの Chrome をヘッドレスで起動し、DevTools Protocol で出力先の HTML を開いて撮る。幅は 1280 CSS ピクセル、画質は 80。印刷の表示にし、ページの高さに画面を合わせて、Slot のページを 1 枚ずつ撮る。Chrome は、環境変数 DOCV_CHROME、OS ごとの標準のインストール先、PATH にある chrome と chromium の順に探し、見つからなければ error で終わる。
+`dir.image` を書いたときだけ、build の最後に撮る。`--no-image` を付けると撮らない。撮った JPG は、`dir.image` に `<まとまり>/<Slot>.jpg` の名前で置く。ローカルの Chrome をヘッドレスで起動し、DevTools Protocol で出力先の HTML を開いて撮る。幅は 1280 CSS ピクセル、画質は 80。印刷の表示にし、ページの高さに画面を合わせて、Slot のページを 1 枚ずつ撮る。Chrome は、環境変数 DOCV_CHROME、OS ごとの標準のインストール先、PATH にある chrome と chromium の順に探し、見つからなければ error で終わる。
 
 ## 終了コード
 
