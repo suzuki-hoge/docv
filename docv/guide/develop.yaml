@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../assets/schema/develop.schema.json
 steps:
   - id: fix
     name: 変えたら整えて確かめる

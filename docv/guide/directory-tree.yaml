@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../assets/schema/directory-tree.schema.json
 entries:
   - path: docv.yaml
     description: このリポジトリの docv の設定
@@ -8,7 +9,7 @@ entries:
   - path: assets/template/
     description: docv slot gen が書く Slot のテンプレ（YAML の Slot の項目のサンプルと、ドキュメントのガイドラインの雛形）
   - path: assets/schema/
-    description: YAML の Slot と `docv.yaml` のスキーマ。`docv slot schema` で出す。`docv.schema.json` は公開して、エディタの補完に使う
+    description: YAML の Slot と `docv.yaml` の JSON Schema。`docv slot schema` で出す。公開して、エディタの補完に使う
   - path: assets/desc.md
     description: docv desc が出す docv の概要。Slot のサービス仕様と同じファイル
   - path: assets/style.css

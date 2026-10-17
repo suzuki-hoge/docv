@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../assets/schema/install.schema.json
 requirements:
   - name: Node.js
     purpose: textlint を使うときだけ要る。`docv check --no-textlint` なら要らない

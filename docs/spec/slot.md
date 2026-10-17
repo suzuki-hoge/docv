@@ -119,7 +119,8 @@ steps:
 
 - YAML の Slot には、`body` と `include` も書ける。`body` は Slot の最後に出す Markdown、`include` は埋め込む Markdown の配列（`パス` か `パス#見出し`）
 - `include` の `パス` はファイル全体を、YAML front matter と h1 を除いて埋め込む。`パス#見出し` は、その見出しの下から、次の同じ深さ以上の見出しの手前までを埋め込む
-- YAML の Slot には、項目の型と意味を書いたスキーマ（YAML で書いた JSON Schema）がある。`docv slot schema <slot>` で出す。元のファイルは `assets/schema/<ID>.yaml` で、`docs/schema/` に写しを置く
+- YAML の Slot には、項目の型と意味を書いたスキーマ（JSON Schema）がある。`docv slot schema <slot>` で出す。元のファイルは `assets/schema/<ID>.schema.json` で、`docs/schema/` に写しを置く
+- `docv slot gen` は、YAML の Slot の 1 行目に、yaml-language-server の書式でスキーマの URL を書く。URL は、実行した CLI の版のタグの `assets/schema/` を指す。エディタで項目の補完と検証が効く
 
 ---
 

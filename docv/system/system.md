@@ -46,7 +46,7 @@ Rust で書いた単一のバイナリにし、次のものを埋め込む。利
 - Markdown の整形に使う dprint-plugin-markdown
 - コードブロックの色付けに使う syntect と、その構文の定義とテーマ
 
-textlint を使うときだけ Node.js が、JPG を作るときだけ Chrome が要る。`docv.yaml` の JSON Schema（`assets/schema/docv.schema.json`）は、埋め込むほかにリポジトリでも公開する。`docv.yaml` からは、版を含む URL で参照する。
+textlint を使うときだけ Node.js が、JPG を作るときだけ Chrome が要る。`docv.yaml` と YAML の Slot の JSON Schema（`assets/schema/`）は、埋め込むほかにリポジトリでも公開する。`docv init` と `docv slot gen` は、ファイルの 1 行目に、版のタグを含む URL を書いて参照させる。
 
 ## HTML の作り
 

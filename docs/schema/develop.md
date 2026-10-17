@@ -5,71 +5,106 @@ tags: [仕様]
 
 # 開発コマンドのスキーマ
 
-```yaml
-$schema: https://json-schema.org/draft/2020-12/schema
-title: 開発コマンド（guide/develop.yaml）
-description: テストやビルドなど、開発者が実行するコマンド
-type: object
-additionalProperties: false
-properties:
-  requirements:
-    description: 前提とされるもの
-    type: array
-    items:
-      type: object
-      additionalProperties: false
-      required: [name]
-      properties:
-        name:
-          description: 名前
-          type: string
-        version:
-          description: 要る版
-          type: string
-        purpose:
-          description: 何に使うか
-          type: string
-        url:
-          description: 詳しく書いてあるページの URL
-          type: string
-  steps:
-    description: 手順の配列。書いた順に出す
-    type: array
-    items:
-      type: object
-      additionalProperties: false
-      required: [id, name]
-      properties:
-        id:
-          description: 手順の ID。手順ごとに重ねない
-          type: string
-        name:
-          description: 手順の名前
-          type: string
-        items:
-          description: 手順の中身。1 つなら配列にしなくてよい。複数あるときは HTML で `os` ごとのタブにし、どの `item` にも `os` を書く
-          oneOf:
-            - $ref: "#/$defs/item"
-            - type: array
-              items:
-                $ref: "#/$defs/item"
-  body:
-    description: Slot のページの最後に出す Markdown
-    type: string
-  include:
-    description: ページに埋め込む Markdown の、ルートからの相対パスの配列。`パス` はファイル全体を（YAML front matter と h1 を除く）、`パス#見出し` はその見出しの章を埋め込む
-    type: array
-    items:
-      type: string
-$defs:
-  item:
-    type: object
-    additionalProperties: false
-    properties:
-      os:
-        description: タブの名前。windows、macos、linux など。1 つの手順の中で重ねない
-        type: string
-      markdown:
-        description: 手順の中身（コマンド、説明など）の Markdown
-        type: string
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "開発コマンド（guide/develop.yaml）",
+  "description": "テストやビルドなど、開発者が実行するコマンド",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "requirements": {
+      "description": "前提とされるもの",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "description": "名前",
+            "type": "string"
+          },
+          "version": {
+            "description": "要る版",
+            "type": "string"
+          },
+          "purpose": {
+            "description": "何に使うか",
+            "type": "string"
+          },
+          "url": {
+            "description": "詳しく書いてあるページの URL",
+            "type": "string"
+          }
+        }
+      }
+    },
+    "steps": {
+      "description": "手順の配列。書いた順に出す",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "description": "手順の ID。手順ごとに重ねない",
+            "type": "string"
+          },
+          "name": {
+            "description": "手順の名前",
+            "type": "string"
+          },
+          "items": {
+            "description": "手順の中身。1 つなら配列にしなくてよい。複数あるときは HTML で `os` ごとのタブにし、どの `item` にも `os` を書く",
+            "oneOf": [
+              {
+                "$ref": "#/$defs/item"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/item"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "body": {
+      "description": "Slot のページの最後に出す Markdown",
+      "type": "string"
+    },
+    "include": {
+      "description": "ページに埋め込む Markdown の、ルートからの相対パスの配列。`パス` はファイル全体を（YAML front matter と h1 を除く）、`パス#見出し` はその見出しの章を埋め込む",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "os": {
+          "description": "タブの名前。windows、macos、linux など。1 つの手順の中で重ねない",
+          "type": "string"
+        },
+        "markdown": {
+          "description": "手順の中身（コマンド、説明など）の Markdown",
+          "type": "string"
+        }
+      }
+    }
+  }
+}
 ```

@@ -5,43 +5,60 @@ tags: [仕様]
 
 # 環境変数のスキーマ
 
-```yaml
-$schema: https://json-schema.org/draft/2020-12/schema
-title: 環境変数（guide/env.yaml）
-description: システムを動かすのに要る環境変数と、それぞれを設定している場所
-type: object
-additionalProperties: false
-properties:
-  envs:
-    description: 環境変数の配列
-    type: array
-    items:
-      type: object
-      additionalProperties: false
-      required: [key, desc]
-      properties:
-        key:
-          description: 環境変数の名前
-          type: string
-        desc:
-          description: 何に使うか
-          type: string
-        secret:
-          description: 秘密の値か
-          type: boolean
-          default: false
-        local_from:
-          description: ローカル環境で、どこで設定しているか（Docker Compose、`.env` など）
-          type: string
-        release_from:
-          description: ステージングや本番で、どこで設定しているか（ECS のタスク定義、SSM など）
-          type: string
-  body:
-    description: Slot のページの最後に出す Markdown
-    type: string
-  include:
-    description: ページに埋め込む Markdown の、ルートからの相対パスの配列。`パス` はファイル全体を（YAML front matter と h1 を除く）、`パス#見出し` はその見出しの章を埋め込む
-    type: array
-    items:
-      type: string
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "環境変数（guide/env.yaml）",
+  "description": "システムを動かすのに要る環境変数と、それぞれを設定している場所",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "envs": {
+      "description": "環境変数の配列",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "desc"
+        ],
+        "properties": {
+          "key": {
+            "description": "環境変数の名前",
+            "type": "string"
+          },
+          "desc": {
+            "description": "何に使うか",
+            "type": "string"
+          },
+          "secret": {
+            "description": "秘密の値か",
+            "type": "boolean",
+            "default": false
+          },
+          "local_from": {
+            "description": "ローカル環境で、どこで設定しているか（Docker Compose、`.env` など）",
+            "type": "string"
+          },
+          "release_from": {
+            "description": "ステージングや本番で、どこで設定しているか（ECS のタスク定義、SSM など）",
+            "type": "string"
+          }
+        }
+      }
+    },
+    "body": {
+      "description": "Slot のページの最後に出す Markdown",
+      "type": "string"
+    },
+    "include": {
+      "description": "ページに埋め込む Markdown の、ルートからの相対パスの配列。`パス` はファイル全体を（YAML front matter と h1 を除く）、`パス#見出し` はその見出しの章を埋め込む",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}
 ```

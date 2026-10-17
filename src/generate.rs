@@ -8,6 +8,7 @@ use std::fs;
 
 use anyhow::{Context, Result, bail};
 
+use crate::schema;
 use crate::slot::{self, DEFS, Def, Format};
 use crate::workspace::Project;
 
@@ -36,11 +37,15 @@ pub fn find(slot: &str) -> Result<&'static Def> {
     }
 }
 
-/// Slot ファイルに書く中身。
-fn text(def: &Def) -> &'static str {
+/// Slot ファイルに書く中身。yaml の Slot は、1 行目でスキーマの URL をエディタに伝える。
+fn text(def: &Def) -> String {
     match def.format {
-        Format::Yaml => slot::template(def.id).expect("yaml の Slot にはテンプレがある"),
-        Format::Markdown => slot::md_template(def.id).unwrap_or(""),
+        Format::Yaml => format!(
+            "{}{}",
+            schema::header(&format!("{}.schema.json", def.id)),
+            slot::template(def.id).expect("yaml の Slot にはテンプレがある")
+        ),
+        Format::Markdown => slot::md_template(def.id).unwrap_or("").to_string(),
     }
 }
 
@@ -58,7 +63,7 @@ fn md_note(def: &Def) -> Option<String> {
 /// docv slot gen --print の出力。Slot ファイルを作らずに、書く中身を出す。雛形のない md の Slot は、中身の形は自由だと伝える。
 pub fn print(slot: &str) -> Result<String> {
     let def = find(slot)?;
-    Ok(md_note(def).unwrap_or_else(|| text(def).to_string()))
+    Ok(md_note(def).unwrap_or_else(|| text(def)))
 }
 
 /// 作った Slot ファイル。
@@ -112,16 +117,22 @@ mod tests {
         fs::read_to_string(dir.path().join(path)).unwrap()
     }
 
+    /// 1 行目でスキーマの URL を伝える、用語集の Slot。
+    fn words_text() -> String {
+        format!(
+            "# yaml-language-server: $schema=https://raw.githubusercontent.com/suzuki-hoge/docv/v{}/assets/schema/words.schema.json\n{}",
+            env!("CARGO_PKG_VERSION"),
+            include_str!("../assets/template/words.yaml")
+        )
+    }
+
     #[test]
     fn creates_slots_at_fixed_paths() {
         let (dir, project) = project();
         let words = run(&project, "words", false).unwrap();
         assert_eq!(words.path, "docv/service/words.yaml");
         assert!(words.note.is_none());
-        assert_eq!(
-            read(&dir, &words.path),
-            include_str!("../assets/template/words.yaml")
-        );
+        assert_eq!(read(&dir, &words.path), words_text());
         // md の Slot は空のファイルを作り、中身の形は自由だと伝える
         let api = run(&project, "api", false).unwrap();
         assert_eq!(api.path, "docv/system/api.md");
@@ -148,10 +159,7 @@ mod tests {
         );
         assert_eq!(read(&dir, "docv/service/words.yaml"), "groups: []\n");
         run(&project, "words", true).unwrap();
-        assert_eq!(
-            read(&dir, "docv/service/words.yaml"),
-            include_str!("../assets/template/words.yaml")
-        );
+        assert_eq!(read(&dir, "docv/service/words.yaml"), words_text());
     }
 
     #[test]
@@ -160,10 +168,7 @@ mod tests {
             print("doc-guide").unwrap(),
             include_str!("../assets/template/doc-guide.md")
         );
-        assert_eq!(
-            print("words").unwrap(),
-            include_str!("../assets/template/words.yaml")
-        );
+        assert_eq!(print("words").unwrap(), words_text());
         assert!(print("manual").unwrap().contains("中身の形は決めていない"));
         for name in ["api-md", "docv/service/words.yaml"] {
             let error = print(name).unwrap_err().to_string();

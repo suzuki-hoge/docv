@@ -44,7 +44,7 @@ AI Agent には、`CLAUDE.md` などに次のように書いて伝える。
 - [`docs/spec/slot.md`](docs/spec/slot.md) — Slot の一覧と、それぞれのファイルに書くことと形、HTML での見せ方
 - [`docs/spec/adr.md`](docs/spec/adr.md) — ADR に書くことと形、HTML での見せ方
 - [`docs/spec/config.md`](docs/spec/config.md) — `docv.yaml` に書くことと、各項目の解釈、check と fix で使う道具の設定
-- [`docs/schema/`](docs/schema) — `docv.yaml` と YAML の Slot のスキーマ（`docv slot schema` が出すものと、`docv.yaml` の JSON Schema の写し）
+- [`docs/schema/`](docs/schema) — `docv.yaml` と YAML の Slot の JSON Schema の写し（`assets/schema/` のファイルと同じもの）
 
 ### これからと経緯
 

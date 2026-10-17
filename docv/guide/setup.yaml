@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../assets/schema/setup.schema.json
 requirements:
   - name: Rust
     version: stable（2024 edition が使えるもの）

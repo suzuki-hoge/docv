@@ -1,6 +1,7 @@
 //! docv slot schema。yaml の Slot のスキーマを出す。docv/service/manual.md の docv slot schema。
 //!
-//! md の Slot はスキーマを持たない。同じスキーマと `docv.yaml` のスキーマを docs/schema/ の Markdown に写して公開する。
+//! md の Slot はスキーマを持たない。スキーマは JSON Schema で書き、GitHub の版のタグの URL で公開する。
+//! 同じスキーマと `docv.yaml` のスキーマを docs/schema/ の Markdown に写して公開する。
 //! 写しが元と揃っていることは、このファイルのテストで確かめる。
 
 use anyhow::{Result, bail};
@@ -8,7 +9,20 @@ use anyhow::{Result, bail};
 use crate::generate;
 use crate::slot::{self, Format};
 
-/// yaml の Slot のスキーマ（YAML）を返す。
+/// 実行した CLI の版の、assets/schema/ のファイルの URL。docv.yaml と YAML の Slot の 1 行目から参照する。
+pub fn url(file: &str) -> String {
+    format!(
+        "https://raw.githubusercontent.com/suzuki-hoge/docv/v{}/assets/schema/{file}",
+        env!("CARGO_PKG_VERSION")
+    )
+}
+
+/// エディタ（yaml-language-server）にスキーマを伝える、YAML のファイルの 1 行目。
+pub fn header(file: &str) -> String {
+    format!("# yaml-language-server: $schema={}\n", url(file))
+}
+
+/// yaml の Slot のスキーマ（JSON）を返す。
 pub fn text(name: &str) -> Result<&'static str> {
     let def = generate::find(name)?;
     if def.format != Format::Yaml {
@@ -27,7 +41,7 @@ mod tests {
     use super::*;
 
     fn validator(text: &str) -> jsonschema::Validator {
-        let schema: Value = serde_yaml_ng::from_str(text).unwrap();
+        let schema: Value = serde_json::from_str(text).unwrap();
         jsonschema::validator_for(&schema).unwrap()
     }
 
@@ -48,7 +62,7 @@ mod tests {
     fn every_yaml_slot_has_a_schema_named_after_it() {
         for def in yaml_defs() {
             let text = text(def.id).unwrap();
-            let schema: Value = serde_yaml_ng::from_str(text).unwrap();
+            let schema: Value = serde_json::from_str(text).unwrap();
             assert_eq!(
                 schema["title"],
                 format!("{}（{}）", def.label, def.file_name()),
@@ -104,15 +118,15 @@ mod tests {
     #[test]
     fn docs_publish_copies_of_the_schemas() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR"));
-        let mut copies = vec![("config", "json", crate::config::SCHEMA)];
+        let mut copies = vec![("config", crate::config::SCHEMA)];
         for def in yaml_defs() {
-            copies.push((def.id, "yaml", text(def.id).unwrap()));
+            copies.push((def.id, text(def.id).unwrap()));
         }
-        for (name, lang, schema) in copies {
+        for (name, schema) in copies {
             let path = root.join(format!("docs/schema/{name}.md"));
             let published = fs::read_to_string(&path).unwrap_or_default();
             assert!(
-                published.contains(&format!("```{lang}\n{schema}```\n")),
+                published.contains(&format!("```json\n{schema}```\n")),
                 "{} が {name} のスキーマと揃っていない",
                 path.display()
             );

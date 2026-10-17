@@ -770,17 +770,17 @@ pub fn md_template(id: &str) -> Option<&'static str> {
     }
 }
 
-/// yaml の Slot のスキーマ（YAML で書いた JSON Schema）。docv slot schema で出す。md の Slot はスキーマを持たない。
+/// yaml の Slot の JSON Schema。docv slot schema で出し、Slot ファイルの 1 行目から参照する。md の Slot はスキーマを持たない。
 pub fn schema(id: &str) -> Option<&'static str> {
     Some(match id {
-        "install" => include_str!("../assets/schema/install.yaml"),
-        "words" => include_str!("../assets/schema/words.yaml"),
-        "stack" => include_str!("../assets/schema/stack.yaml"),
-        "directory-tree" => include_str!("../assets/schema/directory-tree.yaml"),
-        "setup" => include_str!("../assets/schema/setup.yaml"),
-        "env" => include_str!("../assets/schema/env.yaml"),
-        "develop" => include_str!("../assets/schema/develop.yaml"),
-        "cost" => include_str!("../assets/schema/cost.yaml"),
+        "install" => include_str!("../assets/schema/install.schema.json"),
+        "words" => include_str!("../assets/schema/words.schema.json"),
+        "stack" => include_str!("../assets/schema/stack.schema.json"),
+        "directory-tree" => include_str!("../assets/schema/directory-tree.schema.json"),
+        "setup" => include_str!("../assets/schema/setup.schema.json"),
+        "env" => include_str!("../assets/schema/env.schema.json"),
+        "develop" => include_str!("../assets/schema/develop.schema.json"),
+        "cost" => include_str!("../assets/schema/cost.schema.json"),
         _ => return None,
     })
 }

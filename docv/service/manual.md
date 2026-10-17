@@ -87,6 +87,8 @@ Slot の名前、作るファイル、ミッションの一覧を表示する。
 
 Slot ファイルを、決まったパスに作る。
 
+YAML の Slot には、1 行目にスキーマの URL を書く。yaml-language-server に対応したエディタ（VS Code の YAML の拡張など）で、項目の補完と検証が効く。
+
 | オプション | 意味                                    |
 | ---------- | --------------------------------------- |
 | `--print`  | Slot ファイルを作らずに、書く中身を出す |
@@ -100,7 +102,7 @@ docv slot gen doc-guide --print    # 運用中のファイルと雛形を見比�
 
 ### docv slot schema
 
-YAML の Slot のスキーマを表示する。
+YAML の Slot のスキーマ（JSON Schema）を表示する。
 
 ```sh
 docv slot schema words # 用語集のスキーマを表示

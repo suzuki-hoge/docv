@@ -5,19 +5,12 @@ use std::path::Path;
 
 use anyhow::{Context, Result, bail};
 
-/// 実行した CLI の版のスキーマの URL。
-pub fn schema_url() -> String {
-    format!(
-        "https://raw.githubusercontent.com/suzuki-hoge/docv/v{}/assets/schema/docv.schema.json",
-        env!("CARGO_PKG_VERSION")
-    )
-}
+use crate::schema;
 
 /// 推奨する配置（docs/spec/config.md の 7 章）の docv.yaml。すべての項目を、既定の値でコメントに載せる。
 pub fn config_text() -> String {
     format!(
-        "# yaml-language-server: $schema={}
-# docv の設定。項目の型と意味は、1 行目の URL のスキーマにある。
+        "{}# docv の設定。項目の型と意味は、1 行目の URL のスキーマにある。
 # コメントにした項目は、使うときにコメントを外して書き換える。
 
 # HTML に出すプロジェクト名。省略するとルートのディレクトリ名
@@ -60,7 +53,7 @@ format:
   # check で、整形が要るファイルを error にするか
   enabled: false
 ",
-        schema_url()
+        schema::header("docv.schema.json")
     )
 }
 

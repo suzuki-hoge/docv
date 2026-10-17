@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../assets/schema/words.schema.json
 groups:
   - name: ファイルの種類
     items:

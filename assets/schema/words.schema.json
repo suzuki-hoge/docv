@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "用語集（service/words.yaml）",
+  "description": "このプロジェクトの言葉の意味",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "groups": {
+      "description": "用語のまとまりの配列。HTML では、まとまりの名前を見出しにし、用語を表にする",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "description": "まとまりの名前",
+            "type": "string"
+          },
+          "items": {
+            "description": "用語の配列",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "desc"
+              ],
+              "anyOf": [
+                {
+                  "required": [
+                    "ja"
+                  ]
+                },
+                {
+                  "required": [
+                    "en"
+                  ]
+                }
+              ],
+              "properties": {
+                "ja": {
+                  "description": "日本語の名前。`ja` と `en` はどちらかがあればよい",
+                  "type": "string"
+                },
+                "en": {
+                  "description": "英語の名前。`ja` と `en` はどちらかがあればよい",
+                  "type": "string"
+                },
+                "desc": {
+                  "description": "意味",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "body": {
+      "description": "Slot のページの最後に出す Markdown",
+      "type": "string"
+    },
+    "include": {
+      "description": "ページに埋め込む Markdown の、ルートからの相対パスの配列。`パス` はファイル全体を（YAML front matter と h1 を除く）、`パス#見出し` はその見出しの章を埋め込む",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

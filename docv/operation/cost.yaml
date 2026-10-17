@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../assets/schema/cost.schema.json
 accepted_items:
   - name: GitHub Actions（標準のランナー）
     desc: タグの push で各プラットフォーム向けにビルドする。public リポジトリでは、macOS と Windows のランナーも無料
