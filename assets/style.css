@@ -3,7 +3,7 @@
 body { margin: 0; color: #1f2328; font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif; line-height: 1.7; }
 body { display: flex; align-items: flex-start; }
 main { flex: 1; min-width: 0; max-width: 1040px; margin: 0 auto; padding: 32px 40px 80px; }
-/* トップの 4 ページを行き来するサイドバー。印刷の表示（JPG）では出さない */
+/* トップの 5 ページを行き来するサイドバー。印刷の表示（JPG）では出さない */
 .sidebar { position: sticky; top: 0; flex: none; width: 200px; height: 100vh; box-sizing: border-box; padding: 32px 16px; border-right: 1px solid #d8dee4; background: #f6f8fa; }
 .sidebar .project { margin: 0 0 12px; font-weight: 600; }
 .sidebar ul { list-style: none; margin: 0; padding: 0; }
@@ -95,6 +95,16 @@ table.config ul { margin: 0; padding-left: 1.2em; }
 .num { text-align: right; white-space: nowrap; }
 .step-name { font-weight: 600; margin: 0 0 4px; }
 .steps > li { margin-bottom: 12px; }
+
+/* 検索のページ。結果はファイルごとに、パス、タグ、ヒットした行の前後のプレビューを並べる。プレビューの長い行は折り返さず、横にスクロールする */
+form.search input { width: 100%; box-sizing: border-box; margin: 12px 0 4px; padding: 8px 12px; border: 1px solid #d8dee4; border-radius: 6px; font: inherit; }
+form.search input:focus { outline: none; border-color: #0b6bcb; }
+.hit { margin: 20px 0 0; }
+.hit-file { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0 0 4px; }
+.hit-file a { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; }
+pre.preview { margin: 4px 0; white-space: pre; overflow-wrap: normal; overflow-x: auto; }
+pre.preview .ln { display: inline-block; width: 3em; margin-right: 12px; text-align: right; color: #8c959f; user-select: none; }
+mark { background: #fff8c5; color: inherit; }
 
 /* OS ごとの手順のタブ。JS は使わない。印刷の表示（JPG）では、すべての OS を並べる */
 .tabs > input { position: absolute; opacity: 0; pointer-events: none; }

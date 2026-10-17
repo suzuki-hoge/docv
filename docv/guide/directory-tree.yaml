@@ -14,6 +14,8 @@ entries:
     description: docv desc が出す docv の概要。Slot のサービス仕様と同じファイル
   - path: assets/style.css
     description: HTML の CSS
+  - path: assets/search.js
+    description: HTML の検索のページの JS
   - path: docs/
     description: このリポジトリのドキュメント。docv 自身で管理する
   - path: docv/

@@ -1,8 +1,9 @@
 //! docv build。人間向けの HTML と、設定で有効なら Slot のページの JPG を生成する。docv/system/system.md の「HTML の作り」。
 //!
-//! トップは 4 ページに分け、サイドバーで行き来する。
+//! トップは 5 ページに分け、サイドバーで行き来する。
 //! index.html（プロジェクト概要）に Slot ファイルのページへのカード、ADR.html に決定のつながりの図、
-//! プロジェクト詳細.html に Free ファイルのツリー、現在の設定.html に docv.yaml のすべての項目と今の値を置く。
+//! プロジェクト詳細.html に Free ファイルのツリー、現在の設定.html に docv.yaml のすべての項目と今の値、
+//! 検索.html に Slot ファイル、ADR、Free ファイルの中身を探す入力欄を置く。
 //! Slot は 1 つずつ独立したページにし、`<まとまり>/<Slot>.html` に置く。
 //! 画像にしても読めるように、折りたたみは使わない。OS ごとの手順のタブは、印刷の表示（JPG）ではすべて並べる。
 
@@ -15,6 +16,7 @@ use std::sync::OnceLock;
 
 use anyhow::{Context, Result, bail};
 use pulldown_cmark::{CodeBlockKind, CowStr, Event, HeadingLevel, Parser, Tag, TagEnd, html};
+use serde::Serialize;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Theme, ThemeSet};
 use syntect::html::{IncludeBackground, styled_line_to_highlighted_html};
@@ -31,16 +33,18 @@ use crate::textlint;
 use crate::workspace::Project;
 
 const STYLE: &str = include_str!("../assets/style.css");
+const SEARCH: &str = include_str!("../assets/search.js");
 
 /// docv が作った出力先であることを示すファイル。これがない出力先は消さない。
 const MARKER: &str = ".docv";
 const MARKER_TEXT: &str = "docv build の出力。このディレクトリは docv build のたびに作り直す。\n";
 
-/// トップの 4 ページ。サイドバーに、この順で並べる。
+/// トップの 5 ページ。サイドバーに、この順で並べる。
 const PAGE: &str = "index.html";
 const ADR_PAGE: &str = "ADR.html";
 const DETAIL_PAGE: &str = "プロジェクト詳細.html";
 const CONFIG_PAGE: &str = "現在の設定.html";
+const SEARCH_PAGE: &str = "検索.html";
 
 /// サイドバーの項目。描いているページがどれに属するかを示すのにも使う。
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -49,6 +53,7 @@ enum Nav {
     Adr,
     Detail,
     Config,
+    Search,
 }
 
 impl Nav {
@@ -58,6 +63,7 @@ impl Nav {
             Nav::Adr => "ADR",
             Nav::Detail => "プロジェクト詳細",
             Nav::Config => "現在の設定",
+            Nav::Search => "検索",
         }
     }
 
@@ -67,6 +73,7 @@ impl Nav {
             Nav::Adr => ADR_PAGE,
             Nav::Detail => DETAIL_PAGE,
             Nav::Config => CONFIG_PAGE,
+            Nav::Search => SEARCH_PAGE,
         }
     }
 }
@@ -94,6 +101,17 @@ struct Page {
     tags: Vec<String>,
     /// YAML front matter を除いた本文。
     body: String,
+}
+
+/// 検索の索引の、ファイル 1 つ。
+#[derive(Serialize)]
+struct SearchEntry {
+    path: String,
+    /// ページへの、出力先からの相対パス。
+    href: String,
+    /// タグと、その色（CSS の `.tag.c0`〜`.tag.c7`）。
+    tags: Vec<(String, usize)>,
+    lines: Vec<String>,
 }
 
 /// docv build。out（dir.html）の中を作り直す。image（dir.image）を書いていれば、Slot のページを JPG にしてそこに置く。
@@ -139,6 +157,7 @@ fn render(project: &Project, out: &Path) -> Result<Vec<Slot>> {
     }
     write(&out.join(DETAIL_PAGE), &site.render_detail())?;
     write(&out.join(CONFIG_PAGE), &site.render_config())?;
+    write(&out.join(SEARCH_PAGE), &site.render_search()?)?;
     for slot in &slots {
         write(&out.join(page_path(slot)), &site.render_slot(slot))?;
     }
@@ -281,6 +300,51 @@ impl Site<'_> {
         )
     }
 
+    /// 検索.html。入力欄と、探す先の索引。索引は、Slot ファイル、ADR、Free ファイルの順に、中身を行ごとに持つ。
+    /// 入力欄は JS が動くときだけ出し、結果は JS が入力欄の下に並べる。
+    fn render_search(&self) -> Result<String> {
+        *self.dir.borrow_mut() = self.out.to_path_buf();
+        let mut entries = Vec::new();
+        for s in self.slots {
+            entries.push(self.search_entry(&s.path, &[])?);
+        }
+        for a in self.adrs {
+            entries.push(self.search_entry(&a.path, &[])?);
+        }
+        for p in self.pages {
+            entries.push(self.search_entry(&p.source, &p.tags)?);
+        }
+        // <script> の中に置くので、</script> などで閉じないように < を書き換える。
+        let index = serde_json::to_string(&entries)?.replace('<', "\\u003c");
+        let body = format!(
+            "<h1>検索</h1>\n<form class=\"search\" role=\"search\" hidden><input type=\"search\" placeholder=\"入力した文字列をそのまま含む行を探す\" aria-label=\"検索\" autofocus></form>\n<noscript><p class=\"note\">検索には JavaScript が要る。</p></noscript>\n<p class=\"note\" id=\"search-count\"></p>\n<div id=\"search-results\"></div>\n<script>var DOCV_SEARCH={index};\n{SEARCH}</script>\n"
+        );
+        Ok(self.page(
+            &format!(
+                "{} - {}",
+                Nav::Search.label(),
+                escape(&self.project.title())
+            ),
+            Nav::Search,
+            &body,
+        ))
+    }
+
+    /// 検索の索引の、ファイル 1 つ。path はルートからの相対パス。
+    fn search_entry(&self, path: &str, tags: &[String]) -> Result<SearchEntry> {
+        let text = fs::read_to_string(self.project.root.join(path))
+            .with_context(|| format!("{path} を読めない"))?;
+        Ok(SearchEntry {
+            path: path.to_string(),
+            href: self.link(path, "").unwrap_or_default(),
+            tags: tags
+                .iter()
+                .map(|t| (t.clone(), self.tag_color(t)))
+                .collect(),
+            lines: text.lines().map(str::to_string).collect(),
+        })
+    }
+
     /// docv.yaml の項目の表と、docv が使う textlint のルールの表。
     /// 配列の項目は箇条書きにし、選ぶ項目は候補を横に並べて、選んでいるものに色を付ける。値のない項目は `-` を出す。
     fn config(&self, out: &mut String) {
@@ -382,13 +446,19 @@ impl Site<'_> {
         )
     }
 
-    /// HTML の全体。左にトップの 4 ページへのサイドバーを、右に h2 と h3 の目次を置く。印刷の表示（JPG）では、どちらも出さない。
+    /// HTML の全体。左にトップの 5 ページへのサイドバーを、右に h2 と h3 の目次を置く。印刷の表示（JPG）では、どちらも出さない。
     fn page(&self, title: &str, current: Nav, body: &str) -> String {
         let mut nav = format!(
             "<nav class=\"sidebar\">\n<p class=\"project\">{}</p>\n<ul>\n",
             escape(&self.project.title())
         );
-        for item in [Nav::Overview, Nav::Adr, Nav::Detail, Nav::Config] {
+        for item in [
+            Nav::Overview,
+            Nav::Adr,
+            Nav::Detail,
+            Nav::Config,
+            Nav::Search,
+        ] {
             if item == Nav::Adr && self.adrs.is_empty() {
                 continue;
             }
@@ -1730,16 +1800,33 @@ mod tests {
         let out = dir.path().join("out");
         run(&project, &out, None).unwrap();
 
-        // トップは 4 ページ。index.html（プロジェクト概要）には、Slot のページへのカードだけを置く
+        // トップは 5 ページ。index.html（プロジェクト概要）には、Slot のページへのカードだけを置く
         let index = fs::read_to_string(out.join(PAGE)).unwrap();
         let detail = fs::read_to_string(out.join(DETAIL_PAGE)).unwrap();
         let adr_index = fs::read_to_string(out.join(ADR_PAGE)).unwrap();
         let config = fs::read_to_string(out.join(CONFIG_PAGE)).unwrap();
-        // サイドバーで 4 ページを行き来する。描いているページの項目に印を付ける
+        // サイドバーで 5 ページを行き来する。描いているページの項目に印を付ける
         assert!(
-            index.contains("<li><a href=\"index.html\" aria-current=\"page\">プロジェクト概要</a></li>\n<li><a href=\"ADR.html\">ADR</a></li>\n<li><a href=\"プロジェクト詳細.html\">プロジェクト詳細</a></li>\n<li><a href=\"現在の設定.html\">現在の設定</a></li>"),
+            index.contains("<li><a href=\"index.html\" aria-current=\"page\">プロジェクト概要</a></li>\n<li><a href=\"ADR.html\">ADR</a></li>\n<li><a href=\"プロジェクト詳細.html\">プロジェクト詳細</a></li>\n<li><a href=\"現在の設定.html\">現在の設定</a></li>\n<li><a href=\"検索.html\">検索</a></li>"),
             "{index}"
         );
+        // 検索.html に、Slot ファイル、ADR、Free ファイルの順で、中身を行ごとに索引にして書く。< は書き換え、</script> で閉じない
+        let search = fs::read_to_string(out.join(SEARCH_PAGE)).unwrap();
+        assert!(
+            search.contains("<a href=\"検索.html\" aria-current=\"page\">検索</a>"),
+            "{search}"
+        );
+        assert!(
+            search.contains("{\"path\":\"docs/spec/a.md\",\"href\":\"プロジェクト詳細/docs/spec/a.html\",\"tags\":[[\"仕様\",0]],\"lines\":[\"---\",\"mission: A は何か\","),
+            "{search}"
+        );
+        let slot_entry = search
+            .find("\"path\":\"docv/service/install.yaml\"")
+            .unwrap();
+        let adr_entry = search.find("\"path\":\"docv/adr/go.md\"").unwrap();
+        let free_entry = search.find("\"path\":\"docs/spec/a.md\"").unwrap();
+        assert!(slot_entry < adr_entry && adr_entry < free_entry, "{search}");
+        assert!(!search.contains("<nav class=\"outline\">"), "{search}");
         // 現在の設定.html に、docv.yaml のすべての項目を 1 つの表で並べる。選ぶ項目は、すべての候補を横に並べる
         assert!(
             config.contains("<a href=\"現在の設定.html\" aria-current=\"page\">"),
