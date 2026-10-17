@@ -2,10 +2,6 @@
 
 docv の設計のうち、まだ決まっていないこと。決まったら Slot か `docs/spec/` に書き、ここから消す。
 
-## 名前
-
-docv は仮の名前。
-
 ## Slot ファイルからスキーマを参照させるか
 
 YAML の Slot のスキーマは `docv slot schema <slot>` で出せる。`docv.yaml` と同じように、Slot ファイルの先頭に yaml-language-server の書式で URL を書けば、エディタで補完と検証を効かせられる見込みがある。YAML で書いたスキーマをエディタが読めるかは、確かめていない。決まっていないのは、docv slot gen がその行を書くかと、check をスキーマで確かめるか。今の check は Slot の型で確かめていて、スキーマと 2 か所で揃えている。
