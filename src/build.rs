@@ -1244,6 +1244,15 @@ impl Site<'_> {
 
     /// ルートからのパスのファイルの、出力先からのページのパス。ページのないファイルは None。
     fn page_of(&self, target: &str) -> Option<String> {
+        // 設定ファイルのページは、現在の設定のページ。
+        if self
+            .project
+            .config_path
+            .strip_prefix(&self.project.root)
+            .is_ok_and(|rel| markdown::slash_path(rel) == target)
+        {
+            return Some(CONFIG_PAGE.to_string());
+        }
         if self.pages.iter().any(|p| p.source == target) {
             return Some(doc_page(target));
         }
@@ -1263,6 +1272,7 @@ impl Site<'_> {
     }
 
     /// ルートの中のファイルへのリンク先。Free ファイル、Slot ファイル、ADR だけ、そのページに出力先の中の相対パスで向ける。
+    /// docv.yaml は、現在の設定のページに向ける。
     /// HTML は clone したリポジトリで見るので、ほかのファイルはエディタで開けばよく、リンクにしない（None）。
     fn link(&self, target: &str, fragment: &str) -> Option<String> {
         let to = self.out.join(self.page_of(target)?);
@@ -2020,7 +2030,7 @@ mod tests {
             ("docs/a.md", "---\nmission: q\n---\n# A\n"),
             (
                 "docv/system/system.md",
-                "# システム仕様\n\n[memo](../../notes.md) ![図](../../a.svg)\n",
+                "# システム仕様\n\n[memo](../../notes.md) ![図](../../a.svg) [設定](../../docv.yaml)\n",
             ),
         ]);
         let out = dir.path().join("out");
@@ -2030,6 +2040,13 @@ mod tests {
         // ページのないファイルは、リンクにせず文字だけを出す。画像は元のファイルを相対パスで読む
         assert!(page.contains("<p>memo <img src=\"../../a.svg\""), "{page}");
         assert!(!page.contains("notes.md"), "{page}");
+        // docv.yaml へのリンクは、現在の設定のページに向ける
+        assert!(
+            page.contains(
+                "<a href=\"../%E7%8F%BE%E5%9C%A8%E3%81%AE%E8%A8%AD%E5%AE%9A.html\">設定</a>"
+            ),
+            "{page}"
+        );
         assert!(
             detail.contains("href=\"プロジェクト詳細/docs/a.html\""),
             "{detail}"
