@@ -28,23 +28,18 @@ pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Ve
     for path in project.targets(targets)? {
         let text = fs::read_to_string(project.root.join(&path))
             .with_context(|| format!("{path} を読めない"))?;
-        diagnostics.extend(check_file(project, &style, &path, &text));
+        diagnostics.extend(check_markdown(project, &style, &path, &text, true));
         textlint_files.push(path);
     }
-    // Slot のディレクトリの中の .md のファイルには、Free ファイルのルールはかけず、整形と textlint だけをかける。
+    // Slot のディレクトリの中の .md のファイル（md の Slot と ADR）には、YAML front matter のほかは、Free ファイルと同じ検査をかける。
+    // ADR の YAML front matter は adr::check で確かめる。
     for path in project.slot_markdown()? {
         if !targets.is_empty() && !targets.contains(&path) {
             continue;
         }
         let text = fs::read_to_string(project.root.join(&path))
             .with_context(|| format!("{path} を読めない"))?;
-        let mut cx = Checker {
-            project,
-            path: &path,
-            diagnostics: Vec::new(),
-        };
-        check_format(&mut cx, &text);
-        diagnostics.extend(cx.diagnostics);
+        diagnostics.extend(check_markdown(project, &style, &path, &text, false));
         textlint_files.push(path);
     }
     // docv.yaml と YAML の Slot は、末尾の改行だけを整形と連動させる。
@@ -97,7 +92,14 @@ impl Checker<'_> {
     }
 }
 
-fn check_file(project: &Project, style: &Style, path: &str, text: &str) -> Vec<Diagnostic> {
+/// Markdown のファイル 1 つ。frontmatter なら、Free ファイルの YAML front matter を確かめる。
+fn check_markdown(
+    project: &Project,
+    style: &Style,
+    path: &str,
+    text: &str,
+    frontmatter: bool,
+) -> Vec<Diagnostic> {
     let mut cx = Checker {
         project,
         path,
@@ -106,7 +108,9 @@ fn check_file(project: &Project, style: &Style, path: &str, text: &str) -> Vec<D
     let document = markdown::split(text);
     let outline = markdown::outline(&document);
 
-    check_frontmatter(&mut cx, &document);
+    if frontmatter {
+        check_frontmatter(&mut cx, &document);
+    }
     check_structure(&mut cx, &document, &outline);
 
     check_links(&mut cx, &outline);
@@ -428,6 +432,31 @@ lint:
         assert_eq!(
             result[2],
             "docv/service/words.yaml:1: slot-invalid 用語集の Slot の形に合わない: groups: invalid type: integer `1`, expected a sequence at line 1 column 9"
+        );
+    }
+
+    #[test]
+    fn checks_markdown_in_slots_and_adrs() {
+        // md の Slot と ADR に、YAML front matter のほかは、Free ファイルと同じ検査をかける
+        let result = check(&[
+            (
+                "docv/service/manual.md",
+                "# 利用マニュアル\n\n**太字** [切れた](none.md) [見出し](#ない)\n\n# 二つ目\n",
+            ),
+            (
+                "docv/adr/a.md",
+                "---\ngroup: g\ndate: 2026-01-01\n---\n\n# A\n\n[切れた](none.md)\n",
+            ),
+        ]);
+        assert_eq!(
+            result,
+            [
+                "docv/adr/a.md:8: link-broken リンク先 none.md がない",
+                "docv/service/manual.md:3: link-anchor リンク先の見出し #ない がない",
+                "docv/service/manual.md:3: link-broken リンク先 none.md がない",
+                "docv/service/manual.md:3: style-bold 太字を使わない",
+                "docv/service/manual.md:5: title-count h1 が 2 個ある。1 つにする",
+            ]
         );
     }
 

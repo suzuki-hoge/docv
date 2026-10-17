@@ -35,7 +35,7 @@ Slot は、Markdown とは別に、`dir.slot`（既定は `docv/`）から `<ま
 
 `dir.free`、`dir.slot`、`dir.html`、`dir.image`（書いたとき）は、どの 2 つも同じディレクトリにも、一方が他方を含む関係にもできない。`docv.yaml` を読むときに確かめ、違反していれば、どのコマンドもファイルを読み書きせずに終了コード 2 で終わる。
 
-`dir.slot` の中の Markdown（md の Slot と ADR）には、Free ファイルのルール（YAML front matter、書式の規則など）はかけない。整形と textlint だけを、管理対象のファイルと同じくかける。`docv check` にパスを渡したときも、検査するファイルが絞られるだけで、かける検査は変わらない。
+`dir.slot` の中の Markdown（md の Slot と ADR）には、Free ファイルの YAML front matter のルールのほかは、管理対象のファイルと同じ検査をかける。`docv check` にパスを渡したときも、検査するファイルが絞られるだけで、かける検査は変わらない。
 
 ## バイナリに埋め込むもの
 

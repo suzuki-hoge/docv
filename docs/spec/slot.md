@@ -141,6 +141,7 @@ steps:
 | slot-invalid      | YAML の Slot の形に合わない。知らない項目、手順の `id` の重なり、`os` のない `item`、`ja` も `en` もない用語も含む |
 | slot-path-missing | パスの先がない                                                                                                     |
 
+- md の Slot には、YAML front matter のほかは、Free ファイルと同じ検査（[`spec/free.md`](free.md) の「check のルール」の章）をかける
 - directory-tree の `path` の先がなくなったら、ディレクトリの Slot が実装からずれたということ。実装とずれたことに気づけるのは、ここだけ
 
 ---
