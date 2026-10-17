@@ -1,29 +1,33 @@
 steps:
-  - id: check-code
-    name: コミットの前にコードを確かめる
+  - id: fix
+    name: 変えたら整えて確かめる
     items:
       markdown: |
-        ```sh
-        cargo fmt --check
-        cargo clippy --all-targets -- -D warnings
-        cargo test
-        ```
-  - id: check-docs
-    name: ドキュメントを変えたら確かめる
-    items:
-      markdown: |
-        ```sh
-        ./target/release/docv fix
-        ./target/release/docv check
-        ```
-
-        Node.js がないときは、`--no-textlint` を付ける。
-  - id: build
-    name: HTML と JPG を作って見る
-    items:
-      markdown: |
-        `docv.yaml` の `dir.html` で、HTML を `output/docv/html/` に出す。`dir.image` で JPG を `output/docv/image/` に出すので、Chrome が要る。`output/` は `.gitignore` に入れてあり、コミットしない。
+        コードかドキュメントを変えたら、コミットの前に実行する。指摘が 1 件でもあれば止まる。
 
         ```sh
-        ./target/release/docv build
+        make fix
+        ```
+
+        - コードを `cargo fmt` で整え、`cargo clippy` と `cargo test` を通す
+        - `make check-doc-guide` で docv を install し、Doc ガイドの雛形を整えて確かめる。以降は、install した docv で実行する
+        - このリポジトリのドキュメントを `docv fix` で整え、`docv check` を通す
+        - `docv build` で、HTML を `output/docv/html/` に、JPG を `output/docv/image/` に作り直す。`output/` は `.gitignore` に入れてあり、コミットしない
+
+        textlint を使うので Node.js が、JPG を作るので Chrome が要る。
+  - id: check-doc-guide
+    name: Doc ガイドの雛形を整えて確かめる
+    items:
+      markdown: |
+        docv を install してから、雛形（`assets/template/doc-guide.md`）を一時ディレクトリに書き出して `docv fix` する。雛形は管理対象の外にあるため。変わったら雛形に書き戻して install し直し、`docv check` を通す。`make fix` も、途中でこれを実行する。
+
+        ```sh
+        make check-doc-guide
+        ```
+  - id: install
+    name: 手元の docv を新しくする
+    items:
+      markdown: |
+        ```sh
+        make install
         ```

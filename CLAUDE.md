@@ -17,13 +17,7 @@
 
 - 実装の前に Slot と spec を読む。違う実装が必要になったら、実装より先に人間に確認して Slot か spec を直す
 - Rust で書く。単一のバイナリにし、テンプレ・スキーマ・docv の概要・CSS は埋め込む（[`docv/system/system.md`](docv/system/system.md) の「バイナリに埋め込むもの」）
-- コミットの前に次が通ること
-
-```sh
-cargo fmt --check
-cargo clippy --all-targets -- -D warnings
-cargo test
-```
+- コミットの前に `make fix` が通ること。手順は [`docv/guide/develop.yaml`](docv/guide/develop.yaml)（開発コマンド）
 
 - build の出力は、入力が同じなら毎回同じにする（生成日時・実行したマシンのパス・乱数を入れない、並び順を固定する）。[`docv/system/system.md`](docv/system/system.md) の「毎回同じ出力にする決まり」
 - ファイルを書くコマンドは、[`docv/system/system.md`](docv/system/system.md) の「ファイルを書くコマンド」に書いた範囲の外に書かない
