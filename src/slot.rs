@@ -10,7 +10,7 @@ use anyhow::{Context, Result};
 use serde::Deserialize;
 use serde_yaml_ng::Value;
 
-use crate::diagnostic::{Diagnostic, Level};
+use crate::diagnostic::Diagnostic;
 use crate::markdown;
 use crate::workspace::Project;
 
@@ -599,12 +599,11 @@ pub fn load(project: &Project) -> Result<Vec<Slot>> {
 /// Slot ファイルを確かめる。
 pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
     let mut diagnostics = Vec::new();
-    let mut push = |path: &str, line: usize, rule: &str, level: Level, message: String| {
+    let mut push = |path: &str, line: usize, rule: &str, message: String| {
         diagnostics.push(Diagnostic {
             path: path.to_string(),
             line,
             rule: rule.to_string(),
-            level,
             message,
         });
     };
@@ -617,7 +616,7 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
                     file_names()
                 ),
             };
-            push(&file.path, 1, "slot-unknown", Level::Error, message);
+            push(&file.path, 1, "slot-unknown", message);
             continue;
         };
         let text = fs::read_to_string(project.root.join(&file.path))
@@ -630,7 +629,6 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
                     &file.path,
                     line,
                     "slot-invalid",
-                    Level::Error,
                     format!("{}の Slot の形に合わない: {e}", def.label),
                 );
                 continue;
@@ -642,39 +640,21 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
                 .map_or(1, |i| i + 1)
         };
         for (needle, message) in content.problems() {
-            push(
-                &file.path,
-                line_of(&needle),
-                "slot-invalid",
-                Level::Error,
-                message,
-            );
+            push(&file.path, line_of(&needle), "slot-invalid", message);
         }
         for (field, path) in content.paths() {
             if !project.root.join(path).exists() {
-                let level = if field == "path" {
-                    Level::Warn
-                } else {
-                    Level::Error
-                };
                 push(
                     &file.path,
                     line_of(path),
                     "slot-path-missing",
-                    level,
                     format!("{field} の {path} がない"),
                 );
             }
         }
         for target in content.body_and_include().1 {
             if let Err(message) = resolve_include(project, target) {
-                push(
-                    &file.path,
-                    line_of(target),
-                    "slot-include-missing",
-                    Level::Error,
-                    message,
-                );
+                push(&file.path, line_of(target), "slot-include-missing", message);
             }
         }
     }
@@ -888,19 +868,19 @@ mod tests {
         let diagnostics = check(&project).unwrap();
         let result: Vec<String> = diagnostics
             .iter()
-            .map(|d| format!("{}:{} {} {}", d.path, d.line, d.level, d.rule))
+            .map(|d| format!("{}:{} {}", d.path, d.line, d.rule))
             .collect();
         assert_eq!(
             result,
             [
-                "docv/guide/directory-tree.yaml:2 warn slot-path-missing",
-                "docv/guide/directory-tree.yaml:4 error slot-include-missing",
-                "docv/service/03-words.yaml:1 error slot-unknown",
-                "docv/service/install.yaml:2 error slot-invalid",
-                "docv/service/words.yaml:2 error slot-invalid",
-                "docv/system/api.yaml:1 error slot-unknown",
-                "docv/unknown.yaml:1 error slot-unknown",
-                "docv/words.yaml:1 error slot-unknown",
+                "docv/guide/directory-tree.yaml:2 slot-path-missing",
+                "docv/guide/directory-tree.yaml:4 slot-include-missing",
+                "docv/service/03-words.yaml:1 slot-unknown",
+                "docv/service/install.yaml:2 slot-invalid",
+                "docv/service/words.yaml:2 slot-invalid",
+                "docv/system/api.yaml:1 slot-unknown",
+                "docv/unknown.yaml:1 slot-unknown",
+                "docv/words.yaml:1 slot-unknown",
             ]
         );
         // ディレクトリが違う名前、番号を付けた名前には、正しいパスを示す

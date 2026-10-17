@@ -93,7 +93,7 @@ format:
 
 - 既定では使わない。`enable` にしたときだけ、`docv check` が textlint をかけ、`docv fix` が自動修正できるところを直す。かけるのは、管理対象のファイルと、`dir.slots` の中の Markdown（md の Slot と ADR）
 - textlint は Node.js で動くので、使うときだけ Node.js（npx）が必要になる。docv のバイナリには textlint を入れない。`enable` なのに Node.js が見つからないときは、終了コード 2 で終わる
-- 結果は、ほかのルールと同じ形の warn で出す。ルール ID は `textlint/<プリセット>/<ルール>`（例: textlint/ja-technical-writing/sentence-length）。下の表では、プリセットごとにルールの名前だけを書く
+- 結果は、ほかのルールと同じ形の error で出す。ルール ID は `textlint/<プリセット>/<ルール>`（例: textlint/ja-technical-writing/sentence-length）。下の表では、プリセットごとにルールの名前だけを書く
 - `--no-textlint` で、textlint だけを飛ばせる
 - docv は、textlint と 2 つのプリセット（ja-technical-writing、ja-spacing）を npx で取ってくる。版は、docv の版ごとに決める。プロジェクトに `package.json` はいらない。初めて実行するときは、ネットワークが必要
 - プリセットのルールは、使わないものも含めて、すべて docv が値を決める。プリセットの既定には頼らないので、同じ docv なら同じ結果になる

@@ -12,7 +12,7 @@ use std::fs;
 use anyhow::{Context, Result};
 use serde::Deserialize;
 
-use crate::diagnostic::{Diagnostic, Level};
+use crate::diagnostic::Diagnostic;
 use crate::markdown;
 use crate::workspace::Project;
 
@@ -196,7 +196,6 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
             path: path.to_string(),
             line,
             rule: rule.to_string(),
-            level: Level::Error,
             message,
         });
     };

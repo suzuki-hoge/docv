@@ -12,7 +12,7 @@ use serde::Deserialize;
 use serde_json::{Map, Value, json};
 
 use crate::config::Switch;
-use crate::diagnostic::{Diagnostic, Level};
+use crate::diagnostic::Diagnostic;
 use crate::workspace::Project;
 
 /// 使うパッケージ。ルールはプリセットのパッケージから読む。
@@ -252,7 +252,6 @@ impl<'a> Textlint<'a> {
                         "textlint/{}",
                         message.rule_id.as_deref().unwrap_or("unknown")
                     ),
-                    level: Level::Warn,
                     message: message
                         .message
                         .split_whitespace()

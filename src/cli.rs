@@ -7,7 +7,6 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 
 use crate::check::Options;
-use crate::diagnostic::Level;
 use crate::workspace::{Locate, Project};
 use crate::{build, check, desc, fix, generate, init, schema};
 
@@ -165,13 +164,8 @@ fn execute_in_project(project: &Project, command: Command) -> Result<ExitCode> {
             for d in &diagnostics {
                 println!("{d}");
             }
-            let errors = diagnostics
-                .iter()
-                .filter(|d| d.level == Level::Error)
-                .count();
-            let warns = diagnostics.len() - errors;
-            println!("error {errors} 件、warn {warns} 件");
-            Ok(failure_if(errors > 0))
+            println!("error {} 件", diagnostics.len());
+            Ok(failure_if(!diagnostics.is_empty()))
         }
         Command::Fix { paths, no_textlint } => {
             let targets = relative_targets(project, &paths);

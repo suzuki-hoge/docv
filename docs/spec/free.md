@@ -53,21 +53,21 @@ tags:
 
 ### YAML front matter
 
-| ID                  | 強さ  | 内容                                                       |
-| ------------------- | ----- | ---------------------------------------------------------- |
-| frontmatter-invalid | error | YAML front matter が読めない。`mission`、`tags` の型が違う |
-| mission-missing     | error | `mission` がない                                           |
-| mission-multiline   | error | `mission` が複数行                                         |
-| tag-unknown         | error | `docv.yaml` の `tags` にないタグがある                     |
+| ID                  | 内容                                                       |
+| ------------------- | ---------------------------------------------------------- |
+| frontmatter-invalid | YAML front matter が読めない。`mission`、`tags` の型が違う |
+| mission-missing     | `mission` がない                                           |
+| mission-multiline   | `mission` が複数行                                         |
+| tag-unknown         | `docv.yaml` の `tags` にないタグがある                     |
 
 ### 構造とリンク
 
-| ID             | 強さ  | 内容                                                                     |
-| -------------- | ----- | ------------------------------------------------------------------------ |
-| title-count    | error | h1 が 1 つでない                                                         |
-| heading-number | error | 章番号で始まる h2 があるのに、h2 が `1. ` から順に章番号で始まっていない |
-| link-broken    | error | ルートの中を指す相対リンクの先にファイルがない                           |
-| link-text      | error | 管理対象のファイルへのリンクの表示文字が、そのファイルのパスでない       |
+| ID             | 内容                                                                     |
+| -------------- | ------------------------------------------------------------------------ |
+| title-count    | h1 が 1 つでない                                                         |
+| heading-number | 章番号で始まる h2 があるのに、h2 が `1. ` から順に章番号で始まっていない |
+| link-broken    | ルートの中を指す相対リンクの先にファイルがない                           |
+| link-text      | 管理対象のファイルへのリンクの表示文字が、そのファイルのパスでない       |
 
 - 章番号は、h2 のどれかが `1. ` のような章番号で始まっているファイルでだけ確かめる。章番号を使わないファイルでは確かめない
 - リンクのアンカー（`#` 以降）は確かめない

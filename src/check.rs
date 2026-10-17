@@ -7,7 +7,7 @@ use std::path::Path;
 use anyhow::{Context, Result};
 use serde_yaml_ng::Value;
 
-use crate::diagnostic::{Diagnostic, Level};
+use crate::diagnostic::Diagnostic;
 use crate::markdown::{self, Document, Outline};
 use crate::style::{self, Style};
 use crate::textlint::Textlint;
@@ -59,7 +59,6 @@ pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Ve
                     line: format::first_diff_line(&text, &formatted),
                     path,
                     rule: "format-diff".to_string(),
-                    level: Level::Error,
                     message: "末尾の改行を 1 つにする。docv fix で整形する".to_string(),
                 });
             }
@@ -85,12 +84,11 @@ struct Checker<'a> {
 }
 
 impl Checker<'_> {
-    fn push(&mut self, line: usize, rule: &str, level: Level, message: impl Into<String>) {
+    fn push(&mut self, line: usize, rule: &str, message: impl Into<String>) {
         self.diagnostics.push(Diagnostic {
             path: self.path.to_string(),
             line,
             rule: rule.to_string(),
-            level,
             message: message.into(),
         });
     }
@@ -116,7 +114,7 @@ fn check_file(
 
     check_links(&mut cx, &outline);
     for found in style::check(style, path, &document, managed) {
-        cx.push(found.line, found.rule, Level::Error, found.message);
+        cx.push(found.line, found.rule, found.message);
     }
 
     check_format(&mut cx, text);
@@ -132,7 +130,6 @@ fn check_format(cx: &mut Checker, text: &str) {
         cx.push(
             format::first_diff_line(text, &formatted),
             "format-diff",
-            Level::Error,
             "整形が必要。docv fix で整形する",
         );
     }
@@ -146,7 +143,6 @@ fn check_frontmatter(cx: &mut Checker, document: &Document) {
             cx.push(
                 1,
                 "frontmatter-invalid",
-                Level::Error,
                 "YAML front matter を閉じる --- がない",
             );
             return;
@@ -158,7 +154,6 @@ fn check_frontmatter(cx: &mut Checker, document: &Document) {
                 cx.push(
                     1,
                     "frontmatter-invalid",
-                    Level::Error,
                     "YAML front matter はキーと値の組で書く",
                 );
                 return;
@@ -167,7 +162,6 @@ fn check_frontmatter(cx: &mut Checker, document: &Document) {
                 cx.push(
                     1,
                     "frontmatter-invalid",
-                    Level::Error,
                     format!("YAML front matter が読めない: {e}"),
                 );
                 return;
@@ -182,7 +176,6 @@ fn check_frontmatter(cx: &mut Checker, document: &Document) {
                 cx.push(
                     line_of("mission"),
                     "mission-multiline",
-                    Level::Error,
                     "mission は 1 行で書く",
                 );
             }
@@ -190,13 +183,11 @@ fn check_frontmatter(cx: &mut Checker, document: &Document) {
         Some(_) => cx.push(
             line_of("mission"),
             "frontmatter-invalid",
-            Level::Error,
             "mission は文字列で書く",
         ),
         None => cx.push(
             1,
             "mission-missing",
-            Level::Error,
             "mission がない。このファイルを読むと何が分かるかを 1 文で書く",
         ),
     }
@@ -209,7 +200,6 @@ fn check_frontmatter(cx: &mut Checker, document: &Document) {
                     Value::String(t) if cx.project.config.tag_color(t).is_none() => cx.push(
                         line_of("tags"),
                         "tag-unknown",
-                        Level::Error,
                         format!(
                             "タグ {t} は docv.yaml の tags にない。使うなら、docv.yaml の tags に name と color を書いて足す"
                         ),
@@ -218,7 +208,6 @@ fn check_frontmatter(cx: &mut Checker, document: &Document) {
                     _ => cx.push(
                         line_of("tags"),
                         "frontmatter-invalid",
-                        Level::Error,
                         "tags は文字列の配列で書く",
                     ),
                 }
@@ -227,7 +216,6 @@ fn check_frontmatter(cx: &mut Checker, document: &Document) {
         Some(_) => cx.push(
             line_of("tags"),
             "frontmatter-invalid",
-            Level::Error,
             "tags は文字列の配列で書く",
         ),
     }
@@ -240,7 +228,6 @@ fn check_structure(cx: &mut Checker, document: &Document, outline: &Outline) {
         cx.push(
             line,
             "title-count",
-            Level::Error,
             format!("h1 が {} 個ある。1 つにする", h1.len()),
         );
     }
@@ -259,7 +246,6 @@ fn check_links(cx: &mut Checker, outline: &Outline) {
             cx.push(
                 link.line,
                 "link-broken",
-                Level::Error,
                 format!("リンク先 {} がない", link.dest),
             );
         }
@@ -350,15 +336,15 @@ lint:
         assert_eq!(
             without_c,
             [
-                "docs/spec/a.md:1: error mission-missing mission がない。このファイルを読むと何が分かるかを 1 文で書く".to_string(),
-                "docs/spec/b.md:2: error mission-multiline mission は 1 行で書く".to_string(),
-                "docs/spec/b.md:5: error tag-unknown タグ z は docv.yaml の tags にない。使うなら、docv.yaml の tags に name と color を書いて足す".to_string(),
+                "docs/spec/a.md:1: mission-missing mission がない。このファイルを読むと何が分かるかを 1 文で書く".to_string(),
+                "docs/spec/b.md:2: mission-multiline mission は 1 行で書く".to_string(),
+                "docs/spec/b.md:5: tag-unknown タグ z は docv.yaml の tags にない。使うなら、docv.yaml の tags に name と color を書いて足す".to_string(),
             ]
         );
         assert!(
             result
                 .iter()
-                .any(|r| r.starts_with("docs/spec/c.md:1: error frontmatter-invalid"))
+                .any(|r| r.starts_with("docs/spec/c.md:1: frontmatter-invalid"))
         );
     }
 
@@ -377,10 +363,10 @@ lint:
         assert_eq!(
             result,
             [
-                "docs/spec/a.md:6: error title-count h1 が 2 個ある。1 つにする",
-                "docs/spec/b.md:8: error link-text リンクの表示文字を spec/a.md にする",
-                "docs/spec/b.md:8: error style-bold 太字を使わない",
-                "docs/spec/b.md:10: error heading-number h2 の見出しを「2. 」で始める。章番号は 1 から順に振る",
+                "docs/spec/a.md:6: title-count h1 が 2 個ある。1 つにする",
+                "docs/spec/b.md:8: link-text リンクの表示文字を spec/a.md にする",
+                "docs/spec/b.md:8: style-bold 太字を使わない",
+                "docs/spec/b.md:10: heading-number h2 の見出しを「2. 」で始める。章番号は 1 から順に振る",
             ]
         );
     }
@@ -403,15 +389,15 @@ lint:
         assert_eq!(result.len(), 3, "{result:#?}");
         assert_eq!(
             result[0],
-            "docs/spec/a.md:6: error link-broken リンク先 missing.md がない"
+            "docs/spec/a.md:6: link-broken リンク先 missing.md がない"
         );
         assert!(
-            result[1].starts_with("docv/adr/a.md:1: error adr-invalid"),
+            result[1].starts_with("docv/adr/a.md:1: adr-invalid"),
             "{result:#?}"
         );
         assert_eq!(
             result[2],
-            "docv/service/words.yaml:1: error slot-invalid 用語集の Slot の形に合わない: groups: invalid type: integer `1`, expected a sequence at line 1 column 9"
+            "docv/service/words.yaml:1: slot-invalid 用語集の Slot の形に合わない: groups: invalid type: integer `1`, expected a sequence at line 1 column 9"
         );
     }
 
@@ -456,8 +442,8 @@ lint:
         assert_eq!(
             result,
             [
-                "docv/service/manual.md:3: error format-diff 整形が必要。docv fix で整形する",
-                "docv/service/words.yaml:1: error format-diff 末尾の改行を 1 つにする。docv fix で整形する",
+                "docv/service/manual.md:3: format-diff 整形が必要。docv fix で整形する",
+                "docv/service/words.yaml:1: format-diff 末尾の改行を 1 つにする。docv fix で整形する",
             ]
         );
     }
