@@ -3,4 +3,5 @@
 
 entries:
   - path: src/
-    description: 何があるか
+    desc_markdown: |
+      何があるか

@@ -15,6 +15,7 @@ pub mod markdown;
 pub mod meta;
 pub mod schema;
 pub mod slot;
+pub mod slot_markdown;
 pub mod style;
 pub mod textlint;
 pub mod workspace;

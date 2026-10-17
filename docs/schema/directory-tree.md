@@ -21,15 +21,15 @@ tags: [仕様]
         "additionalProperties": false,
         "required": [
           "path",
-          "description"
+          "desc_markdown"
         ],
         "properties": {
           "path": {
             "description": "ルートからの相対パス",
             "type": "string"
           },
-          "description": {
-            "description": "そこに何があるか",
+          "desc_markdown": {
+            "description": "そこに何があるか。Markdown。`|` のブロックで書く。",
             "type": "string"
           }
         }

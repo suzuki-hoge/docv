@@ -49,8 +49,8 @@ tags: [仕様]
                   "description": "版",
                   "type": "string"
                 },
-                "purpose": {
-                  "description": "何に使うか",
+                "purpose_markdown": {
+                  "description": "何に使うか。Markdown。`|` のブロックで書く。",
                   "type": "string"
                 },
                 "url": {

@@ -18,6 +18,7 @@ serde_json = "1.0.152"
 serde_yaml_ng = "0.10.0"
 syntect = { version = "5.3.0", default-features = false, features = ["default-syntaxes", "default-themes", "html", "regex-fancy"] }
 tungstenite = { version = "0.30.0", default-features = false, features = ["handshake"] }
+yaml-rust2 = "0.13.0"
 
 [dev-dependencies]
 tempfile = "3.27.0"

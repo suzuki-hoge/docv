@@ -1,9 +1,10 @@
 # 用語集: このプロジェクトの言葉の意味
-# groups ごとに、name が見出し、items が表になる。ja と en は、どちらかがあればよい。desc には Markdown を書ける。
+# groups ごとに、name が見出し、items が表になる。ja と en は、どちらかがあればよい。_markdown で終わる項目は Markdown で、| のブロックで書く。
 
 groups:
   - name: まとまりの名前
     items:
       - ja: 用語
         en: Term
-        desc: 意味
+        desc_markdown: |
+          意味

@@ -59,13 +59,13 @@ HTML には、この表の順に、まとまりごとに並べる。
 <details>
 <summary>手順の Slot（インストール、環境構築、開発コマンド）</summary>
 
-| 項目           | 中身                                                                    |
-| -------------- | ----------------------------------------------------------------------- |
-| `requirements` | 前提とされるもの。`name`、`version`、`purpose`、`url`                   |
-| `steps`        | 手順の配列。`id`、`name`、`items`。`items` は `os` と `markdown` を持つ |
+| 項目           | 中身                                                                         |
+| -------------- | ---------------------------------------------------------------------------- |
+| `requirements` | 前提とされるもの。`name`、`version`、`purpose_markdown`、`url`               |
+| `steps`        | 手順の配列。`id`、`name`、`items`。`items` は `os` と `body_markdown` を持つ |
 
 - `id` は手順ごとに重ねない
-- `markdown` は、その手順の中身（コマンド、説明など）を Markdown で書く
+- `body_markdown` は、その手順の中身（コマンド、説明など）を Markdown で書く
 - `items` が 1 つなら、配列にしなくてよい。HTML ではタブにしない
 - `items` が複数あるときは、HTML で `os` ごとのタブにする。どの `item` にも `os` を書き、`os` は重ねない。タブは書いた順に並べる。`os` は windows、macos、linux など
 
@@ -75,16 +75,18 @@ steps:
     name: バイナリを取る
     items:
       - os: windows
-        markdown: リリースのページから zip を取り、展開する
+        body_markdown: |
+          リリースのページから zip を取り、展開する
       - os: macos
-        markdown: |
+        body_markdown: |
           ```sh
           curl -L https://example.com/example-macos.tar.gz | tar xz
           ```
   - id: cargo
     name: ソースから入れる
     items:
-      markdown: "`cargo install example`"
+      body_markdown: |
+        `cargo install example`
 ````
 
 </details>
@@ -92,32 +94,44 @@ steps:
 <details>
 <summary>用語集、技術スタック、ディレクトリ</summary>
 
-| Slot           | 項目      | 中身                                                                                                        |
-| -------------- | --------- | ----------------------------------------------------------------------------------------------------------- |
-| words          | `groups`  | 用語のまとまりの配列。`name` と `items`。`items` は `ja`、`en`、`desc`。`ja` と `en` はどちらかがあればよい |
-| stack          | `stack`   | 層の配列。`group`、`image`（任意。図があれば出す）、`items`                                                 |
-|                |           | `items` は `name`、`version`、`purpose`、`url`                                                              |
-| directory-tree | `entries` | `path` と `description` の配列。パスの親子でツリーにし、兄弟は書いた順に並べる                              |
+| Slot           | 項目      | 中身                                                                                                                 |
+| -------------- | --------- | -------------------------------------------------------------------------------------------------------------------- |
+| words          | `groups`  | 用語のまとまりの配列。`name` と `items`。`items` は `ja`、`en`、`desc_markdown`。`ja` と `en` はどちらかがあればよい |
+| stack          | `stack`   | 層の配列。`group`、`image`（任意。図があれば出す）、`items`                                                          |
+|                |           | `items` は `name`、`version`、`purpose_markdown`、`url`                                                              |
+| directory-tree | `entries` | `path` と `desc_markdown` の配列。パスの親子でツリーにし、兄弟は書いた順に並べる                                     |
 
 </details>
 
 <details>
 <summary>環境変数、費用</summary>
 
-| Slot | 項目             | 中身                                                                |
-| ---- | ---------------- | ------------------------------------------------------------------- |
-| env  | `envs`           | `key`、`desc`、`secret`、`local_from`、`release_from` の配列        |
-| cost | `accepted_items` | 費用をかけて使っているもの。`name`、`desc`、`monthly`、`ref` の配列 |
-|      | `rejected_items` | 費用を理由にやっていないこと。形は `accepted_items` と同じ          |
+| Slot | 項目             | 中身                                                                                    |
+| ---- | ---------------- | --------------------------------------------------------------------------------------- |
+| env  | `envs`           | `key`、`desc_markdown`、`secret`、`local_from_markdown`、`release_from_markdown` の配列 |
+| cost | `accepted_items` | 費用をかけて使っているもの。`name`、`desc_markdown`、`monthly`、`ref` の配列            |
+|      | `rejected_items` | 費用を理由にやっていないこと。形は `accepted_items` と同じ                              |
 
-- 環境変数の `secret` は、秘密の値か。`local_from` と `release_from` には、どこで設定しているかを書く
-  - `local_from`: ローカル環境（Docker Compose、`.env` など）
-  - `release_from`: ステージングや本番（ECS のタスク定義、SSM など）
+- 環境変数の `secret` は、秘密の値か。`local_from_markdown` と `release_from_markdown` には、どこで設定しているかを書く
+  - `local_from_markdown`: ローカル環境（Docker Compose、`.env` など）
+  - `release_from_markdown`: ステージングや本番（ECS のタスク定義、SSM など）
 - 費用の `monthly` は 1 か月あたりの金額で、数でも文字列（「3 ドル」など）でもよい。予算が変われば、`accepted_items` と `rejected_items` の間で項目を移す
 
 </details>
 
+- 名前が `_markdown` で終わる項目は Markdown。値は、1 行でも必ず `|` のブロックで書く。`|-`、`|+`、字下げの数を付けた `|2` などは使わない。それ以外の文字列の項目は、Markdown として扱わず、1 行で書く
+- Markdown の項目の中のリンクは、ルートからの相対パスで書く
 - 項目にない文章は、YAML の Slot には書けない。Free ファイルに書いてリンクする
+
+```yaml
+groups:
+  - name: ファイルの種類
+    items:
+      - en: Slot
+        desc_markdown: |
+          どのプロジェクトにも要るドキュメントを書くファイル。`docv/` に置く
+```
+
 - YAML の Slot には、項目の型と意味を書いたスキーマ（JSON Schema）がある。`docv slot schema <slot>` で出す。元のファイルは `assets/schema/<ID>.schema.json` で、`docs/schema/` に写しを置く
 - `docv slot gen` は、YAML の Slot の 1 行目に、yaml-language-server の書式でスキーマの URL を書く。URL は、実行した CLI の版のタグの `assets/schema/` を指す。エディタで項目の補完と検証が効く
 
@@ -135,13 +149,17 @@ steps:
 
 ## 5. check
 
-| ID                | 内容                                                                                                               |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------ |
-| slot-unknown      | Slot のディレクトリに、Slot の名前でないファイルがある                                                             |
-| slot-invalid      | YAML の Slot の形に合わない。知らない項目、手順の `id` の重なり、`os` のない `item`、`ja` も `en` もない用語も含む |
-| slot-path-missing | パスの先がない                                                                                                     |
+| ID                  | 内容                                                                                                               |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| slot-unknown        | Slot のディレクトリに、Slot の名前でないファイルがある                                                             |
+| slot-invalid        | YAML の Slot の形に合わない。知らない項目、手順の `id` の重なり、`os` のない `item`、`ja` も `en` もない用語も含む |
+| slot-path-missing   | パスの先がない                                                                                                     |
+| slot-markdown-style | `_markdown` で終わる項目を、`\|` のブロックで書いていない                                                          |
+| slot-text-multiline | `_markdown` で終わらない文字列の項目が、複数行になっている                                                         |
 
 - md の Slot には、YAML front matter のほかは、Free ファイルと同じ検査（[`spec/free.md`](free.md) の「check のルール」の章）をかける
+- YAML の Slot の Markdown の項目には、リンク、書式の規則、整形、textlint の検査をかける。見出しの検査はかけない。項目の中に h1 はなく、HTML では見出しの段を付け直すため。指摘の行番号は、YAML の行番号で出す
+
 - directory-tree の `path` の先がなくなったら、ディレクトリの Slot が実装からずれたということ。実装とずれたことに気づけるのは、ここだけ
 
 ---

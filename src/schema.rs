@@ -98,7 +98,7 @@ mod tests {
         let install = text("install").unwrap();
         assert!(is_valid(
             install,
-            "steps:\n  - id: a\n    name: A\n    items:\n      markdown: x\n"
+            "steps:\n  - id: a\n    name: A\n    items:\n      body_markdown: x\n"
         ));
         assert!(!is_valid(install, "steps:\n  - id: a\n"));
     }

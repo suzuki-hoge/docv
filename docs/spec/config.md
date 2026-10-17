@@ -85,7 +85,7 @@ format:
 - 既定はどれも `allow`（確かめない）
 - コードブロックとインラインコードの中は見ない
 - 章番号は、設定によらず常に確かめる（[`spec/free.md`](free.md) の「check のルール」の章）
-- 管理対象のファイルのほか、md の Slot と ADR にもかける
+- 管理対象のファイルのほか、md の Slot、ADR、YAML の Slot の Markdown の項目にもかける
 
 ---
 
@@ -93,7 +93,8 @@ format:
 
 文章の校正に textlint を使う仕組み。AI Agent が書く文章のぶれをなくすのが目的なので、使うルールとその値は docv が決める。利用者は、使うかどうか（`enable`、`disable`）だけを決める。
 
-- 既定では使わない。`enable` にしたときだけ、`docv check` が textlint をかけ、`docv fix` が自動修正できるところを直す。かけるのは、管理対象のファイルと、`dir.slot` の中の Markdown（md の Slot と ADR）
+- 既定では使わない。`enable` にしたときだけ、`docv check` が textlint をかけ、`docv fix` が自動修正できるところを直す。かけるのは、管理対象のファイル、`dir.slot` の中の Markdown（md の Slot と ADR）、YAML の Slot の Markdown の項目
+- YAML の Slot の Markdown の項目には、`ja-no-mixed-period`（文末を「。」で終える）をかけない。項目の多くは HTML で表のセルに出す短い説明で、textlint が段落として扱わない Free ファイルの表のセルと、扱いを揃えるため
 - textlint は Node.js で動くので、使うときだけ Node.js（npx）が必要になる。docv のバイナリには textlint を入れない。`enable` なのに Node.js が見つからないときは、終了コード 2 で終わる
 - 結果は、ほかのルールと同じ形の error で出す。ルール ID は `textlint/<プリセット>/<ルール>`（例: textlint/ja-technical-writing/sentence-length）。下の表では、プリセットごとにルールの名前だけを書く
 - `--no-textlint` で、textlint だけを飛ばせる
@@ -165,7 +166,7 @@ docv は、次のルールを使わない。
 
 ## 6. 整形との連動（`format.enabled`）
 
-整形の形は docv が決め、設定では変えない。設定で決めるのは、check を整形と連動させるかだけ。整形は、管理対象のファイルと、`dir.slot` の中の Markdown（md の Slot と ADR）にかける。`docv.yaml` と YAML の Slot は、末尾の改行を 1 つにすることだけをする。
+整形の形は docv が決め、設定では変えない。設定で決めるのは、check を整形と連動させるかだけ。整形は、管理対象のファイル、`dir.slot` の中の Markdown（md の Slot と ADR）、YAML の Slot の Markdown の項目にかける。YAML の Slot は、Markdown の項目の中身を整形し、字下げを付け直して書き戻す。`docv.yaml` と YAML の Slot の末尾の改行は、1 つに整える。
 
 - 表は、列ごとに縦の線の位置を揃える。幅は、全角の文字（Unicode の East Asian Width が W か F の文字）を 2、それ以外の文字を 1 と数える
 - エディタの表の揃え方は、この数え方と違うことがある。手で揃えず、`docv fix` の結果を正とする

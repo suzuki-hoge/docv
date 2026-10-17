@@ -216,6 +216,10 @@ pub const RULES: &[Rule] = &[
     ),
 ];
 
+/// YAML の Slot の Markdown の項目には使わないルール。項目の多くは HTML で表のセルに出す短い説明で、
+/// Free ファイルの表のセルと同じく、文末の「。」を求めない（textlint は表のセルを段落として扱わない）。
+pub const VIRTUAL_OFF: &[&str] = &["ja-no-mixed-period"];
+
 pub struct Textlint<'a> {
     project: &'a Project,
 }
@@ -226,62 +230,85 @@ impl<'a> Textlint<'a> {
         (project.config.lint.textlint == Switch::Enable).then_some(Textlint { project })
     }
 
-    /// files はルートからの相対パス。
-    pub fn lint(&self, files: &[String]) -> Result<Vec<Diagnostic>> {
-        if files.is_empty() {
-            return Ok(Vec::new());
-        }
-        let mut command = self.command()?;
-        command.args(["--format", "json"]).args(files);
-        let output = run(command)?;
-        let results: Vec<FileResult> =
-            serde_json::from_slice(&output.stdout).with_context(|| {
-                format!(
-                    "textlint の結果を読めない\n{}",
-                    String::from_utf8_lossy(&output.stderr).trim()
-                )
-            })?;
+    /// files はルートからの相対パス。virtual は、ファイルにない Markdown（YAML の Slot の Markdown の項目）と、
+    /// 指摘に付けるパス。(パス, Markdown)。virtual には VIRTUAL_OFF のルールをかけない。
+    pub fn lint(
+        &self,
+        files: &[String],
+        virtual_files: &[(String, String)],
+    ) -> Result<Vec<Diagnostic>> {
+        let virtual_dir = VirtualDir::write(virtual_files)?;
         let mut diagnostics = Vec::new();
-        for result in results {
-            let path = self.relative(&result.file_path, files);
-            for message in result.messages {
-                diagnostics.push(Diagnostic {
-                    path: path.clone(),
-                    line: message.line,
-                    rule: format!(
-                        "textlint/{}",
-                        message.rule_id.as_deref().unwrap_or("unknown")
-                    ),
-                    message: message
-                        .message
-                        .split_whitespace()
-                        .collect::<Vec<_>>()
-                        .join(" "),
-                });
+        for (paths, off) in [
+            (files.iter().map(PathBuf::from).collect::<Vec<_>>(), &[][..]),
+            (virtual_dir.paths.clone(), VIRTUAL_OFF),
+        ] {
+            if paths.is_empty() {
+                continue;
+            }
+            let mut command = self.command(off)?;
+            command.args(["--format", "json"]).args(&paths);
+            let output = run(command)?;
+            let results: Vec<FileResult> =
+                serde_json::from_slice(&output.stdout).with_context(|| {
+                    format!(
+                        "textlint の結果を読めない\n{}",
+                        String::from_utf8_lossy(&output.stderr).trim()
+                    )
+                })?;
+            for result in results {
+                let path = virtual_dir
+                    .original(&result.file_path)
+                    .unwrap_or_else(|| self.relative(&result.file_path, files));
+                for message in result.messages {
+                    diagnostics.push(Diagnostic {
+                        path: path.clone(),
+                        line: message.line,
+                        rule: format!(
+                            "textlint/{}",
+                            message.rule_id.as_deref().unwrap_or("unknown")
+                        ),
+                        message: message
+                            .message
+                            .split_whitespace()
+                            .collect::<Vec<_>>()
+                            .join(" "),
+                    });
+                }
             }
         }
         Ok(diagnostics)
     }
 
-    /// textlint の自動修正でファイルを書き換える。
-    pub fn fix(&self, files: &[String]) -> Result<()> {
-        if files.is_empty() {
-            return Ok(());
+    /// textlint の自動修正でファイルを書き換える。virtual は lint と同じで、直した Markdown を同じ順に返す。
+    pub fn fix(&self, files: &[String], virtual_files: &[(String, String)]) -> Result<Vec<String>> {
+        let virtual_dir = VirtualDir::write(virtual_files)?;
+        if !files.is_empty() {
+            let mut command = self.command(&[])?;
+            command.arg("--fix").args(files);
+            run(command)?;
         }
-        let mut command = self.command()?;
-        command.arg("--fix").args(files);
-        run(command)?;
-        Ok(())
+        if !virtual_dir.paths.is_empty() {
+            let mut command = self.command(VIRTUAL_OFF)?;
+            command.arg("--fix").args(&virtual_dir.paths);
+            run(command)?;
+        }
+        virtual_dir
+            .paths
+            .iter()
+            .map(|p| fs::read_to_string(p).with_context(|| format!("{} を読めない", p.display())))
+            .collect()
     }
 
-    fn command(&self) -> Result<Command> {
+    /// off は、RULES で使うルールのうち、この実行では使わないもの。
+    fn command(&self, off: &[&str]) -> Result<Command> {
         let mut command = Command::new(if cfg!(windows) { "npx.cmd" } else { "npx" });
         command.current_dir(&self.project.root);
         command.arg("--yes");
         for package in PACKAGES {
             command.args(["-p", package]);
         }
-        let rc = write_builtin_config(&builtin_config())?;
+        let rc = write_builtin_config(&builtin_config(off))?;
         command.arg("textlint").arg("--config").arg(rc);
         Ok(command)
     }
@@ -301,6 +328,66 @@ impl<'a> Textlint<'a> {
     }
 }
 
+/// ファイルにない Markdown を textlint に渡すために、OS のキャッシュのディレクトリに書いたファイル。
+/// リポジトリにはファイルを作らない。使い終わったら消す。
+struct VirtualDir {
+    dir: Option<PathBuf>,
+    /// 書いたファイル。virtual と同じ順。
+    paths: Vec<PathBuf>,
+    /// 書いたファイルと、指摘に付けるパス。
+    originals: Vec<(PathBuf, String)>,
+}
+
+impl VirtualDir {
+    fn write(virtual_files: &[(String, String)]) -> Result<Self> {
+        if virtual_files.is_empty() {
+            return Ok(VirtualDir {
+                dir: None,
+                paths: Vec::new(),
+                originals: Vec::new(),
+            });
+        }
+        let dir = dirs::cache_dir()
+            .context("OS のキャッシュのディレクトリが分からない")?
+            .join("docv")
+            .join("textlint")
+            .join(format!("virtual-{}", std::process::id()));
+        fs::create_dir_all(&dir).with_context(|| format!("{} を作れない", dir.display()))?;
+        let dir = dir.canonicalize().unwrap_or(dir);
+        let mut paths = Vec::new();
+        let mut originals = Vec::new();
+        for (i, (path, text)) in virtual_files.iter().enumerate() {
+            let file = dir.join(format!("{i}.md"));
+            fs::write(&file, text).with_context(|| format!("{} を書けない", file.display()))?;
+            paths.push(file.clone());
+            originals.push((file, path.clone()));
+        }
+        Ok(VirtualDir {
+            dir: Some(dir),
+            paths,
+            originals,
+        })
+    }
+
+    /// textlint が出したパスが、書いたファイルなら、指摘に付けるパスを返す。
+    fn original(&self, file_path: &str) -> Option<String> {
+        let path = Path::new(file_path);
+        let path = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+        self.originals
+            .iter()
+            .find(|(file, _)| *file == path)
+            .map(|(_, original)| original.clone())
+    }
+}
+
+impl Drop for VirtualDir {
+    fn drop(&mut self) {
+        if let Some(dir) = &self.dir {
+            let _ = fs::remove_dir_all(dir);
+        }
+    }
+}
+
 #[derive(Deserialize)]
 struct FileResult {
     #[serde(rename = "filePath")]
@@ -316,11 +403,15 @@ struct Message {
     line: usize,
 }
 
-/// textlint の設定ファイルの中身。RULES をプリセットごとにまとめる。
-fn builtin_config() -> Value {
+/// textlint の設定ファイルの中身。RULES をプリセットごとにまとめる。off のルールは使わない。
+fn builtin_config(off: &[&str]) -> Value {
     let mut rules = Map::new();
     for r in RULES {
-        let value: Value = serde_json::from_str(r.value).expect("RULES の値は JSON として正しい");
+        let value: Value = if off.contains(&r.name) {
+            Value::Bool(false)
+        } else {
+            serde_json::from_str(r.value).expect("RULES の値は JSON として正しい")
+        };
         let preset = rules
             .entry(format!("preset-{}", r.preset))
             .or_insert_with(|| Value::Object(Map::new()));
@@ -375,7 +466,7 @@ mod tests {
 
     #[test]
     fn builds_builtin_config() {
-        let config = builtin_config();
+        let config = builtin_config(&[]);
         let rules = &config["rules"];
         assert_eq!(
             rules["preset-ja-technical-writing"]["sentence-length"],
@@ -391,6 +482,11 @@ mod tests {
         );
         assert_eq!(rules.as_object().unwrap().len(), 2);
         assert!(RULES.iter().all(|r| !r.desc.is_empty()));
+        let virtual_config = builtin_config(VIRTUAL_OFF);
+        assert_eq!(
+            virtual_config["rules"]["preset-ja-technical-writing"]["ja-no-mixed-period"],
+            json!(false)
+        );
     }
 
     #[test]

@@ -11,7 +11,7 @@ use crate::markdown::{self, Document, Outline};
 use crate::style::{self, Style};
 use crate::textlint::Textlint;
 use crate::workspace::Project;
-use crate::{adr, format, slot};
+use crate::{adr, format, slot, slot_markdown};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Options {
@@ -19,34 +19,52 @@ pub struct Options {
     pub textlint: bool,
 }
 
-/// 管理対象のファイルと Slot を確かめる。targets が空ならすべて、そうでなければそのパス（ルートからの相対パス）だけ。
+/// 管理対象のファイル、Slot、ADR を確かめる。targets が空ならすべて、そうでなければそのパス（ルートからの相対パス）だけ。
 /// targets で絞るのは確かめるファイルだけで、ファイルにかける検査は、targets があってもなくても同じ。
 pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Vec<Diagnostic>> {
     let style = Style::new(&project.config);
+    let wanted = |path: &str| targets.is_empty() || targets.iter().any(|t| t == path);
+    let read = |path: &str| {
+        fs::read_to_string(project.root.join(path)).with_context(|| format!("{path} を読めない"))
+    };
     let mut diagnostics = Vec::new();
     let mut textlint_files = Vec::new();
+    let mut textlint_virtual = Vec::new();
     for path in project.targets(targets)? {
-        let text = fs::read_to_string(project.root.join(&path))
-            .with_context(|| format!("{path} を読めない"))?;
+        let text = read(&path)?;
         diagnostics.extend(check_markdown(project, &style, &path, &text, true));
         textlint_files.push(path);
     }
     // Slot のディレクトリの中の .md のファイル（md の Slot と ADR）には、YAML front matter のほかは、Free ファイルと同じ検査をかける。
     // ADR の YAML front matter は adr::check で確かめる。
-    for path in project.slot_markdown()? {
-        if !targets.is_empty() && !targets.contains(&path) {
-            continue;
-        }
-        let text = fs::read_to_string(project.root.join(&path))
-            .with_context(|| format!("{path} を読めない"))?;
+    for path in project.slot_markdown()?.into_iter().filter(|p| wanted(p)) {
+        let text = read(&path)?;
         diagnostics.extend(check_markdown(project, &style, &path, &text, false));
         textlint_files.push(path);
+    }
+    // YAML の Slot は、Markdown の項目（`_markdown` で終わる項目）の中身に検査をかける。
+    for path in slot::yaml_paths(project)?.into_iter().filter(|p| wanted(p)) {
+        let text = read(&path)?;
+        let Some(scan) = slot_markdown::scan(&text) else {
+            continue;
+        };
+        for problem in scan.problems {
+            diagnostics.push(Diagnostic {
+                path: path.clone(),
+                line: problem.line,
+                rule: problem.rule.to_string(),
+                message: problem.message,
+            });
+        }
+        for block in &scan.blocks {
+            diagnostics.extend(check_block(project, &style, &path, block));
+        }
+        textlint_virtual.push((path, slot_markdown::virtual_markdown(&text, &scan.blocks)));
     }
     // docv.yaml と YAML の Slot は、末尾の改行だけを整形と連動させる。
     if project.config.format.enabled {
         for path in project.yaml_targets(targets)? {
-            let text = fs::read_to_string(project.root.join(&path))
-                .with_context(|| format!("{path} を読めない"))?;
+            let text = read(&path)?;
             let formatted = format::final_newline(&text);
             if formatted != text {
                 diagnostics.push(Diagnostic {
@@ -59,7 +77,6 @@ pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Ve
         }
     }
     // Slot と ADR は、ファイルどうしのつながり（ADR の supersedes など）も見るので、すべて読んでから絞る。
-    let wanted = |path: &str| targets.is_empty() || targets.iter().any(|t| t == path);
     diagnostics.extend(
         slot::check(project)?
             .into_iter()
@@ -69,7 +86,7 @@ pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Ve
     if options.textlint
         && let Some(textlint) = Textlint::new(project)
     {
-        diagnostics.extend(textlint.lint(&textlint_files)?);
+        diagnostics.extend(textlint.lint(&textlint_files, &textlint_virtual)?);
     }
     diagnostics.sort();
     Ok(diagnostics)
@@ -113,12 +130,51 @@ fn check_markdown(
     }
     check_structure(&mut cx, &document, &outline);
 
-    check_links(&mut cx, &outline);
+    let base = Path::new(path).parent().unwrap_or(Path::new(""));
+    check_links(&mut cx, &outline, base);
     for found in style::check(style, &document) {
         cx.push(found.line, found.rule, found.message);
     }
 
     check_format(&mut cx, text);
+    cx.diagnostics
+}
+
+/// YAML の Slot の Markdown の項目 1 つ。行番号は YAML の行番号にする。
+/// 項目の中に h1 はなく、HTML では見出しの段を付け直すので、見出しの検査はかけない。
+/// リンクは、HTML と同じく、ルートからの相対パスとして確かめる。
+fn check_block(
+    project: &Project,
+    style: &Style,
+    path: &str,
+    block: &slot_markdown::Block,
+) -> Vec<Diagnostic> {
+    let mut cx = Checker {
+        project,
+        path,
+        diagnostics: Vec::new(),
+    };
+    let document = Document {
+        frontmatter: None,
+        body: block.text.clone(),
+        body_start_line: block.line,
+    };
+    check_links(&mut cx, &markdown::outline(&document), Path::new(""));
+    for found in style::check(style, &document) {
+        if found.rule != "heading-number" {
+            cx.push(found.line, found.rule, found.message);
+        }
+    }
+    if project.config.format.enabled
+        && let Ok(formatted) = format::format(&block.text)
+        && formatted != block.text
+    {
+        cx.push(
+            block.line - 1 + format::first_diff_line(&block.text, &formatted),
+            "format-diff",
+            "整形が必要。docv fix で整形する",
+        );
+    }
     cx.diagnostics
 }
 
@@ -234,11 +290,8 @@ fn check_structure(cx: &mut Checker, document: &Document, outline: &Outline) {
     }
 }
 
-fn check_links(cx: &mut Checker, outline: &Outline) {
-    let base = Path::new(cx.path)
-        .parent()
-        .unwrap_or(Path::new(""))
-        .to_path_buf();
+/// base は、相対リンクの起点（ルートからの相対パス）。
+fn check_links(cx: &mut Checker, outline: &Outline, base: &Path) {
     for link in &outline.links {
         // ページ内のリンクは、このファイルの見出しを指す。
         if let Some(fragment) = link.dest.strip_prefix('#') {
@@ -251,7 +304,7 @@ fn check_links(cx: &mut Checker, outline: &Outline) {
             }
             continue;
         }
-        let Some((target, fragment)) = markdown::resolve_link(&base, &link.dest) else {
+        let Some((target, fragment)) = markdown::resolve_link(base, &link.dest) else {
             continue;
         };
         let path = cx.project.root.join(&target);
@@ -435,64 +488,67 @@ lint:
         );
     }
 
+    /// md の Slot、ADR、YAML の Slot の Markdown の項目に、Free ファイルと同じ検査をかける（YAML front matter を除く）。
+    const SLOT_FILES: &[(&str, &str)] = &[
+        (
+            "docv/service/manual.md",
+            "# 利用マニュアル\n\n**太字** [切れた](none.md) [見出し](#ない)\n\n# 二つ目\n",
+        ),
+        (
+            "docv/adr/a.md",
+            "---\ngroup: g\ndate: 2026-01-01\nsupersedes: [none]\n---\n\n# A\n\n[切れた](none.md)\n",
+        ),
+        (
+            "docv/service/words.yaml",
+            "groups:\n  - name: g\n    items:\n      - ja: 用語\n        desc_markdown: |\n          説明\n\n          **太字** [切れた](none.md) [ある](docs/spec/b.md)\n      - ja: 二つ目\n        desc_markdown: 1 行\n      - ja: |\n          複数行\n        desc_markdown: |-\n          x\n",
+        ),
+        ("docs/spec/b.md", "---\nmission: q\n---\n\n# B\n"),
+    ];
+
+    const SLOT_RESULTS: &[&str] = &[
+        "docv/adr/a.md:4: adr-unknown-ref supersedes の none という ADR がない",
+        "docv/adr/a.md:9: link-broken リンク先 none.md がない",
+        "docv/service/manual.md:3: link-anchor リンク先の見出し #ない がない",
+        "docv/service/manual.md:3: link-broken リンク先 none.md がない",
+        "docv/service/manual.md:3: style-bold 太字を使わない",
+        "docv/service/manual.md:5: title-count h1 が 2 個ある。1 つにする",
+        "docv/service/words.yaml:8: link-broken リンク先 none.md がない",
+        "docv/service/words.yaml:8: style-bold 太字を使わない",
+        "docv/service/words.yaml:10: slot-markdown-style desc_markdown は Markdown なので、| のブロックで書く",
+        "docv/service/words.yaml:12: slot-text-multiline ja は 1 行で書く。複数行の文章は、_markdown で終わる項目に書く",
+        "docv/service/words.yaml:13: slot-markdown-style desc_markdown は | だけで書く。|- や |+ や字下げの数は付けない",
+    ];
+
     #[test]
     fn checks_markdown_in_slots_and_adrs() {
-        // md の Slot と ADR に、YAML front matter のほかは、Free ファイルと同じ検査をかける
-        let result = check(&[
-            (
-                "docv/service/manual.md",
-                "# 利用マニュアル\n\n**太字** [切れた](none.md) [見出し](#ない)\n\n# 二つ目\n",
-            ),
-            (
-                "docv/adr/a.md",
-                "---\ngroup: g\ndate: 2026-01-01\n---\n\n# A\n\n[切れた](none.md)\n",
-            ),
-        ]);
-        assert_eq!(
-            result,
-            [
-                "docv/adr/a.md:8: link-broken リンク先 none.md がない",
-                "docv/service/manual.md:3: link-anchor リンク先の見出し #ない がない",
-                "docv/service/manual.md:3: link-broken リンク先 none.md がない",
-                "docv/service/manual.md:3: style-bold 太字を使わない",
-                "docv/service/manual.md:5: title-count h1 が 2 個ある。1 つにする",
-            ]
-        );
+        assert_eq!(check(SLOT_FILES), SLOT_RESULTS);
     }
 
     #[test]
     fn checks_the_same_with_paths() {
         let dir = tempfile::tempdir().unwrap();
         write(dir.path(), "docv.yaml", CONFIG);
-        let files = [
-            ("docs/spec/a.md", "# A\n\n[x](missing.md)\n"),
-            ("docv/service/words.yaml", "groups: 1\n"),
-            (
-                "docv/adr/a.md",
-                "---\ngroup: g\ndate: 2026-01-01\nsupersedes: [none]\n---\n\n# A\n",
-            ),
-        ];
-        for (path, text) in files {
+        for (path, text) in SLOT_FILES {
             write(dir.path(), path, text);
         }
         let project = Project::open(&Locate::default(), dir.path()).unwrap();
-        let strings = |targets: &[String]| -> Vec<String> {
-            run(&project, targets, OPTIONS)
+        // パスを渡すと、そのファイルだけを、パスを渡さないときと同じ検査で確かめる
+        for path in [
+            "docv/service/manual.md",
+            "docv/adr/a.md",
+            "docv/service/words.yaml",
+        ] {
+            let result: Vec<String> = run(&project, &[path.to_string()], OPTIONS)
                 .unwrap()
                 .iter()
                 .map(|d| d.to_string())
-                .collect()
-        };
-        let all = strings(&[]);
-        // パスを渡すと、そのファイルだけを、パスを渡さないときと同じ検査で確かめる
-        for (path, _) in files {
-            let expected: Vec<String> = all
-                .iter()
-                .filter(|r| r.starts_with(&format!("{path}:")))
-                .cloned()
                 .collect();
-            assert!(!expected.is_empty(), "{path}");
-            assert_eq!(strings(&[path.to_string()]), expected, "{path}");
+            let expected: Vec<&str> = SLOT_RESULTS
+                .iter()
+                .copied()
+                .filter(|r| r.starts_with(&format!("{path}:")))
+                .collect();
+            assert_eq!(result, expected, "{path}");
         }
     }
 

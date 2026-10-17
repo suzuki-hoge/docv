@@ -23,8 +23,8 @@
             "description": "要る版",
             "type": "string"
           },
-          "purpose": {
-            "description": "何に使うか",
+          "purpose_markdown": {
+            "description": "何に使うか。Markdown。`|` のブロックで書く。",
             "type": "string"
           },
           "url": {
@@ -80,8 +80,8 @@
           "description": "タブの名前。windows、macos、linux など。1 つの手順の中で重ねない",
           "type": "string"
         },
-        "markdown": {
-          "description": "手順の中身（コマンド、説明など）の Markdown",
+        "body_markdown": {
+          "description": "手順の中身（コマンド、説明など）。Markdown。`|` のブロックで書く。",
           "type": "string"
         }
       }

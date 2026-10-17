@@ -3,7 +3,7 @@ steps:
   - id: fix
     name: 変えたら整えて確かめる
     items:
-      markdown: |
+      body_markdown: |
         コードかドキュメントを変えたら、コミットの前に実行する。指摘が 1 件でもあれば止まる。
 
         ```sh
@@ -19,7 +19,7 @@ steps:
   - id: check-doc-guide
     name: Doc ガイドの雛形を整えて確かめる
     items:
-      markdown: |
+      body_markdown: |
         docv を install してから、雛形（`assets/template/doc-guide.md`）を一時ディレクトリに書き出して `docv fix` する。雛形は管理対象の外にあるため。変わったら雛形に書き戻して install し直し、`docv check` を通す。`make fix` も、途中でこれを実行する。
 
         ```sh
@@ -28,7 +28,7 @@ steps:
   - id: install
     name: 手元の docv を新しくする
     items:
-      markdown: |
+      body_markdown: |
         ```sh
         make install
         ```

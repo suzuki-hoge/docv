@@ -21,15 +21,15 @@ tags: [仕様]
         "additionalProperties": false,
         "required": [
           "key",
-          "desc"
+          "desc_markdown"
         ],
         "properties": {
           "key": {
             "description": "環境変数の名前",
             "type": "string"
           },
-          "desc": {
-            "description": "何に使うか",
+          "desc_markdown": {
+            "description": "何に使うか。Markdown。`|` のブロックで書く。",
             "type": "string"
           },
           "secret": {
@@ -37,12 +37,12 @@ tags: [仕様]
             "type": "boolean",
             "default": false
           },
-          "local_from": {
-            "description": "ローカル環境で、どこで設定しているか（Docker Compose、`.env` など）",
+          "local_from_markdown": {
+            "description": "ローカル環境で、どこで設定しているか（Docker Compose、`.env` など）。Markdown。`|` のブロックで書く。",
             "type": "string"
           },
-          "release_from": {
-            "description": "ステージングや本番で、どこで設定しているか（ECS のタスク定義、SSM など）",
+          "release_from_markdown": {
+            "description": "ステージングや本番で、どこで設定しているか（ECS のタスク定義、SSM など）。Markdown。`|` のブロックで書く。",
             "type": "string"
           }
         }

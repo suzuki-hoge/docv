@@ -1,19 +1,21 @@
 # yaml-language-server: $schema=../../assets/schema/install.schema.json
 requirements:
   - name: Node.js
-    purpose: textlint を使うときだけ要る。`docv check --no-textlint` なら要らない
+    purpose_markdown: |
+      textlint を使うときだけ要る。`docv check --no-textlint` なら要らない
     url: https://nodejs.org/
   - name: Google Chrome
-    purpose: JPG を作るときだけ要る
+    purpose_markdown: |
+      JPG を作るときだけ要る
 steps:
   - id: binary
     name: バイナリを取る
     items:
       - os: windows
-        markdown: |
+        body_markdown: |
           GitHub Release から `docv-1.0.0-x86_64-pc-windows-msvc.zip` を取り、展開した docv.exe を PATH の通った場所に置く。
       - os: macos
-        markdown: |
+        body_markdown: |
           GitHub Release からバイナリを取り、パスの通った場所に置く。arm64 の例。
 
           ```sh
@@ -23,7 +25,7 @@ steps:
 
           ブラウザでダウンロードしたバイナリは、macOS の Gatekeeper に止められることがある。curl で取れば止められない。
       - os: linux
-        markdown: |
+        body_markdown: |
           GitHub Release からバイナリを取り、パスの通った場所に置く。x86_64 の例。
 
           ```sh
@@ -33,14 +35,14 @@ steps:
   - id: cargo
     name: ソースから入れる（Rust の環境があるとき）
     items:
-      markdown: |
+      body_markdown: |
         ```sh
         cargo install --git https://github.com/suzuki-hoge/docv
         ```
   - id: local
     name: 手元のソースから入れる（Rust の環境があるとき）
     items:
-      markdown: |
+      body_markdown: |
         クローンしたリポジトリや、手を入れている作業中のソースから入れる。リポジトリのルートで実行する。
 
         ```sh

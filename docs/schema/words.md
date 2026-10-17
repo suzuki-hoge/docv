@@ -34,7 +34,7 @@ tags: [仕様]
               "type": "object",
               "additionalProperties": false,
               "required": [
-                "desc"
+                "desc_markdown"
               ],
               "anyOf": [
                 {
@@ -57,8 +57,8 @@ tags: [仕様]
                   "description": "英語の名前。`ja` と `en` はどちらかがあればよい",
                   "type": "string"
                 },
-                "desc": {
-                  "description": "意味",
+                "desc_markdown": {
+                  "description": "意味。Markdown。`|` のブロックで書く。",
                   "type": "string"
                 }
               }

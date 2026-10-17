@@ -1748,7 +1748,7 @@ mod tests {
             ("docs/tmp/memo.md", "# Memo\n"),
             (
                 "docv/service/install.yaml",
-                "steps:\n  - id: binary\n    name: 取る\n    items:\n      - os: macos\n        markdown: \"`curl`\"\n      - os: windows\n  - id: cargo\n    name: cargo\n    items:\n      markdown: \"`cargo install`\"\n",
+                "steps:\n  - id: binary\n    name: 取る\n    items:\n      - os: macos\n        body_markdown: \"`curl`\"\n      - os: windows\n  - id: cargo\n    name: cargo\n    items:\n      body_markdown: \"`cargo install`\"\n",
             ),
             (
                 "docv/service/service.md",
@@ -2105,7 +2105,7 @@ mod tests {
             ("docs/a.md", "---\nmission: q\n---\n# A\n"),
             (
                 "docv/guide/directory-tree.yaml",
-                "entries:\n  - path: src/\n    description: ソース\n  - path: docs/\n    description: \"`docv` の文書\"\n  - path: src/main.rs\n    description: 入口\n  - path: docs/rule/guide.md\n    description: 書き方\n  - path: docs/spec/\n    description: 規格\n",
+                "entries:\n  - path: src/\n    desc_markdown: ソース\n  - path: docs/\n    desc_markdown: \"`docv` の文書\"\n  - path: src/main.rs\n    desc_markdown: 入口\n  - path: docs/rule/guide.md\n    desc_markdown: 書き方\n  - path: docs/spec/\n    desc_markdown: 規格\n",
             ),
         ]);
         let out = dir.path().join("out");

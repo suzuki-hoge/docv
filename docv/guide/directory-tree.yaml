@@ -1,28 +1,41 @@
 # yaml-language-server: $schema=../../assets/schema/directory-tree.schema.json
 entries:
   - path: docv.yaml
-    description: このリポジトリの docv の設定
+    desc_markdown: |
+      このリポジトリの docv の設定
   - path: src/
-    description: CLI のソースコード。コマンドごとにファイルを分ける
+    desc_markdown: |
+      CLI のソースコード。コマンドごとにファイルを分ける
   - path: assets/
-    description: 実装から参照して出力するもの。バイナリに埋め込む
+    desc_markdown: |
+      実装から参照して出力するもの。バイナリに埋め込む
   - path: assets/template/
-    description: docv slot gen が書く Slot のテンプレ（YAML の Slot の項目のサンプルと、ドキュメントのガイドラインの雛形）
+    desc_markdown: |
+      docv slot gen が書く Slot のテンプレ（YAML の Slot の項目のサンプルと、ドキュメントのガイドラインの雛形）
   - path: assets/schema/
-    description: YAML の Slot と `docv.yaml` の JSON Schema。`docv slot schema` で出す。公開して、エディタの補完に使う
+    desc_markdown: |
+      YAML の Slot と `docv.yaml` の JSON Schema。`docv slot schema` で出す。公開して、エディタの補完に使う
   - path: assets/desc.md
-    description: docv desc が出す docv の概要。Slot のサービス仕様と同じファイル
+    desc_markdown: |
+      docv desc が出す docv の概要。Slot のサービス仕様と同じファイル
   - path: assets/style.css
-    description: HTML の CSS
+    desc_markdown: |
+      HTML の CSS
   - path: assets/search.js
-    description: HTML の検索のページの JS
+    desc_markdown: |
+      HTML の検索のページの JS
   - path: docs/
-    description: このリポジトリのドキュメント。docv 自身で管理する
+    desc_markdown: |
+      このリポジトリのドキュメント。docv 自身で管理する
   - path: docv/
-    description: このリポジトリの Slot ファイル
+    desc_markdown: |
+      このリポジトリの Slot ファイル
   - path: docv/adr/
-    description: 決めた経緯（ADR）
+    desc_markdown: |
+      決めた経緯（ADR）
   - path: docs/spec/
-    description: docv のルールの詳細（Slot、Free ファイル、ADR、`docv.yaml`）
+    desc_markdown: |
+      docv のルールの詳細（Slot、Free ファイル、ADR、`docv.yaml`）
   - path: docs/schema/
-    description: "`docv.yaml` と YAML の Slot のスキーマの写し。HTML で公開する"
+    desc_markdown: |
+      `docv.yaml` と YAML の Slot のスキーマの写し。HTML で公開する

@@ -1,12 +1,12 @@
 # 環境構築: 開発を始めるのに用意するものと、実行するコマンド
-# items が複数ある手順は、HTML で os ごとのタブになる。1 つなら配列にしなくてよい。markdown には Markdown を書ける。
+# items が複数ある手順は、HTML で os ごとのタブになる。1 つなら配列にしなくてよい。_markdown で終わる項目は Markdown で、| のブロックで書く。
 
 requirements: []
 steps:
   - id: clone
     name: リポジトリを取る
     items:
-      markdown: |
+      body_markdown: |
         ```sh
         git clone https://example.com/example.git
         ```

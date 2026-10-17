@@ -266,6 +266,7 @@ pub struct Step {
 #[serde(deny_unknown_fields)]
 pub struct StepItem {
     pub os: Option<String>,
+    #[serde(rename = "body_markdown")]
     pub markdown: Option<String>,
 }
 
@@ -293,6 +294,7 @@ where
 pub struct Tool {
     pub name: String,
     pub version: Option<String>,
+    #[serde(rename = "purpose_markdown")]
     pub purpose: Option<String>,
     pub url: Option<String>,
 }
@@ -319,6 +321,7 @@ pub struct WordGroup {
 pub struct Word {
     pub ja: Option<String>,
     pub en: Option<String>,
+    #[serde(rename = "desc_markdown")]
     pub desc: String,
 }
 
@@ -350,6 +353,7 @@ pub struct Layout {
 #[serde(deny_unknown_fields)]
 pub struct LayoutEntry {
     pub path: String,
+    #[serde(rename = "desc_markdown")]
     pub description: String,
 }
 
@@ -364,12 +368,15 @@ pub struct Env {
 #[serde(deny_unknown_fields)]
 pub struct EnvVar {
     pub key: String,
+    #[serde(rename = "desc_markdown")]
     pub desc: String,
     #[serde(default)]
     pub secret: bool,
     /// ローカル環境で、どこで設定しているか（Docker Compose、.env など）。
+    #[serde(rename = "local_from_markdown")]
     pub local_from: Option<String>,
     /// ステージングや本番で、どこで設定しているか（ECS のタスク定義、SSM など）。
+    #[serde(rename = "release_from_markdown")]
     pub release_from: Option<String>,
 }
 
@@ -388,6 +395,7 @@ pub struct Cost {
 #[serde(deny_unknown_fields)]
 pub struct CostItem {
     pub name: String,
+    #[serde(rename = "desc_markdown")]
     pub desc: Option<String>,
     /// 1 か月あたりの金額。数でも文字列でもよい。
     pub monthly: Option<Value>,
@@ -464,7 +472,11 @@ impl Content {
                 .filter(|w| w.ja.is_none() && w.en.is_none())
                 .map(|w| {
                     (
-                        format!("desc: {}", w.desc.lines().next().unwrap_or("")),
+                        w.desc
+                            .lines()
+                            .find(|l| !l.trim().is_empty())
+                            .unwrap_or("")
+                            .to_string(),
                         "用語に ja か en のどちらかを書く".to_string(),
                     )
                 })
@@ -542,6 +554,15 @@ fn slot_files(project: &Project) -> Result<Vec<SlotFile>> {
             def: def_of_file(path.strip_prefix(&prefix).unwrap_or(&path)),
             path,
         })
+        .collect())
+}
+
+/// YAML の Slot ファイルのパス（ルートからの相対パス）。
+pub fn yaml_paths(project: &Project) -> Result<Vec<String>> {
+    Ok(slot_files(project)?
+        .into_iter()
+        .filter(|f| f.def.is_some_and(|d| d.format == Format::Yaml))
+        .map(|f| f.path)
         .collect())
 }
 
@@ -734,11 +755,11 @@ mod tests {
             ("docv/system/api.yaml", "ref: openapi.yaml\n"),
             (
                 "docv/service/install.yaml",
-                "steps:\n  - id: binary\n    name: a\n    items:\n      - os: macos\n      - markdown: m\n",
+                "steps:\n  - id: binary\n    name: a\n    items:\n      - os: macos\n      - body_markdown: m\n",
             ),
             (
                 "docv/guide/directory-tree.yaml",
-                "entries:\n  - path: src/\n    description: d\n",
+                "entries:\n  - path: src/\n    desc_markdown: |\n      d\n",
             ),
             ("docs/a.md", "# A\n\n## 1. ある\n"),
         ]);
@@ -770,14 +791,14 @@ mod tests {
     fn needs_ja_or_en_for_each_word() {
         let (_dir, project) = project(&[(
             "docv/service/words.yaml",
-            "groups:\n  - name: g\n    items:\n      - en: Slot\n        desc: a\n      - desc: b\n",
+            "groups:\n  - name: g\n    items:\n      - en: Slot\n        desc_markdown: |\n          a\n      - desc_markdown: |\n          b\n",
         )]);
         let result: Vec<String> = check(&project)
             .unwrap()
             .iter()
             .map(|d| format!("{}:{} {}", d.path, d.line, d.rule))
             .collect();
-        assert_eq!(result, ["docv/service/words.yaml:6 slot-invalid"]);
+        assert_eq!(result, ["docv/service/words.yaml:8 slot-invalid"]);
     }
 
     #[test]
@@ -785,7 +806,7 @@ mod tests {
         let install = def("install").unwrap();
         let one = Content::parse(
             install,
-            "steps:\n  - id: cargo\n    name: c\n    items:\n      markdown: m\n",
+            "steps:\n  - id: cargo\n    name: c\n    items:\n      body_markdown: m\n",
         )
         .unwrap();
         let many = Content::parse(

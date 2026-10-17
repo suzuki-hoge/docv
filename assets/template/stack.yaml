@@ -7,4 +7,5 @@ stack:
     items:
       - name: 言語やライブラリ
         version: "1.0"
-        purpose: 何に使うか
+        purpose_markdown: |
+          何に使うか

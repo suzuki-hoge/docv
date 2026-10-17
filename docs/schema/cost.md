@@ -40,8 +40,8 @@ tags: [仕様]
           "description": "名前",
           "type": "string"
         },
-        "desc": {
-          "description": "何のためか、なぜやらないか",
+        "desc_markdown": {
+          "description": "何のためか、なぜやらないか。Markdown。`|` のブロックで書く。",
           "type": "string"
         },
         "monthly": {

@@ -1,18 +1,19 @@
 # インストール: 利用者がこれを入れる手順
-# items が複数ある手順は、HTML で os ごとのタブになる。1 つなら配列にしなくてよい。markdown には Markdown を書ける。
+# items が複数ある手順は、HTML で os ごとのタブになる。1 つなら配列にしなくてよい。_markdown で終わる項目は Markdown で、| のブロックで書く。
 
 requirements:
   - name: 前提とされるもの
-    purpose: 何に使うか
+    purpose_markdown: |
+      何に使うか
 steps:
   - id: binary
     name: バイナリを取る
     items:
       - os: windows
-        markdown: |
+        body_markdown: |
           リリースのページから zip を取り、展開する。
       - os: macos
-        markdown: |
+        body_markdown: |
           ```sh
           curl -L https://example.com/example-macos.tar.gz | tar xz
           ```

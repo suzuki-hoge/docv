@@ -3,10 +3,12 @@
 
 accepted_items:
   - name: サーバー
-    desc: 何に使うか
+    desc_markdown: |
+      何に使うか
     monthly: 3 ドル
     ref: https://example.com/pricing
 rejected_items:
   - name: 有料の監視サービス
-    desc: 費用を理由に入れていない
+    desc_markdown: |
+      費用を理由に入れていない
     monthly: 20 ドル

@@ -2,17 +2,20 @@
 requirements:
   - name: Rust
     version: stable（2024 edition が使えるもの）
-    purpose: ビルドとテスト
+    purpose_markdown: |
+      ビルドとテスト
     url: https://rustup.rs/
   - name: Node.js
-    purpose: make fix で textlint をかける
+    purpose_markdown: |
+      make fix で textlint をかける
   - name: Google Chrome
-    purpose: make fix で JPG を作る
+    purpose_markdown: |
+      make fix で JPG を作る
 steps:
   - id: install
     name: ビルドして手元に入れる
     items:
-      markdown: |
+      body_markdown: |
         ```sh
         make install
         ```
