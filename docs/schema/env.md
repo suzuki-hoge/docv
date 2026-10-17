@@ -47,6 +47,10 @@ tags: [仕様]
           }
         }
       }
+    },
+    "appendix_markdown": {
+      "description": "項目のあとに続けて、ページに出す文章。Markdown。`|` のブロックで書く。",
+      "type": "string"
     }
   }
 }

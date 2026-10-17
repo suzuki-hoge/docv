@@ -248,6 +248,9 @@ pub struct Procedure {
     pub requirements: Vec<Tool>,
     #[serde(default)]
     pub steps: Vec<Step>,
+    /// 項目のあとに続けて出す Markdown。
+    #[serde(rename = "appendix_markdown")]
+    pub appendix: Option<String>,
 }
 
 /// 手順の 1 つ。items が複数あるときは、HTML で os ごとのタブにする。
@@ -304,6 +307,9 @@ pub struct Tool {
 pub struct Words {
     #[serde(default)]
     pub groups: Vec<WordGroup>,
+    /// 項目のあとに続けて出す Markdown。
+    #[serde(rename = "appendix_markdown")]
+    pub appendix: Option<String>,
 }
 
 /// 用語のまとまり。HTML では、name を h2 にし、items を表にする。
@@ -330,6 +336,9 @@ pub struct Word {
 pub struct Stack {
     #[serde(default)]
     pub stack: Vec<StackGroup>,
+    /// 項目のあとに続けて出す Markdown。
+    #[serde(rename = "appendix_markdown")]
+    pub appendix: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -347,6 +356,9 @@ pub struct StackGroup {
 pub struct Layout {
     #[serde(default)]
     pub entries: Vec<LayoutEntry>,
+    /// 項目のあとに続けて出す Markdown。
+    #[serde(rename = "appendix_markdown")]
+    pub appendix: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -362,6 +374,9 @@ pub struct LayoutEntry {
 pub struct Env {
     #[serde(default)]
     pub envs: Vec<EnvVar>,
+    /// 項目のあとに続けて出す Markdown。
+    #[serde(rename = "appendix_markdown")]
+    pub appendix: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -389,6 +404,9 @@ pub struct Cost {
     /// 費用を理由に、やっていないこと。
     #[serde(default)]
     pub rejected_items: Vec<CostItem>,
+    /// 項目のあとに続けて出す Markdown。
+    #[serde(rename = "appendix_markdown")]
+    pub appendix: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -432,6 +450,19 @@ impl Content {
             "cost" => Content::Cost(serde_yaml_ng::from_str(text)?),
             _ => unreachable!("YAML の Slot の ID は DEFS で確かめてある"),
         })
+    }
+
+    /// 項目のあとに続けて出す Markdown（appendix_markdown）。md の Slot は None。
+    pub fn appendix(&self) -> Option<&str> {
+        match self {
+            Content::Procedure(c) => c.appendix.as_deref(),
+            Content::Words(c) => c.appendix.as_deref(),
+            Content::Stack(c) => c.appendix.as_deref(),
+            Content::Layout(c) => c.appendix.as_deref(),
+            Content::Env(c) => c.appendix.as_deref(),
+            Content::Cost(c) => c.appendix.as_deref(),
+            Content::Markdown(_) => None,
+        }
     }
 
     /// 中身が指すルートの中のパス。check で、あるかどうかを確かめる。(フィールド名, パス)

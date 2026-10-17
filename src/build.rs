@@ -679,6 +679,10 @@ impl Site<'_> {
                 let _ = writeln!(out, "{html}");
             }
         }
+        // YAML の Slot の appendix_markdown は、項目のあとに続けて出す。見出しは h2 から。リンクはルートからの相対パス。
+        if let Some(appendix) = slot.content.appendix() {
+            let _ = writeln!(out, "{}", self.markdown(appendix, Path::new(""), false, 2));
+        }
         body
     }
 
@@ -1748,7 +1752,7 @@ mod tests {
             ("docs/tmp/memo.md", "# Memo\n"),
             (
                 "docv/service/install.yaml",
-                "steps:\n  - id: binary\n    name: 取る\n    items:\n      - os: macos\n        body_markdown: \"`curl`\"\n      - os: windows\n  - id: cargo\n    name: cargo\n    items:\n      body_markdown: \"`cargo install`\"\n",
+                "steps:\n  - id: binary\n    name: 取る\n    items:\n      - os: macos\n        body_markdown: \"`curl`\"\n      - os: windows\n  - id: cargo\n    name: cargo\n    items:\n      body_markdown: \"`cargo install`\"\nappendix_markdown: |\n  # 補足\n\n  後書き\n",
             ),
             (
                 "docv/service/service.md",
@@ -1909,6 +1913,14 @@ mod tests {
             install.contains(
                 "<li><p class=\"step-name\">cargo</p><p><code>cargo install</code></p>\n</li>"
             ),
+            "{install}"
+        );
+        // appendix_markdown は、項目のあとに続けて出す。見出しは h2 から
+        let appendix = install
+            .find("<h2 id=\"補足\">補足</h2>\n<p>後書き</p>")
+            .unwrap();
+        assert!(
+            install.find("cargo install").unwrap() < appendix,
             "{install}"
         );
         // Markdown の Slot は、h1 を除き、見出しを下げて、そのまま出す。見出しには id を付ける。details は開く
