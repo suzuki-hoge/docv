@@ -1,6 +1,5 @@
 //! docv check のルール。Free ファイルのルールは docs/spec/free.md の 3 章、書式の規則と textlint は docs/spec/config.md。
 
-use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 
@@ -23,13 +22,12 @@ pub struct Options {
 /// 管理対象のファイルと Slot を確かめる。targets が空ならすべて、そうでなければそのパス（ルートからの相対パス）だけ。
 pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Vec<Diagnostic>> {
     let style = Style::new(&project.config);
-    let managed: HashSet<String> = project.managed()?.into_iter().collect();
     let mut diagnostics = Vec::new();
     let mut textlint_files = Vec::new();
     for path in project.targets(targets)? {
         let text = fs::read_to_string(project.root.join(&path))
             .with_context(|| format!("{path} を読めない"))?;
-        diagnostics.extend(check_file(project, &style, &managed, &path, &text));
+        diagnostics.extend(check_file(project, &style, &path, &text));
         textlint_files.push(path);
     }
     // Slot のディレクトリの中の .md のファイルには、Free ファイルのルールはかけず、整形と textlint だけをかける。
@@ -94,13 +92,7 @@ impl Checker<'_> {
     }
 }
 
-fn check_file(
-    project: &Project,
-    style: &Style,
-    managed: &HashSet<String>,
-    path: &str,
-    text: &str,
-) -> Vec<Diagnostic> {
+fn check_file(project: &Project, style: &Style, path: &str, text: &str) -> Vec<Diagnostic> {
     let mut cx = Checker {
         project,
         path,
@@ -113,7 +105,7 @@ fn check_file(
     check_structure(&mut cx, &document, &outline);
 
     check_links(&mut cx, &outline);
-    for found in style::check(style, path, &document, managed) {
+    for found in style::check(style, &document) {
         cx.push(found.line, found.rule, found.message);
     }
 
@@ -388,7 +380,7 @@ lint:
             ("docs/spec/a.md", &format!("{}# A\n\n# B\n", fm(""))),
             // 終わったタスクは確かめない
             ("docs/plan/p.md", &format!("{}# P\n\n- [x] done\n", fm(""))),
-            // 書式の規則は、lint で deny にしたものと、章番号とリンクの表示文字を確かめる
+            // 書式の規則は、lint で deny にしたものと、章番号を確かめる
             (
                 "docs/spec/b.md",
                 &format!("{}# B\n\n## 1. 一\n\n**b** [a](a.md)\n\n## 二\n", fm("")),
@@ -398,7 +390,6 @@ lint:
             result,
             [
                 "docs/spec/a.md:6: title-count h1 が 2 個ある。1 つにする",
-                "docs/spec/b.md:8: link-text リンクの表示文字を spec/a.md にする",
                 "docs/spec/b.md:8: style-bold 太字を使わない",
                 "docs/spec/b.md:10: heading-number h2 の見出しを「2. 」で始める。章番号は 1 から順に振る",
             ]
