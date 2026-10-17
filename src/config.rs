@@ -2,7 +2,6 @@
 //!
 //! docv.yaml にはツールの設定と、プロジェクト全体で共有する語彙だけを書く。ファイルごとの設定は YAML front matter に書く。
 
-use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
@@ -14,129 +13,105 @@ use serde_json::Value;
 pub const FILE_NAME: &str = "docv.yaml";
 pub const SCHEMA: &str = include_str!("../assets/schema/docv.schema.json");
 
-/// タグに付けられるルール。docs/spec/free.md の 2 章。
-pub const TAG_RULES: &[&str] = &["no-past-wording", "no-done-task"];
-
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub title: Option<String>,
-    /// 管理対象のファイルの glob。
-    pub docs: Vec<String>,
+    #[serde(default)]
+    pub dir: Dirs,
     #[serde(default)]
     pub ignore: Vec<String>,
-    /// タグの一覧。書いたときだけ、YAML front matter の tags をこの中に限る。
-    pub tags: Option<Vec<String>>,
+    /// タグの一覧。YAML front matter の tags には、ここにあるタグだけを書ける。
     #[serde(default)]
-    pub slots: Slots,
-    #[serde(default)]
-    pub output: Output,
+    pub tags: Vec<TagDef>,
     #[serde(default)]
     pub lint: Lint,
     #[serde(default)]
     pub format: Format,
-    /// パスごとに、道具の設定を上書きする。後に書いたものが優先する。
-    #[serde(default)]
-    pub overrides: Vec<Override>,
 }
 
-/// overrides の 1 つ。paths に当てはまるファイルだけ、書いた項目を上書きする。docs/spec/config.md。
+/// tags の 1 つ。color は HTML でのタグの色。
 #[derive(Debug, Clone, Deserialize)]
-pub struct Override {
-    pub paths: Vec<String>,
-    /// textlint をかけるか。
-    pub textlint: Option<bool>,
-    /// 書式の規則（lint.style）をかけるか。
-    pub style: Option<bool>,
-    /// 整形するか。
-    pub format: Option<bool>,
-    /// YAML front matter の mission を必須にするか。
-    pub mission: Option<Requirement>,
+pub struct TagDef {
+    pub name: String,
+    pub color: TagColor,
 }
 
+/// タグの色。並びは CSS の `.tag.c0`〜`.tag.c7` の順。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub enum Requirement {
-    Required,
-    Optional,
+pub enum TagColor {
+    Blue,
+    Green,
+    Yellow,
+    Red,
+    Purple,
+    Orange,
+    Teal,
+    Pink,
 }
 
+impl TagColor {
+    pub fn index(self) -> usize {
+        self as usize
+    }
+}
+
+/// dir。docv が読み書きするディレクトリ。どれもルートからの相対パス。docs/spec/config.md の 3 章。
 #[derive(Debug, Clone, Deserialize)]
-pub struct Slots {
-    #[serde(default = "default_slots_dir")]
-    pub dir: String,
+pub struct Dirs {
+    /// 管理対象の Markdown（Free ファイル）を置くディレクトリ。
+    #[serde(default = "default_free")]
+    pub free: String,
+    /// Slot ファイルを置くディレクトリ。
+    #[serde(default = "default_slots")]
+    pub slots: String,
+    /// docv build が HTML を出すディレクトリ。
+    #[serde(default = "default_html")]
+    pub html: String,
+    /// docv build が Slot のページの JPG を出すディレクトリ。書かなければ JPG を作らない。
+    pub image: Option<String>,
 }
 
-impl Default for Slots {
+impl Default for Dirs {
     fn default() -> Self {
-        Slots {
-            dir: default_slots_dir(),
+        Dirs {
+            free: default_free(),
+            slots: default_slots(),
+            html: default_html(),
+            image: None,
         }
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct Output {
-    #[serde(default = "default_output_dir")]
-    pub dir: String,
-    #[serde(default = "default_true")]
-    pub commit: bool,
-    /// docv build で、Slot のページを JPG にするか。
-    #[serde(default)]
-    pub image: bool,
-}
-
-impl Default for Output {
-    fn default() -> Self {
-        Output {
-            dir: default_output_dir(),
-            commit: true,
-            image: false,
-        }
-    }
-}
-
+/// lint。docs/spec/config.md の 4 章と 5 章。
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct Lint {
     #[serde(default)]
-    pub words: Words,
-    pub style: Option<Value>,
-    /// タグごとに、そのタグを持つファイルにかけるルール。
+    pub bold: Permission,
     #[serde(default)]
-    pub tags: BTreeMap<String, Vec<String>>,
+    pub italic: Permission,
     #[serde(default)]
-    pub textlint: Textlint,
+    pub dollar: Permission,
+    /// textlint で文章を校正するか。使うルールは docv が決める。
+    #[serde(default)]
+    pub textlint: Switch,
 }
 
-/// lint.textlint。docs/spec/config.md の 6 章。
-#[derive(Debug, Clone, Default, Deserialize)]
-pub struct Textlint {
-    #[serde(default)]
-    pub enabled: bool,
-    #[serde(default)]
-    pub level: TextlintLevel,
-    #[serde(default)]
-    pub presets: Vec<String>,
-    #[serde(default)]
-    pub rules: BTreeMap<String, Value>,
-    #[serde(default)]
-    pub prh: Vec<String>,
-    pub config: Option<String>,
+/// 書き方を許すか。
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Permission {
+    #[default]
+    Allow,
+    Deny,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub enum TextlintLevel {
+pub enum Switch {
+    Enable,
     #[default]
-    Warn,
-    Error,
-}
-
-#[derive(Debug, Clone, Default, Deserialize)]
-pub struct Words {
-    #[serde(default)]
-    pub add: Vec<String>,
-    #[serde(default)]
-    pub remove: Vec<String>,
+    Disable,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -145,16 +120,23 @@ pub struct Format {
     pub enabled: bool,
 }
 
-fn default_slots_dir() -> String {
+fn default_free() -> String {
+    "docs".to_string()
+}
+
+fn default_slots() -> String {
     "docv".to_string()
 }
 
-fn default_output_dir() -> String {
+fn default_html() -> String {
     "docv/build".to_string()
 }
 
-fn default_true() -> bool {
-    true
+/// `./` と末尾の `/` を除く。
+pub fn normalize_dir(dir: &str) -> String {
+    dir.trim_start_matches("./")
+        .trim_end_matches('/')
+        .to_string()
 }
 
 pub fn load(path: &Path) -> Result<Config> {
@@ -164,12 +146,27 @@ pub fn load(path: &Path) -> Result<Config> {
 }
 
 impl Config {
-    /// タグにかけるルール。
-    pub fn rules_of<'a>(&'a self, tags: &'a [String]) -> impl Iterator<Item = &'a str> + 'a {
-        tags.iter()
-            .filter_map(|tag| self.lint.tags.get(tag))
-            .flatten()
-            .map(String::as_str)
+    /// 管理対象の Markdown を置くディレクトリ（ルートからの相対パス）。
+    pub fn free_dir(&self) -> String {
+        normalize_dir(&self.dir.free)
+    }
+
+    pub fn slots_dir(&self) -> String {
+        normalize_dir(&self.dir.slots)
+    }
+
+    pub fn html_dir(&self) -> String {
+        normalize_dir(&self.dir.html)
+    }
+
+    /// JPG を出すディレクトリ。書いていなければ None で、JPG を作らない。
+    pub fn image_dir(&self) -> Option<String> {
+        self.dir.image.as_deref().map(normalize_dir)
+    }
+
+    /// tags に書いたタグの色。tags にないタグなら None。
+    pub fn tag_color(&self, name: &str) -> Option<TagColor> {
+        self.tags.iter().find(|t| t.name == name).map(|t| t.color)
     }
 }
 
@@ -212,9 +209,27 @@ fn validate_schema(value: &Value) -> Result<()> {
 fn validate_semantics(config: &Config) -> Result<()> {
     let mut errors = Vec::new();
 
-    for (i, pattern) in config.docs.iter().enumerate() {
-        if let Err(e) = glob(pattern) {
-            errors.push(format!("/docs/{i}: glob として読めない: {e}"));
+    let is_root = |dir: &str| dir.is_empty() || dir == ".";
+    let under = |path: &str, dir: &str| path == dir || path.starts_with(&format!("{dir}/"));
+    if is_root(&config.free_dir()) {
+        errors.push("/dir/free: ルートは書けない。Markdown を置くディレクトリを書く".to_string());
+    }
+    if is_root(&config.html_dir()) {
+        errors.push("/dir/html: ルートは書けない".to_string());
+    }
+    if let Some(image) = config.image_dir() {
+        if is_root(&image) {
+            errors.push("/dir/image: ルートは書けない".to_string());
+        } else if under(&config.html_dir(), &image) {
+            errors.push(
+                "/dir/image: dir.html と同じか、dir.html を含むディレクトリは書けない".to_string(),
+            );
+        }
+    }
+    let mut names = std::collections::BTreeSet::new();
+    for (i, tag) in config.tags.iter().enumerate() {
+        if !names.insert(tag.name.as_str()) {
+            errors.push(format!("/tags/{i}: タグ {} が重なっている", tag.name));
         }
     }
     for (i, pattern) in config.ignore.iter().enumerate() {
@@ -222,42 +237,6 @@ fn validate_semantics(config: &Config) -> Result<()> {
             errors.push(format!("/ignore/{i}: glob として読めない: {e}"));
         }
     }
-    for (i, o) in config.overrides.iter().enumerate() {
-        for (j, pattern) in o.paths.iter().enumerate() {
-            if let Err(e) = glob(pattern) {
-                errors.push(format!(
-                    "/overrides/{i}/paths/{j}: glob として読めない: {e}"
-                ));
-            }
-        }
-    }
-
-    for (tag, rules) in &config.lint.tags {
-        if let Some(tags) = &config.tags
-            && !tags.contains(tag)
-        {
-            errors.push(format!("/lint/tags/{tag}: タグ {tag} は tags にない"));
-        }
-        for rule in rules {
-            if !TAG_RULES.contains(&rule.as_str()) {
-                errors.push(format!(
-                    "/lint/tags/{tag}: ルール {rule} はない。使えるのは {}",
-                    TAG_RULES.join("、")
-                ));
-            }
-        }
-    }
-
-    let textlint = &config.lint.textlint;
-    for key in textlint.rules.keys() {
-        let preset = key.split_once('/').map_or(key.as_str(), |(p, _)| p);
-        if !textlint.presets.iter().any(|p| p == preset) {
-            errors.push(format!(
-                "/lint/textlint/rules/{key}: プリセット {preset} が presets にない"
-            ));
-        }
-    }
-
     report("設定が正しくない", errors)
 }
 
@@ -281,12 +260,13 @@ mod tests {
 
     #[test]
     fn fills_defaults() {
-        let config = parse("docs: []\n").unwrap();
-        assert_eq!(config.slots.dir, "docv");
-        assert_eq!(config.output.dir, "docv/build");
-        assert!(config.output.commit);
+        let config = parse("{}\n").unwrap();
+        assert_eq!(config.free_dir(), "docs");
+        assert_eq!(config.slots_dir(), "docv");
+        assert_eq!(config.html_dir(), "docv/build");
+        assert_eq!(config.image_dir(), None);
         assert!(!config.format.enabled);
-        assert!(config.tags.is_none());
+        assert!(config.tags.is_empty());
     }
 
     #[test]
@@ -297,54 +277,44 @@ mod tests {
 
     #[test]
     fn rejects_schema_violation() {
-        let error = error_of("docs: []\nunknown: 1\n");
+        let error = error_of("unknown: 1\n");
         assert!(error.contains("スキーマに合わない"), "{error}");
         assert!(error.contains("unknown"), "{error}");
     }
 
     #[test]
-    fn rejects_unknown_tag_and_rule() {
-        let error = error_of("docs: []\ntags: [仕様]\nlint:\n  tags:\n    計画: [no-done-task]\n");
-        assert!(
-            error.contains("/lint/tags/計画: タグ 計画 は tags にない"),
-            "{error}"
-        );
-        let error = error_of("docs: []\nlint:\n  tags:\n    仕様: [no-such-rule]\n");
-        assert!(error.contains("/lint/tags/仕様/0"), "{error}");
+    fn reads_lint() {
+        let config = parse("lint:\n  bold: deny\n  textlint: enable\n").unwrap();
+        assert_eq!(config.lint.bold, Permission::Deny);
+        assert_eq!(config.lint.italic, Permission::Allow);
+        assert_eq!(config.lint.textlint, Switch::Enable);
+        let error = error_of("lint:\n  bold: true\n");
+        assert!(error.contains("/lint/bold"), "{error}");
     }
 
     #[test]
-    fn collects_rules_of_tags() {
-        let config = parse(
-            "docs: []\nlint:\n  tags:\n    仕様: [no-past-wording]\n    計画: [no-done-task]\n",
-        )
-        .unwrap();
-        let tags = ["計画".to_string(), "その他".to_string()];
-        assert_eq!(config.rules_of(&tags).collect::<Vec<_>>(), ["no-done-task"]);
+    fn reads_dirs() {
+        let config = parse("dir:\n  free: ./notes/\n  image: out/jpg\n").unwrap();
+        assert_eq!(config.free_dir(), "notes");
+        assert_eq!(config.image_dir().as_deref(), Some("out/jpg"));
+        let error = error_of("dir:\n  free: .\n");
+        assert!(error.contains("/dir/free: ルートは書けない"), "{error}");
+        let error = error_of("dir:\n  html: out\n  image: out\n");
+        assert!(error.contains("/dir/image: dir.html と同じか"), "{error}");
+        assert!(parse("dir:\n  html: out\n  image: out/jpg\n").is_ok());
     }
 
     #[test]
-    fn rejects_textlint_rule_of_unused_preset() {
-        let error = error_of(
-            "docs: []\nlint:\n  textlint:\n    presets: [ja-spacing]\n    rules:\n      jtf-style/x: false\n",
-        );
-        assert!(
-            error.contains(
-                "/lint/textlint/rules/jtf-style/x: プリセット jtf-style が presets にない"
-            ),
-            "{error}"
-        );
-    }
-
-    #[test]
-    fn reads_overrides() {
-        let config = parse(
-            "docs: []\noverrides:\n  - paths: [docs/tmp/**]\n    textlint: false\n    mission: optional\n",
-        )
-        .unwrap();
-        assert_eq!(config.overrides[0].textlint, Some(false));
-        assert_eq!(config.overrides[0].mission, Some(Requirement::Optional));
-        assert_eq!(config.overrides[0].style, None);
+    fn reads_tags_with_colors() {
+        let config = parse("tags:\n  - name: 仕様\n    color: red\n").unwrap();
+        assert_eq!(config.tag_color("仕様"), Some(TagColor::Red));
+        assert_eq!(config.tag_color("手順"), None);
+        let error = error_of("tags:\n  - name: a\n    color: red\n  - name: a\n    color: blue\n");
+        assert!(error.contains("/tags/1: タグ a が重なっている"), "{error}");
+        let error = error_of("tags:\n  - name: a\n    color: black\n");
+        assert!(error.contains("/tags/0/color"), "{error}");
+        let error = error_of("tags:\n  - name: a\n");
+        assert!(error.contains("color"), "{error}");
     }
 
     #[test]

@@ -46,6 +46,17 @@ pub fn format(text: &str) -> Result<String> {
     })
 }
 
+/// YAML のファイル（docv.yaml と YAML の Slot）の整形。末尾の改行を 1 つにする。中身は変えない。
+pub fn final_newline(text: &str) -> String {
+    let text = text.replace("\r\n", "\n");
+    let body = text.trim_end_matches('\n');
+    if body.is_empty() {
+        String::new()
+    } else {
+        format!("{body}\n")
+    }
+}
+
 /// 2 つの文字列で、最初に違う行（1 始まり）。
 pub fn first_diff_line(a: &str, b: &str) -> usize {
     let mut a_lines = a.split_inclusive('\n');
@@ -86,5 +97,12 @@ mod tests {
     fn finds_first_different_line() {
         assert_eq!(first_diff_line("a\nb\nc\n", "a\nb\nd\n"), 3);
         assert_eq!(first_diff_line("a\n", "a\nb\n"), 2);
+    }
+
+    #[test]
+    fn keeps_one_final_newline() {
+        assert_eq!(final_newline("a: 1"), "a: 1\n");
+        assert_eq!(final_newline("a: 1\r\n\n\n"), "a: 1\n");
+        assert_eq!(final_newline(""), "");
     }
 }

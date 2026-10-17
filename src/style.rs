@@ -1,65 +1,37 @@
-//! 書式の規則（lint.style）。docs/spec/config.md の 5 章。
+//! 書式の規則。lint の bold、italic、dollar（docs/spec/config.md の 4 章）と、
+//! 常に確かめる章番号とリンクの表示文字（docs/spec/free.md の 3 章）。
 
 use std::collections::{BTreeMap, HashSet};
 use std::path::Path;
 
 use pulldown_cmark::{Event, HeadingLevel, Parser, Tag, TagEnd};
-use serde_json::Value;
 
+use crate::config::{Config, Permission};
 use crate::markdown::{self, Document, LineIndex};
 
-/// 1 つのファイルに効く書式の規則。
+/// 1 つのファイルにかける書式の規則。
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Style {
     pub bold: bool,
     pub italic: bool,
-    /// 使ってよい HTML タグ。None なら確かめない。
-    pub html: Option<Vec<String>>,
     pub dollar: bool,
-    pub heading_number: bool,
-    pub section_separator: bool,
-    /// link_text の base。None なら確かめない。
-    pub link_text: Option<String>,
-    pub image_alt: bool,
+    /// リンクの表示文字のパスの起点（docs のディレクトリ）。None ならルートからのパス。
+    pub link_base: Option<String>,
 }
 
 impl Style {
-    /// lint.style に、docs の項目の style を上書きする。false を書いた規則は使わない。
-    pub fn resolve(base: Option<&Value>, over: Option<&Value>) -> Style {
-        let mut rules = serde_json::Map::new();
-        for value in [base, over].into_iter().flatten() {
-            if let Value::Object(map) = value {
-                rules.extend(map.clone());
-            }
-        }
-        let is = |key: &str, word: &str| rules.get(key).and_then(Value::as_str) == Some(word);
+    pub fn new(config: &Config) -> Style {
+        let deny = |p: Permission| p == Permission::Deny;
         Style {
-            bold: is("bold", "deny"),
-            italic: is("italic", "deny"),
-            html: rules.get("html").and_then(Value::as_array).map(|tags| {
-                tags.iter()
-                    .filter_map(Value::as_str)
-                    .map(str::to_ascii_lowercase)
-                    .collect()
-            }),
-            dollar: is("dollar", "deny"),
-            heading_number: is("heading_number", "require"),
-            section_separator: is("section_separator", "require"),
-            link_text: rules
-                .get("link_text")
-                .and_then(|v| v.get("base"))
-                .and_then(Value::as_str)
-                .map(|base| {
-                    base.trim_start_matches("./")
-                        .trim_end_matches('/')
-                        .to_string()
-                }),
-            image_alt: is("image_alt", "require"),
+            bold: deny(config.lint.bold),
+            italic: deny(config.lint.italic),
+            dollar: deny(config.lint.dollar),
+            link_base: Some(config.free_dir()),
         }
     }
 }
 
-/// link_text の規則で求める表示文字。from と to はルートからの相対パス。
+/// リンクの表示文字として求めるパス。from と to はルートからの相対パス。
 /// リンク元とリンク先がどちらも base の中にあれば base からのパス、そうでなければルートからのパス。
 pub fn link_text(base: Option<&str>, from: &str, to: &str) -> String {
     let inside = |path: &str, base: &str| {
@@ -82,7 +54,7 @@ pub struct Found {
     pub message: String,
 }
 
-/// path はルートからの相対パス。managed は管理対象のファイル（tmp を除く）のパスで、link_text に使う。
+/// path はルートからの相対パス。managed は管理対象のファイルのパスで、リンクの表示文字に使う。
 pub fn check(
     style: &Style,
     path: &str,
@@ -101,112 +73,52 @@ pub fn check(
         });
     };
 
-    let mut depth = 0usize;
-    let mut previous_is_rule = false;
-    let mut h2_count = 0usize;
     let mut in_code_block = false;
-    let mut in_comment = false;
-    // 見出し・リンク・画像の中の文字を集める。（行、文字、求める表示文字）
+    // 見出しとリンクの中の文字を集める。（行、文字、求める表示文字）
     let mut heading: Option<(usize, String)> = None;
+    let mut h2: Vec<(usize, String)> = Vec::new();
     let mut link: Option<(usize, String, String)> = None;
-    let mut image: Option<(usize, String)> = None;
     let mut dollars: BTreeMap<usize, usize> = BTreeMap::new();
 
     for (event, range) in Parser::new_ext(body, markdown::OPTIONS).into_offset_iter() {
         let line = index.line(range.start);
         match &event {
-            Event::Start(tag) => {
-                if depth == 0 {
-                    if matches!(
-                        tag,
-                        Tag::Heading {
-                            level: HeadingLevel::H2,
-                            ..
-                        }
-                    ) {
-                        h2_count += 1;
-                        if style.section_separator && h2_count > 1 && !previous_is_rule {
-                            push(
-                                line,
-                                "style-section-separator",
-                                "章（h2）の直前に --- を置く".to_string(),
-                            );
-                        }
-                    }
-                    previous_is_rule = false;
+            Event::Start(tag) => match tag {
+                Tag::Heading {
+                    level: HeadingLevel::H2,
+                    ..
+                } => heading = Some((line, String::new())),
+                Tag::CodeBlock(_) => in_code_block = true,
+                Tag::Strong if style.bold => push(line, "style-bold", "太字を使わない".to_string()),
+                Tag::Emphasis if style.italic => {
+                    push(line, "style-italic", "斜体を使わない".to_string())
                 }
-                depth += 1;
-                match tag {
-                    Tag::Heading {
-                        level: HeadingLevel::H2,
-                        ..
-                    } => heading = Some((line, String::new())),
-                    Tag::CodeBlock(_) => in_code_block = true,
-                    Tag::Strong if style.bold => {
-                        push(line, "style-bold", "太字を使わない".to_string())
+                Tag::Link { dest_url, .. } => {
+                    if let Some(expected) = expected_text(style, path, base_dir, dest_url, managed)
+                    {
+                        link = Some((line, String::new(), expected));
                     }
-                    Tag::Emphasis if style.italic => {
-                        push(line, "style-italic", "斜体を使わない".to_string())
-                    }
-                    Tag::Link { dest_url, .. } => {
-                        if let Some(expected) =
-                            expected_text(style, path, base_dir, dest_url, managed)
-                        {
-                            link = Some((line, String::new(), expected));
-                        }
-                    }
-                    Tag::Image { .. } if style.image_alt => image = Some((line, String::new())),
-                    _ => {}
                 }
-            }
-            Event::End(tag) => {
-                depth = depth.saturating_sub(1);
-                match tag {
-                    TagEnd::Heading(HeadingLevel::H2) => {
-                        if let Some((line, text)) = heading.take()
-                            && style.heading_number
-                        {
-                            let number = format!("{h2_count}. ");
-                            if !text.trim().starts_with(&number) {
-                                push(
-                                    line,
-                                    "style-heading-number",
-                                    format!(
-                                        "h2 の見出しを「{number}」で始める。章番号は 1 から順に振る"
-                                    ),
-                                );
-                            }
-                        }
+                _ => {}
+            },
+            Event::End(tag) => match tag {
+                TagEnd::Heading(HeadingLevel::H2) => h2.extend(heading.take()),
+                TagEnd::CodeBlock => in_code_block = false,
+                TagEnd::Link => {
+                    if let Some((line, text, expected)) = link.take()
+                        && text.trim() != expected
+                    {
+                        push(
+                            line,
+                            "link-text",
+                            format!("リンクの表示文字を {expected} にする"),
+                        );
                     }
-                    TagEnd::CodeBlock => in_code_block = false,
-                    TagEnd::Link => {
-                        if let Some((line, text, expected)) = link.take()
-                            && text.trim() != expected
-                        {
-                            push(
-                                line,
-                                "style-link-text",
-                                format!("リンクの表示文字を {expected} にする"),
-                            );
-                        }
-                    }
-                    TagEnd::Image => {
-                        if let Some((line, alt)) = image.take()
-                            && alt.trim().is_empty()
-                        {
-                            push(
-                                line,
-                                "style-image-alt",
-                                "画像に代替テキストを書く".to_string(),
-                            );
-                        }
-                    }
-                    _ => {}
                 }
-            }
-            Event::Rule if depth == 0 => previous_is_rule = true,
+                _ => {}
+            },
             Event::Text(text) | Event::Code(text) => {
-                for (_, collected) in [&mut heading, &mut image].into_iter().flatten() {
+                if let Some((_, collected)) = heading.as_mut() {
                     collected.push_str(text);
                 }
                 if let Some((_, collected, _)) = link.as_mut() {
@@ -216,23 +128,23 @@ pub fn check(
                     count_dollars(body, range.clone(), &index, &mut dollars);
                 }
             }
-            Event::Html(html) | Event::InlineHtml(html) => {
-                if let Some(allowed) = &style.html {
-                    for (offset, tag) in html_tags(html, &mut in_comment) {
-                        if !allowed.contains(&tag) {
-                            push(
-                                index.line(range.start + offset),
-                                "style-html",
-                                format!("HTML タグ <{tag}> を使わない"),
-                            );
-                        }
-                    }
-                }
-            }
             _ => {}
         }
     }
 
+    // h2 のどれかが章番号で始まっていれば、すべての h2 に 1 から順に章番号を求める。
+    if h2.iter().any(|(_, text)| has_number(text)) {
+        for (i, (line, text)) in h2.iter().enumerate() {
+            let number = format!("{}. ", i + 1);
+            if !text.trim().starts_with(&number) {
+                push(
+                    *line,
+                    "heading-number",
+                    format!("h2 の見出しを「{number}」で始める。章番号は 1 から順に振る"),
+                );
+            }
+        }
+    }
     for (line, count) in dollars {
         if count >= 2 {
             push(
@@ -247,6 +159,13 @@ pub fn check(
     found
 }
 
+/// 見出しが `1. ` のような章番号で始まっているか。
+fn has_number(text: &str) -> bool {
+    let text = text.trim();
+    let digits = text.chars().take_while(char::is_ascii_digit).count();
+    digits > 0 && text[digits..].starts_with(". ")
+}
+
 /// 管理対象のファイルを指すリンクなら、求める表示文字を返す。
 fn expected_text(
     style: &Style,
@@ -255,12 +174,11 @@ fn expected_text(
     dest: &str,
     managed: &HashSet<String>,
 ) -> Option<String> {
-    let base = style.link_text.as_deref()?;
     let (target, _) = markdown::resolve_link(base_dir, dest)?;
     let target = markdown::slash_path(&target);
     managed
         .contains(&target)
-        .then(|| link_text(Some(base), path, &target))
+        .then(|| link_text(style.link_base.as_deref(), path, &target))
 }
 
 /// テキストの元の文字列から、`\` でエスケープしていない `$` を行ごとに数える。
@@ -280,49 +198,8 @@ fn count_dollars(
     }
 }
 
-/// HTML の中の開きタグの名前と、その位置。コメントの中は見ない。in_comment はイベントをまたいで持ち越す。
-fn html_tags(html: &str, in_comment: &mut bool) -> Vec<(usize, String)> {
-    let mut tags = Vec::new();
-    let mut offset = 0;
-    let mut rest = html;
-    loop {
-        if *in_comment {
-            match rest.find("-->") {
-                Some(i) => {
-                    offset += i + 3;
-                    rest = &rest[i + 3..];
-                    *in_comment = false;
-                }
-                None => break,
-            }
-        }
-        let Some(i) = rest.find('<') else {
-            break;
-        };
-        let after = &rest[i..];
-        if after.starts_with("<!--") {
-            *in_comment = true;
-            offset += i + 4;
-            rest = &rest[i + 4..];
-            continue;
-        }
-        let name: String = after[1..]
-            .chars()
-            .take_while(|c| c.is_ascii_alphanumeric() || *c == '-')
-            .collect();
-        if name.starts_with(|c: char| c.is_ascii_alphabetic()) {
-            tags.push((offset + i, name.to_ascii_lowercase()));
-        }
-        offset += i + 1;
-        rest = &rest[i + 1..];
-    }
-    tags
-}
-
 #[cfg(test)]
 mod tests {
-    use serde_json::json;
-
     use super::*;
 
     fn run(style: &Style, path: &str, text: &str) -> Vec<String> {
@@ -337,54 +214,47 @@ mod tests {
     }
 
     fn all() -> Style {
-        Style::resolve(
-            Some(&json!({
-                "bold": "deny",
-                "italic": "deny",
-                "html": ["details", "summary"],
-                "dollar": "deny",
-                "heading_number": "require",
-                "section_separator": "require",
-                "link_text": { "base": "docs" },
-                "image_alt": "require",
-            })),
-            None,
-        )
+        Style {
+            bold: true,
+            italic: true,
+            dollar: true,
+            link_base: Some("docs".to_string()),
+        }
     }
 
     #[test]
-    fn resolves_overrides() {
-        let style = Style::resolve(
-            Some(&json!({ "bold": "deny", "heading_number": "require" })),
-            Some(&json!({ "heading_number": false, "html": [] })),
+    fn reads_lint_and_docs() {
+        let config = crate::config::parse("lint:\n  bold: deny\n  dollar: allow\n").unwrap();
+        assert_eq!(
+            Style::new(&config),
+            Style {
+                bold: true,
+                italic: false,
+                dollar: false,
+                link_base: Some("docs".to_string()),
+            }
         );
-        assert!(style.bold);
-        assert!(!style.heading_number);
-        assert_eq!(style.html, Some(Vec::new()));
     }
 
     #[test]
     fn passes_valid_text() {
-        let text = "---\nmission: q\n---\n\n# A\n\n## 1. 一\n\n[spec/b.md](b.md) [README.md](../../README.md) [外](https://example.com) `$a $b` 3 ドル\n\n<details><summary>s</summary>\n\n<!-- <b>x</b>\n<i> -->\n\n</details>\n\n![図](x.png)\n\n```\n**$x$**\n```\n\n---\n\n## 2. 二\n";
+        let text = "---\nmission: q\n---\n\n# A\n\n## 1. 一\n\n[spec/b.md](b.md) [README.md](../../README.md) [外](https://example.com) `$a $b` 3 ドル\n\n<b>x</b> ![](x.png)\n\n```\n**$x$**\n```\n\n## 2. 二\n";
         assert_eq!(run(&all(), "docs/spec/a.md", text), Vec::<String>::new());
     }
 
     #[test]
     fn reports_each_rule() {
-        let text = "# A\n\n## 一\n\n**b** _i_ <b>x</b> $1 と $2\n\n[b](b.md) [docs/spec/b.md](b.md#x) ![](x.png)\n\n## 3. 三\n";
+        let text = "# A\n\n## 一\n\n**b** _i_ $1 と $2\n\n[b](b.md) [docs/spec/b.md](b.md#x)\n\n## 3. 三\n";
         assert_eq!(
             run(&all(), "docs/spec/a.md", text),
             [
-                "3: style-heading-number h2 の見出しを「1. 」で始める。章番号は 1 から順に振る",
+                "3: heading-number h2 の見出しを「1. 」で始める。章番号は 1 から順に振る",
                 "5: style-bold 太字を使わない",
                 "5: style-italic 斜体を使わない",
-                "5: style-html HTML タグ <b> を使わない",
                 "5: style-dollar 1 行に $ が 2 つ以上ある。GitHub は $ で挟んだ部分を数式として表示する",
-                "7: style-link-text リンクの表示文字を spec/b.md にする",
-                "7: style-link-text リンクの表示文字を spec/b.md にする",
-                "7: style-image-alt 画像に代替テキストを書く",
-                "9: style-section-separator 章（h2）の直前に --- を置く",
-                "9: style-heading-number h2 の見出しを「2. 」で始める。章番号は 1 から順に振る",
+                "7: link-text リンクの表示文字を spec/b.md にする",
+                "7: link-text リンクの表示文字を spec/b.md にする",
+                "9: heading-number h2 の見出しを「2. 」で始める。章番号は 1 から順に振る",
             ]
         );
     }
@@ -393,7 +263,7 @@ mod tests {
     fn uses_root_path_outside_base() {
         assert_eq!(
             run(&all(), "README.md", "# R\n\n[spec/a.md](docs/spec/a.md)\n"),
-            ["3: style-link-text リンクの表示文字を docs/spec/a.md にする"]
+            ["3: link-text リンクの表示文字を docs/spec/a.md にする"]
         );
         assert_eq!(
             link_text(Some("docs"), "docs/spec/a.md", "README.md"),
@@ -403,8 +273,12 @@ mod tests {
     }
 
     #[test]
-    fn checks_nothing_by_default() {
-        let text = "# A\n\n## x\n\n**b** <b>x</b> $1 $2\n\n## y\n";
-        assert!(run(&Style::default(), "docs/spec/a.md", text).is_empty());
+    fn checks_only_fixed_rules_by_default() {
+        // 章番号のない h2 は確かめない。リンクの表示文字は、起点がなければルートからのパスを求める
+        let text = "# A\n\n## x\n\n**b** _i_ $1 $2\n\n[b](b.md) [docs/spec/b.md](b.md)\n\n## y\n";
+        assert_eq!(
+            run(&Style::default(), "docs/spec/a.md", text),
+            ["7: link-text リンクの表示文字を docs/spec/b.md にする"]
+        );
     }
 }

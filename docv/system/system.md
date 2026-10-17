@@ -10,30 +10,30 @@
 
 ## ファイルを書くコマンド
 
-| コマンド | 書くもの                                                                                                         |
-| -------- | ---------------------------------------------------------------------------------------------------------------- |
-| init     | `docv.yaml` だけ。`--print` のときは書かない                                                                     |
-| slot gen | 指定した Slot ファイルだけ。`--print` のときは書かない                                                           |
-| fix      | 管理対象のファイルと、`slots.dir` の中の Markdown（md の Slot と ADR）だけ。整形と textlint の自動修正だけをする |
-| build    | `output.dir` の中だけ。目印の `.docv` を残して中を消し、作り直す                                                 |
+| コマンド | 書くもの                                                                                                                                                                 |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| init     | `docv.yaml` だけ。`--print` のときは書かない                                                                                                                             |
+| slot gen | 指定した Slot ファイルだけ。`--print` のときは書かない                                                                                                                   |
+| fix      | 管理対象のファイルと、`dir.slots` の中の Markdown（md の Slot と ADR）だけ。整形と textlint の自動修正だけをする。`docv.yaml` と YAML の Slot は、末尾の改行だけを整える |
+| build    | `dir.html` と `dir.image` の中だけ。目印の `.docv` を残して中を消し、作り直す                                                                                            |
 
 - ほかのコマンドは、ファイルを書かない
 - `CLAUDE.md`、リポジトリのルートの `.gitignore`、hook の設定は、どのコマンドも書かない
-- build は、出力先に `.docv`（docv が作った目印）がなく、空でもないときは、何も書かずにエラーで終わる。`output.dir` を間違えて既存のディレクトリを指しても消さないため
+- build は、出力先に `.docv`（docv が作った目印）がなく、空でもないときは、何も書かずにエラーで終わる。`dir.html` や `dir.image` を間違えて既存のディレクトリを指しても消さないため
 
 ## ファイルの分類
 
-| 分類     | 条件                                                                        |
-| -------- | --------------------------------------------------------------------------- |
-| 除外     | `.gitignore` に書かれている、`output.dir` の中にある、`ignore` に当てはまる |
-| 管理対象 | `docs` に当てはまる Markdown                                                |
-| 管理外   | それ以外の Markdown。中身は見ない                                           |
+| 分類     | 条件                                                                                     |
+| -------- | ---------------------------------------------------------------------------------------- |
+| 除外     | `.gitignore` に書かれている、`dir.html` か `dir.image` の中にある、`ignore` に当てはまる |
+| 管理対象 | `dir.free` のディレクトリの下の Markdown                                                 |
+| 管理外   | それ以外の Markdown。中身は見ない                                                        |
 
-Slot は、Markdown とは別に、`slots.dir`（既定は `docv/`）から `<まとまり>/<ID>.<拡張子>` の名前のファイルだけを読む。拡張子は Slot ごとに決まる（YAML か md）。知らない項目があれば、読めない Slot として check が error にする。
+Slot は、Markdown とは別に、`dir.slots`（既定は `docv/`）から `<まとまり>/<ID>.<拡張子>` の名前のファイルだけを読む。拡張子は Slot ごとに決まる（YAML か md）。知らない項目があれば、読めない Slot として check が error にする。
 
-`slots.dir` の中でも、除外に当たるファイルと、名前がドットで始まるファイルとディレクトリ（`.DS_Store` など）は読まない。`output.dir` の既定の `docv/build` は `slots.dir` の中にあるが、出力は Slot として読まない。それ以外で Slot の名前でないファイルは、check が slot-unknown の error にする。
+`dir.slots` の中でも、除外に当たるファイルと、名前がドットで始まるファイルとディレクトリ（`.DS_Store` など）は読まない。`dir.html` の既定の `docv/build` は `dir.slots` の中にあるが、出力は Slot として読まない。それ以外で Slot の名前でないファイルは、check が slot-unknown の error にする。
 
-`slots.dir` の中の Markdown（md の Slot と ADR）には、Free ファイルのルール（YAML front matter、書式の規則など）はかけない。整形と textlint だけを、管理対象のファイルと同じくかける。
+`dir.slots` の中の Markdown（md の Slot と ADR）には、Free ファイルのルール（YAML front matter、書式の規則など）はかけない。整形と textlint だけを、管理対象のファイルと同じくかける。
 
 ## ソースの構成
 
@@ -42,7 +42,7 @@ Slot は、Markdown とは別に、`slots.dir`（既定は `docv/`）から `<�
 | 入口     | `src/main.rs`、`src/cli.rs`                                                                        |
 | 読み込み | `src/workspace.rs`、`src/config.rs`、`src/markdown.rs`、`src/meta.rs`、`src/slot.rs`、`src/adr.rs` |
 | 検査     | `src/check.rs`、`src/style.rs`、`src/textlint.rs`、`src/diagnostic.rs`                             |
-| 出力     | `src/build.rs`、`src/jpg.rs`、`src/desc.rs`、`src/schema.rs`                                       |
+| 出力     | `src/build.rs`、`src/jpg.rs`、`src/desc.rs`、`src/schema.rs`、`src/config_view.rs`                 |
 | 書き換え | `src/fix.rs`、`src/format.rs`、`src/generate.rs`、`src/init.rs`                                    |
 
 ## バイナリに埋め込むもの
@@ -62,7 +62,7 @@ textlint を使うときだけ Node.js が、JPG を作るときだけ Chrome �
 
 - CSS は各ページの中に書く。外部の CDN は使わない。file:// で開いても、そのままホスティングしても見られる
 - JS は、決定のページのカーソルキーでの移動と、プロジェクト詳細のタグのトグルにだけ使い、ページの中に書く。どちらも JPG にしないページで、JS が動かなくても、すべての中身は読め、リンクから辿れる。OS ごとの手順のタブは、JS を使わず CSS で切り替える
-- すべてのページの左に、トップの 3 ページへのサイドバーを、右に、そのページの h2 と h3 の目次を置く。目次は、見出しのないページでは出さない。印刷の表示（JPG）では、どちらのサイドバーも出さない
+- すべてのページの左に、トップの 4 ページ（プロジェクト概要、ADR、プロジェクト詳細、現在の設定）へのサイドバーを、右に、そのページの h2 と h3 の目次を置く。目次は、見出しのないページでは出さない。印刷の表示（JPG）では、どちらのサイドバーも出さない
 - フェンスのコードブロックは、フェンスに書いた言語（`yaml` など）に合わせて、build のときに色を付ける。色は HTML の中に埋め込み、JS は使わない。言語がないか、syntect が知らない言語なら、色を付けずに出す
 - リンクは、Free ファイル、Slot ファイル、ADR のページにだけ、出力先の中の相対パスで張る（ツリー、Slot ファイルや Free ファイルの本文の中のリンク）。file:// で開けば file:// のまま、ホスティングすればその中で辿れる。HTML は clone したリポジトリで見るので、ほかのファイル（コード、管理外のファイルなど）はエディタで開けばよく、リンクにせず文字だけを出す
 - 画像は、元のファイルを出力先から辿れる相対パスで読む
@@ -77,7 +77,7 @@ textlint を使うときだけ Node.js が、JPG を作るときだけ Chrome �
 
 ## JPG の撮り方
 
-`output.image` が true のときだけ、build の最後に撮る。ローカルの Chrome をヘッドレスで起動し、DevTools Protocol で出力先の HTML を開いて撮る。幅は 1280 CSS ピクセル、画質は 80。印刷の表示にし、ページの高さに画面を合わせて、Slot のページを 1 枚ずつ撮る。Chrome は、環境変数 DOCV_CHROME、OS ごとの標準のインストール先、PATH にある chrome と chromium の順に探し、見つからなければ error で終わる。
+`dir.image` を書いたときだけ、build の最後に撮り、`dir.image` に `<まとまり>/<Slot>.jpg` の名前で置く。ローカルの Chrome をヘッドレスで起動し、DevTools Protocol で出力先の HTML を開いて撮る。幅は 1280 CSS ピクセル、画質は 80。印刷の表示にし、ページの高さに画面を合わせて、Slot のページを 1 枚ずつ撮る。Chrome は、環境変数 DOCV_CHROME、OS ごとの標準のインストール先、PATH にある chrome と chromium の順に探し、見つからなければ error で終わる。
 
 ## 終了コード
 

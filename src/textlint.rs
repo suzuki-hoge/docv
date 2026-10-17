@@ -1,4 +1,4 @@
-//! textlint を npx で実行する。docs/spec/config.md の 6 章。
+//! textlint を npx で実行する。使うルールとその値は docv が決め、docv の版ごとに固定する。docs/spec/config.md の 5 章。
 
 use std::collections::hash_map::DefaultHasher;
 use std::fs;
@@ -11,32 +11,219 @@ use anyhow::{Context, Result, anyhow, bail};
 use serde::Deserialize;
 use serde_json::{Map, Value, json};
 
-use crate::config::{self, TextlintLevel};
+use crate::config::Switch;
 use crate::diagnostic::{Diagnostic, Level};
 use crate::workspace::Project;
 
-/// 組み込みの使い方で使うパッケージ。docv の版ごとに固定する。
-const TEXTLINT: &str = "textlint@15.8.0";
-const PRESETS: &[(&str, &str)] = &[
-    (
-        "ja-technical-writing",
-        "textlint-rule-preset-ja-technical-writing@12.0.2",
-    ),
-    ("ja-spacing", "textlint-rule-preset-ja-spacing@3.0.3"),
-    ("jtf-style", "textlint-rule-preset-jtf-style@3.0.3"),
+/// 使うパッケージ。ルールはプリセットのパッケージから読む。
+const PACKAGES: &[&str] = &[
+    "textlint@15.8.0",
+    "textlint-rule-preset-ja-technical-writing@12.0.2",
+    "textlint-rule-preset-ja-spacing@3.0.3",
 ];
-const PRH: &str = "textlint-rule-prh@6.1.0";
+
+/// docv が決めた textlint のルール 1 つ。
+pub struct Rule {
+    pub preset: &'static str,
+    pub name: &'static str,
+    /// ルールに渡す値（JSON）。false なら使わない。
+    pub value: &'static str,
+    /// 現在の設定のページに出す説明。使うルールは確かめること、使わないルールは確かめないこと。
+    pub desc: &'static str,
+}
+
+impl Rule {
+    pub fn enabled(&self) -> bool {
+        self.value != "false"
+    }
+}
+
+const fn rule(
+    preset: &'static str,
+    name: &'static str,
+    value: &'static str,
+    desc: &'static str,
+) -> Rule {
+    Rule {
+        preset,
+        name,
+        value,
+        desc,
+    }
+}
+
+const TW: &str = "ja-technical-writing";
+const SP: &str = "ja-spacing";
+
+/// RULES のプリセット。現在の設定のページで、この順に表を分ける。
+pub const PRESETS: &[&str] = &[TW, SP];
+
+/// プリセットのルールを、使わないものも含めてすべて書く。プリセットの既定には頼らない。
+pub const RULES: &[Rule] = &[
+    rule(
+        TW,
+        "sentence-length",
+        r#"{"max":100}"#,
+        "一文を 100 文字以内にする",
+    ),
+    rule(
+        TW,
+        "max-comma",
+        r#"{"max":3}"#,
+        "一文のカンマ（,）を 3 つまでにする",
+    ),
+    rule(
+        TW,
+        "max-ten",
+        r#"{"max":3}"#,
+        "一文の読点（、）を 3 つまでにする",
+    ),
+    rule(TW, "max-kanji-continuous-len", "false", "漢字が続く長さ"),
+    rule(
+        TW,
+        "no-mix-dearu-desumasu",
+        r#"{"preferInHeader":"","preferInBody":"","preferInList":"","strict":false}"#,
+        "「である」と「ですます」を混ぜない",
+    ),
+    rule(
+        TW,
+        "ja-no-mixed-period",
+        r#"{"periodMark":"。"}"#,
+        "文末を「。」で終える",
+    ),
+    rule(
+        TW,
+        "arabic-kanji-numbers",
+        "true",
+        "算用数字と漢数字を使い分ける",
+    ),
+    rule(TW, "no-doubled-conjunction", "true", "同じ接続詞を続けない"),
+    rule(
+        TW,
+        "no-doubled-conjunctive-particle-ga",
+        "true",
+        "逆接の「が」を一文に 2 回使わない",
+    ),
+    rule(TW, "no-double-negative-ja", "true", "二重否定を使わない"),
+    rule(
+        TW,
+        "no-doubled-joshi",
+        r#"{"min_interval":1}"#,
+        "同じ助詞を続けない",
+    ),
+    rule(TW, "no-dropping-the-ra", "true", "ら抜き言葉を使わない"),
+    rule(TW, "no-nfd", "true", "UTF8-MAC の濁点を使わない"),
+    rule(TW, "no-invalid-control-character", "false", "制御文字"),
+    rule(
+        TW,
+        "no-zero-width-spaces",
+        "true",
+        "ゼロ幅スペースを使わない",
+    ),
+    rule(
+        TW,
+        "no-exclamation-question-mark",
+        "false",
+        "感嘆符と疑問符を使うこと",
+    ),
+    rule(TW, "no-hankaku-kana", "false", "半角カナ"),
+    rule(
+        TW,
+        "ja-no-weak-phrase",
+        "false",
+        "「かもしれない」などの弱い表現",
+    ),
+    rule(TW, "ja-no-successive-word", "false", "同じ語の連続"),
+    rule(TW, "ja-no-abusage", "true", "よくある誤用を避ける"),
+    rule(
+        TW,
+        "ja-no-redundant-expression",
+        "true",
+        "冗長な表現を避ける",
+    ),
+    rule(
+        TW,
+        "ja-unnatural-alphabet",
+        "true",
+        "入力ミスで紛れたアルファベットを残さない",
+    ),
+    rule(TW, "no-unmatched-pair", "true", "括弧を対にする"),
+    rule(
+        SP,
+        "ja-space-between-half-and-full-width",
+        r#"{"space":"always"}"#,
+        "半角の文字と全角の文字の間にスペースを入れる",
+    ),
+    rule(
+        SP,
+        "ja-space-around-code",
+        r#"{"before":true,"after":true}"#,
+        "インラインコードの前後にスペースを入れる",
+    ),
+    rule(
+        SP,
+        "ja-space-around-link",
+        r#"{"before":true,"after":true}"#,
+        "リンクの前後にスペースを入れる",
+    ),
+    rule(
+        SP,
+        "ja-space-around-emphasis",
+        r#"{"before":true,"after":true}"#,
+        "斜体の前後にスペースを入れる",
+    ),
+    rule(
+        SP,
+        "ja-space-around-strong",
+        r#"{"before":true,"after":true}"#,
+        "太字の前後にスペースを入れる",
+    ),
+    rule(
+        SP,
+        "ja-no-space-around-slash",
+        "false",
+        "スラッシュの前後のスペース",
+    ),
+    rule(
+        SP,
+        "ja-no-space-between-full-width",
+        "false",
+        "全角の文字どうしの間のスペース",
+    ),
+    rule(
+        SP,
+        "ja-no-space-around-parentheses",
+        "true",
+        "全角の括弧と [ ] の内側と外側にスペースを入れない",
+    ),
+    rule(
+        SP,
+        "ja-nakaguro-or-halfwidth-space-between-katakana",
+        "false",
+        "カタカナ語の区切りの文字",
+    ),
+    rule(
+        SP,
+        "ja-space-after-exclamation",
+        "false",
+        "文末の感嘆符の後のスペース",
+    ),
+    rule(
+        SP,
+        "ja-space-after-question",
+        "false",
+        "文末の疑問符の後のスペース",
+    ),
+];
 
 pub struct Textlint<'a> {
     project: &'a Project,
-    config: &'a config::Textlint,
 }
 
 impl<'a> Textlint<'a> {
-    /// lint.textlint.enabled が true のときだけ返す。
+    /// lint.textlint が enable のときだけ返す。
     pub fn new(project: &'a Project) -> Option<Self> {
-        let config = &project.config.lint.textlint;
-        config.enabled.then_some(Textlint { project, config })
+        (project.config.lint.textlint == Switch::Enable).then_some(Textlint { project })
     }
 
     /// files はルートからの相対パス。
@@ -54,10 +241,6 @@ impl<'a> Textlint<'a> {
                     String::from_utf8_lossy(&output.stderr).trim()
                 )
             })?;
-        let level = match self.config.level {
-            TextlintLevel::Warn => Level::Warn,
-            TextlintLevel::Error => Level::Error,
-        };
         let mut diagnostics = Vec::new();
         for result in results {
             let path = self.relative(&result.file_path, files);
@@ -69,7 +252,7 @@ impl<'a> Textlint<'a> {
                         "textlint/{}",
                         message.rule_id.as_deref().unwrap_or("unknown")
                     ),
-                    level,
+                    level: Level::Warn,
                     message: message
                         .message
                         .split_whitespace()
@@ -95,19 +278,12 @@ impl<'a> Textlint<'a> {
     fn command(&self) -> Result<Command> {
         let mut command = Command::new(if cfg!(windows) { "npx.cmd" } else { "npx" });
         command.current_dir(&self.project.root);
-        match &self.config.config {
-            Some(config) => {
-                command.args(["--no", "textlint", "--config", config]);
-            }
-            None => {
-                command.arg("--yes");
-                for package in packages(self.config) {
-                    command.args(["-p", package]);
-                }
-                let rc = write_builtin_config(&builtin_config(self.config, &self.project.root))?;
-                command.arg("textlint").arg("--config").arg(rc);
-            }
+        command.arg("--yes");
+        for package in PACKAGES {
+            command.args(["-p", package]);
         }
+        let rc = write_builtin_config(&builtin_config())?;
+        command.arg("textlint").arg("--config").arg(rc);
         Ok(command)
     }
 
@@ -141,45 +317,18 @@ struct Message {
     line: usize,
 }
 
-fn packages(config: &config::Textlint) -> Vec<&'static str> {
-    let mut packages = vec![TEXTLINT];
-    for (name, package) in PRESETS {
-        if config.presets.iter().any(|p| p == name) {
-            packages.push(package);
-        }
-    }
-    if !config.prh.is_empty() {
-        packages.push(PRH);
-    }
-    packages
-}
-
-/// 組み込みの使い方の、textlint の設定ファイルの中身。
-fn builtin_config(config: &config::Textlint, root: &Path) -> Value {
+/// textlint の設定ファイルの中身。RULES をプリセットごとにまとめる。
+fn builtin_config() -> Value {
     let mut rules = Map::new();
-    for preset in &config.presets {
-        let overrides: Map<String, Value> = config
-            .rules
-            .iter()
-            .filter_map(|(key, value)| {
-                let (p, rule) = key.split_once('/')?;
-                (p == preset).then(|| (rule.to_string(), value.clone()))
-            })
-            .collect();
-        let value = if overrides.is_empty() {
-            Value::Bool(true)
-        } else {
-            Value::Object(overrides)
-        };
-        rules.insert(format!("preset-{preset}"), value);
-    }
-    if !config.prh.is_empty() {
-        let paths: Vec<String> = config
-            .prh
-            .iter()
-            .map(|p| root.join(p).to_string_lossy().into_owned())
-            .collect();
-        rules.insert("prh".to_string(), json!({ "rulePaths": paths }));
+    for r in RULES {
+        let value: Value = serde_json::from_str(r.value).expect("RULES の値は JSON として正しい");
+        let preset = rules
+            .entry(format!("preset-{}", r.preset))
+            .or_insert_with(|| Value::Object(Map::new()));
+        preset
+            .as_object_mut()
+            .expect("プリセットの値はオブジェクト")
+            .insert(r.name.to_string(), value);
     }
     json!({ "rules": rules })
 }
@@ -206,7 +355,7 @@ fn run(mut command: Command) -> Result<Output> {
     let output = command.output().map_err(|e| {
         if e.kind() == ErrorKind::NotFound {
             anyhow!(
-                "lint.textlint.enabled が true だが、npx が見つからない。Node.js を入れるか、--no-textlint で textlint を飛ばす"
+                "lint.textlint が enable だが、npx が見つからない。Node.js を入れるか、--no-textlint で textlint を飛ばす"
             )
         } else {
             anyhow!(e).context("npx を実行できない")
@@ -227,33 +376,22 @@ mod tests {
 
     #[test]
     fn builds_builtin_config() {
-        let config = config::parse(
-            "docs: []\nlint:\n  textlint:\n    enabled: true\n    presets: [ja-technical-writing, ja-spacing]\n    rules:\n      ja-technical-writing/sentence-length: { max: 120 }\n      ja-technical-writing/no-exclamation-question-mark: false\n    prh: [docs/rule/prh.yml]\n",
-        )
-        .unwrap();
-        let textlint = &config.lint.textlint;
+        let config = builtin_config();
+        let rules = &config["rules"];
         assert_eq!(
-            builtin_config(textlint, Path::new("/repo")),
-            json!({
-                "rules": {
-                    "preset-ja-technical-writing": {
-                        "sentence-length": { "max": 120 },
-                        "no-exclamation-question-mark": false,
-                    },
-                    "preset-ja-spacing": true,
-                    "prh": { "rulePaths": ["/repo/docs/rule/prh.yml"] },
-                }
-            })
+            rules["preset-ja-technical-writing"]["sentence-length"],
+            json!({ "max": 100 })
         );
         assert_eq!(
-            packages(textlint),
-            [
-                TEXTLINT,
-                "textlint-rule-preset-ja-technical-writing@12.0.2",
-                "textlint-rule-preset-ja-spacing@3.0.3",
-                PRH,
-            ]
+            rules["preset-ja-technical-writing"]["no-exclamation-question-mark"],
+            json!(false)
         );
+        assert_eq!(
+            rules["preset-ja-spacing"]["ja-space-around-code"],
+            json!({ "before": true, "after": true })
+        );
+        assert_eq!(rules.as_object().unwrap().len(), 2);
+        assert!(RULES.iter().all(|r| !r.desc.is_empty()));
     }
 
     #[test]

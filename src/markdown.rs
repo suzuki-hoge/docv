@@ -78,8 +78,6 @@ pub struct Heading {
     pub level: u8,
     /// インラインコードも含めた見出しの文字列。
     pub text: String,
-    /// インラインコードを除いた見出しの文字列。
-    pub prose: String,
     pub line: usize,
 }
 
@@ -91,21 +89,11 @@ pub struct Link {
     pub span: Range<usize>,
 }
 
-/// コードブロックとインラインコードと見出しの外にある地の文。
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Prose {
-    pub text: String,
-    pub line: usize,
-}
-
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Outline {
     pub headings: Vec<Heading>,
     /// リンクと画像の参照先。
     pub links: Vec<Link>,
-    pub prose: Vec<Prose>,
-    /// 終わったタスク（`- [x]`）の行。
-    pub done_tasks: Vec<usize>,
 }
 
 /// 本文の中の位置から、ファイルの何行目かを引く。
@@ -145,14 +133,12 @@ pub fn outline(document: &Document) -> Outline {
                 heading = Some(Heading {
                     level: heading_level(level),
                     text: String::new(),
-                    prose: String::new(),
                     line: line_of(range.start),
                 });
             }
             Event::End(TagEnd::Heading(_)) => {
                 if let Some(mut h) = heading.take() {
                     h.text = h.text.trim().to_string();
-                    h.prose = h.prose.trim().to_string();
                     outline.headings.push(h);
                 }
             }
@@ -165,22 +151,16 @@ pub fn outline(document: &Document) -> Outline {
                     span: range.clone(),
                 });
             }
-            Event::Text(text) if !in_code_block => match heading.as_mut() {
-                Some(h) => {
+            Event::Text(text) if !in_code_block => {
+                if let Some(h) = heading.as_mut() {
                     h.text.push_str(&text);
-                    h.prose.push_str(&text);
                 }
-                None => outline.prose.push(Prose {
-                    text: text.to_string(),
-                    line: line_of(range.start),
-                }),
-            },
+            }
             Event::Code(code) => {
                 if let Some(h) = heading.as_mut() {
                     h.text.push_str(&code);
                 }
             }
-            Event::TaskListMarker(true) => outline.done_tasks.push(line_of(range.start)),
             _ => {}
         }
     }
@@ -327,25 +307,8 @@ mod tests {
             [Heading {
                 level: 1,
                 text: "T code".to_string(),
-                prose: "T".to_string(),
                 line: 5
             }]
-        );
-        let prose: Vec<(&str, usize)> = outline
-            .prose
-            .iter()
-            .map(|p| (p.text.as_str(), p.line))
-            .collect();
-        assert_eq!(
-            prose,
-            [
-                ("以前は ", 7),
-                ("a", 7),
-                (" ", 7),
-                ("done", 13),
-                ("todo", 14),
-                ("img", 16)
-            ]
         );
         let links: Vec<(&str, usize)> = outline
             .links
@@ -353,6 +316,5 @@ mod tests {
             .map(|l| (l.dest.as_str(), l.line))
             .collect();
         assert_eq!(links, [("a.md", 7), ("i.png", 16)]);
-        assert_eq!(outline.done_tasks, [13]);
     }
 }

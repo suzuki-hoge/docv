@@ -3,7 +3,7 @@
 body { margin: 0; color: #1f2328; font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif; line-height: 1.7; }
 body { display: flex; align-items: flex-start; }
 main { flex: 1; min-width: 0; max-width: 1040px; margin: 0 auto; padding: 32px 40px 80px; }
-/* トップの 3 ページを行き来するサイドバー。印刷の表示（JPG）では出さない */
+/* トップの 4 ページを行き来するサイドバー。印刷の表示（JPG）では出さない */
 .sidebar { position: sticky; top: 0; flex: none; width: 200px; height: 100vh; box-sizing: border-box; padding: 32px 16px; border-right: 1px solid #d8dee4; background: #f6f8fa; }
 .sidebar .project { margin: 0 0 12px; font-weight: 600; }
 .sidebar ul { list-style: none; margin: 0; padding: 0; }
@@ -86,6 +86,12 @@ table.docs tr.dir div { padding: 5px 9px; background: #eef7fc; color: #3d444d; f
 table.tree { table-layout: fixed; }
 table.tree th:nth-child(1) { width: 14em; }
 table.tree td:nth-child(1) { overflow-wrap: anywhere; }
+/* 現在の設定の表。選ぶ項目は候補を横に並べ、選んでいる候補に色を付ける */
+table.config td:nth-child(1), table.textlint td:nth-child(1) { width: 14em; white-space: nowrap; }
+table.config ul { margin: 0; padding-left: 1.2em; }
+.choices { display: flex; flex-wrap: wrap; gap: 6px; }
+.choice { padding: 0 8px; border: 1px solid #d8dee4; border-radius: 6px; color: #8c959f; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
+.choice.on { border-color: #9fcff5; background: #ddf0fd; color: #0a5aa8; font-weight: 600; }
 .num { text-align: right; white-space: nowrap; }
 .step-name { font-weight: 600; margin: 0 0 4px; }
 .steps > li { margin-bottom: 12px; }

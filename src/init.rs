@@ -13,7 +13,7 @@ pub fn schema_url() -> String {
     )
 }
 
-/// 推奨する配置（docs/spec/config.md の 9 章）の docv.yaml。すべての項目を、既定の値でコメントに載せる。
+/// 推奨する配置（docs/spec/config.md の 7 章）の docv.yaml。すべての項目を、既定の値でコメントに載せる。
 pub fn config_text() -> String {
     format!(
         "# yaml-language-server: $schema={}
@@ -23,66 +23,42 @@ pub fn config_text() -> String {
 # HTML に出すプロジェクト名。省略するとルートのディレクトリ名
 # title: my-project
 
-# 管理対象の Markdown（Free ファイル）の glob。各ファイルの YAML front matter に mission を書く
-docs:
-  - docs/**/*.md
+# docv が読み書きするディレクトリ。どれもルートからの相対パス
+dir:
+  # 管理対象の Markdown（Free ファイル）を置くディレクトリ。各ファイルの YAML front matter に mission を書く
+  free: docs
+  # Slot ファイルを置くディレクトリ
+  slots: docv
+  # docv build が HTML を出すディレクトリ
+  html: docv/build
+  # docv build が Slot のページの JPG を出すディレクトリ。書かなければ JPG を作らない。JPG を作るには Chrome が要る
+  # image: docv/build/jpg
 
 # 管理対象にも管理外にもしないファイルの glob
 ignore:
   - docs/tmp/**
 
-# タグの一覧。書いたときだけ、YAML front matter の tags をこの中に限る
-# tags: [仕様, 手順, 規約]
+# 使うタグの一覧。YAML front matter の tags には、ここにあるタグだけを書ける
+# color は HTML のタグの色（blue、green、yellow、red、purple、orange、teal、pink）
+# tags:
+#   - name: 仕様
+#     color: blue
+#   - name: 手順
+#     color: green
 
-slots:
-  # Slot ファイルを置くディレクトリ
-  dir: docv
-
-output:
-  # docv build の出力先
-  dir: docv/build
-  # 出力を git で管理するか。false なら出力先に .gitignore を置く
-  commit: true
-  # docv build で、Slot のページを JPG にするか。true なら Chrome が要る
-  image: false
-
-# lint:
-#   # タグごとに、そのタグを持つファイルにかけるルール（no-past-wording、no-done-task）
-#   tags:
-#     仕様: [no-past-wording]
-#   # 過去の言い回しとして警告する語の足し引き
-#   words:
-#     add: []
-#     remove: []
-#   # 書式の規則。書いた規則だけを確かめる
-#   style:
-#     bold: deny
-#     italic: deny
-#     html: [details, summary]
-#     dollar: deny
-#     heading_number: require
-#     section_separator: require
-#     link_text: {{ base: docs }}
-#     image_alt: require
-#   # textlint。使うには Node.js が要る
-#   textlint:
-#     enabled: true
-#     level: warn
-#     presets: [ja-technical-writing]
-#     rules: {{}}
-#     prh: []
+lint:
+  # 太字を使ってよいか（allow、deny）
+  bold: allow
+  # 斜体を使ってよいか（allow、deny）
+  italic: allow
+  # コードの外の 1 行に $ を 2 つ以上書いてよいか（allow、deny）。GitHub は $ で挟んだ部分を数式として表示する
+  dollar: allow
+  # textlint で文章を校正するか（enable、disable）。ルールは docv が決める。使うには Node.js が要る
+  textlint: disable
 
 format:
   # check で、整形が要るファイルを error にするか
   enabled: false
-
-# パスごとに、道具の設定を上書きする。後に書いたものが優先する
-# overrides:
-#   - paths: [docs/tmp/**]
-#     textlint: false
-#     style: false
-#     format: false
-#     mission: optional
 ",
         schema_url()
     )
@@ -115,12 +91,12 @@ mod tests {
             env!("CARGO_PKG_VERSION")
         )));
         let config = config::parse(&text).unwrap();
-        assert_eq!(config.docs, ["docs/**/*.md"]);
-        assert_eq!(config.slots.dir, "docv");
-        assert!(!config.output.image);
+        assert_eq!(config.free_dir(), "docs");
+        assert_eq!(config.slots_dir(), "docv");
+        assert_eq!(config.image_dir(), None);
         let error = run(&path, false).unwrap_err().to_string();
         assert!(error.contains("すでにある"), "{error}");
-        fs::write(&path, "docs: []\n").unwrap();
+        fs::write(&path, "dir:\n  free: notes\n").unwrap();
         run(&path, true).unwrap();
         assert_eq!(fs::read_to_string(&path).unwrap(), config_text());
     }
@@ -142,7 +118,7 @@ mod tests {
             })
             .collect::<Vec<_>>()
             .join("\n");
-        assert!(text.contains("  style:\n    bold: deny"), "{text}");
+        assert!(text.contains("title: my-project"), "{text}");
         config::parse(&text).unwrap_or_else(|e| panic!("{e:#}\n{text}"));
     }
 }

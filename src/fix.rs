@@ -1,4 +1,5 @@
-//! docv fix。textlint の自動修正と整形で、管理対象のファイルと Slot のディレクトリの中の .md のファイルを書き換える。docv/service/manual.md の docv fix。
+//! docv fix。textlint の自動修正と整形で、管理対象のファイルと Slot のディレクトリの中の .md のファイルを書き換える。
+//! docv.yaml と YAML の Slot は、末尾の改行だけを整える。docv/service/manual.md の docv fix。
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -28,21 +29,13 @@ pub fn run(project: &Project, targets: &[String], textlint: bool) -> Result<Repo
         original.insert(path.clone(), text);
     }
 
-    // textlint の自動修正で文を直してから整形する。overrides で textlint や整形を外したパスは飛ばす。
+    // textlint の自動修正で文を直してから整形する。
     if textlint && let Some(textlint) = Textlint::new(project) {
-        let paths: Vec<String> = files
-            .iter()
-            .filter(|path| project.settings_of(path).textlint)
-            .cloned()
-            .collect();
-        textlint.fix(&paths)?;
+        textlint.fix(&files)?;
     }
 
     let mut report = Report::default();
     for (path, before) in original {
-        if !project.settings_of(&path).format {
-            continue;
-        }
         let full = project.root.join(&path);
         let text = fs::read_to_string(&full).with_context(|| format!("{path} を読めない"))?;
         match format::format(&text) {
@@ -57,6 +50,17 @@ pub fn run(project: &Project, targets: &[String], textlint: bool) -> Result<Repo
             Err(e) => report.failed.push((path, format!("{e:#}"))),
         }
     }
+
+    for path in project.yaml_targets(targets)? {
+        let full = project.root.join(&path);
+        let text = fs::read_to_string(&full).with_context(|| format!("{path} を読めない"))?;
+        let formatted = format::final_newline(&text);
+        if formatted != text {
+            fs::write(&full, &formatted).with_context(|| format!("{path} を書けない"))?;
+            report.changed.push(path);
+        }
+    }
+    report.changed.sort();
     Ok(report)
 }
 
@@ -77,11 +81,7 @@ mod tests {
     fn formats_targets_only() {
         let dir = tempfile::tempdir().unwrap();
         let root = dir.path();
-        write(
-            root,
-            "docv.yaml",
-            "docs: [docs/spec/*.md]\nignore: [docs/tmp/**]\n",
-        );
+        write(root, "docv.yaml", "ignore: [docs/tmp/**]\n\n");
         write(root, "docs/spec/a.md", "---\nmission: q\n---\n# A\n* x\n");
         write(root, "docs/spec/b.md", "# B\n");
         write(root, "docs/spec/c.md", "---\nmission: q\n");
@@ -92,10 +92,24 @@ mod tests {
             "docv/service/manual.md",
             "# M\n| a | bb |\n|---|---|\n| 種類 | c |\n",
         );
+        write(root, "docv/service/words.yaml", "groups: []");
+        write(root, "docv/service/install.yaml", "steps: []\n");
         let project = Project::open(&Locate::default(), root).unwrap();
 
         let report = run(&project, &[], true).unwrap();
-        assert_eq!(report.changed, ["docs/spec/a.md", "docv/service/manual.md"]);
+        assert_eq!(
+            report.changed,
+            [
+                "docs/spec/a.md",
+                "docv.yaml",
+                "docv/service/manual.md",
+                "docv/service/words.yaml"
+            ]
+        );
+        assert_eq!(
+            fs::read_to_string(root.join("docv/service/words.yaml")).unwrap(),
+            "groups: []\n"
+        );
         assert_eq!(report.failed.len(), 1);
         assert_eq!(report.failed[0].0, "docs/spec/c.md");
         assert_eq!(

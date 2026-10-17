@@ -1,44 +1,33 @@
 # yaml-language-server: $schema=./assets/schema/docv.schema.json
 title: docv
 
-docs:
-  - docs/**/*.md
+dir:
+  free: docs
+  slots: docv
+  html: output/docv/html
+  image: output/docv/image
 
 ignore:
   - docs/tmp/**
   - docs/plan/**
-  - assets/**
-  - CLAUDE.md
-  - tmp/**
 
-tags: [仕様, 未決, ルール, 設定, 出力]
-
-slots:
-  dir: docv
-
-output:
-  dir: tmp/html
-  commit: false
-  image: true
+tags:
+  - name: 仕様
+    color: blue
+  - name: 未決
+    color: red
+  - name: ルール
+    color: green
+  - name: 設定
+    color: yellow
+  - name: 出力
+    color: purple
 
 lint:
-  tags:
-    仕様: [no-past-wording]
-  style:
-    bold: deny
-    dollar: deny
-    heading_number: require
-    section_separator: require
-    link_text: { base: docs }
-  textlint:
-    enabled: true
-    presets: [ja-technical-writing, ja-spacing]
-    rules:
-      ja-technical-writing/no-exclamation-question-mark: false
-      ja-spacing/ja-space-between-half-and-full-width: { space: always }
-      ja-spacing/ja-space-around-code: { before: true, after: true }
-      ja-spacing/ja-space-around-link: { before: true, after: true }
-      ja-spacing/ja-no-space-around-slash: false
+  bold: deny
+  italic: deny
+  dollar: deny
+  textlint: enable
 
 format:
   enabled: true

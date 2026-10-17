@@ -71,15 +71,16 @@ Free ファイルは、ディレクトリではなくタグで分類する。
 | 手順 | コマンド、手順、うまくいかないときの対処     |
 | 規約 | コードの書き方など、守ること                 |
 
-どのタグにも、過去の言い回しを警告するルールを付ける。
+`docv.yaml` の `tags` に、この 3 つを色と一緒に書く。
 
 ```yaml
-tags: [仕様, 手順, 規約]
-lint:
-  tags:
-    仕様: [no-past-wording]
-    手順: [no-past-wording]
-    規約: [no-past-wording]
+tags:
+  - name: 仕様
+    color: blue
+  - name: 手順
+    color: green
+  - name: 規約
+    color: yellow
 ```
 
 ---
@@ -125,5 +126,5 @@ lint:
 ## 7. 変えたら
 
 - `docv fix` で整形し、`docv check` を通す。空行や表の余白は、手で揃えない
-- `docv.yaml` の `output.commit` が true なら、続けて `docv build` を実行し、出力も同じコミットに入れる
+- docv build の出力をコミットしているなら、続けて `docv build` を実行し、出力も同じコミットに入れる
 - 書式（章番号、文体、強調など）を決めたら、この章に書き足す。機械で確かめられるものは、`docv.yaml` の `lint` で確かめる

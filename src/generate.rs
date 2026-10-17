@@ -11,7 +11,7 @@ use anyhow::{Context, Result, bail};
 use crate::slot::{self, DEFS, Def, Format};
 use crate::workspace::Project;
 
-/// docv slot list の出力。名前、作るファイル（slots.dir からの相対パス）、Slot の名前とミッションを 1 行ずつ並べる。
+/// docv slot list の出力。名前、作るファイル（dir.slots からの相対パス）、Slot の名前とミッションを 1 行ずつ並べる。
 pub fn list() -> String {
     let name_width = DEFS.iter().map(|d| d.id.len()).max().unwrap_or(0);
     let file_width = DEFS.iter().map(|d| d.file_name().len()).max().unwrap_or(0);
@@ -103,7 +103,7 @@ mod tests {
 
     fn project() -> (tempfile::TempDir, Project) {
         let dir = tempfile::tempdir().unwrap();
-        write(dir.path(), "docv.yaml", "docs: [docs/**/*.md]\n");
+        write(dir.path(), "docv.yaml", "{}\n");
         let project = Project::open(&Locate::default(), dir.path()).unwrap();
         (dir, project)
     }

@@ -20,7 +20,7 @@ docv init                          # docv.yaml を作る
 docv desc                          # docv の概要を出す
 docv check                         # ルールに沿っているかを確かめる
 docv fix                           # 空行や表の余白を整形し、textlint で直せるところを直す
-docv build                         # HTML を作る（output.image が true なら JPG も）
+docv build                         # HTML を作る（dir.image を書いていれば JPG も）
 docv slot list                     # Slot の一覧と、ミッションを出す
 docv slot gen service              # Slot を決まったパスに作る
 docv slot gen doc-guide            # ドキュメントのガイドラインの雛形を作る
@@ -34,7 +34,7 @@ AI Agent には、`CLAUDE.md` などに次のように書いて伝える。
 - ドキュメントを書く前に、`docv/guide/doc-guide.md`（ガイドライン）を読むこと
 ```
 
-このリポジトリのサービス仕様、利用マニュアル、開発者向けガイドなどは、Slot（[`docv/`](docv)）に書いてある。`docv build` で HTML（`tmp/html/`）にして見られる。
+このリポジトリのサービス仕様、利用マニュアル、開発者向けガイドなどは、Slot（[`docv/`](docv)）に書いてある。`docv build` で HTML（`output/docv/html/`）にして見られる。
 
 ## ドキュメント
 

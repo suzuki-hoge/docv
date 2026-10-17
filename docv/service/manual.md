@@ -55,8 +55,8 @@ docv check docs/spec/order.md
 
 人間向けの HTML を生成する。
 
-- 出力先は `docv.yaml` で指定された `output.dir`
-- `output.image` が true なら、Slot のページを JPG にする。Google Chrome または Chromium が必要
+- 出力先は `docv.yaml` で指定された `dir.html`
+- `dir.image` を書いていれば、Slot のページを JPG にして、そこに出す。Google Chrome または Chromium が必要
 
 ### docv slot list
 
@@ -80,7 +80,7 @@ docv slot gen doc-guide --print # 今の版の雛形を出す。手元のガイ�
 - yaml の Slot には、項目のサンプルを書く
 - md の Slot は空のファイルを作り、中身の形は自由で、Slot のミッションに沿って Markdown を書けばよいことを表示する
 - Doc ガイド（`doc-guide`）だけは、ガイドラインの雛形を書く
-- Slot ファイルの名前は変更できない。`docv/` は `slots.dir` で変更可能
+- Slot ファイルの名前は変更できない。`docv/` は `dir.slots` で変更可能
 
 ### docv slot schema
 

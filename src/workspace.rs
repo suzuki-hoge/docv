@@ -20,7 +20,6 @@ pub struct Project {
     pub root: PathBuf,
     pub config_path: PathBuf,
     pub config: Config,
-    docs: GlobSet,
     ignore: GlobSet,
 }
 
@@ -29,16 +28,6 @@ pub struct Project {
 pub struct DocFile {
     pub path: String,
     pub class: Class,
-}
-
-/// overrides を当てた、ファイルごとの道具の設定。
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Settings {
-    pub textlint: bool,
-    pub style: bool,
-    pub format: bool,
-    /// YAML front matter の mission を必須にするか。
-    pub mission_required: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -74,10 +63,11 @@ impl Project {
         let root = root
             .canonicalize()
             .with_context(|| format!("ルート {} が見つからない", root.display()))?;
+        // ルートと比べられるように、設定ファイルのパスもシンボリックリンクを解く。
+        let config_path = config_path.canonicalize().unwrap_or(config_path);
         Ok(Project {
             root,
             config_path,
-            docs: glob_set(&config.docs)?,
             ignore: glob_set(&config.ignore)?,
             config,
         })
@@ -85,10 +75,10 @@ impl Project {
 
     /// 除外したものを除く .md のファイルを、パスの辞書順で返す。
     pub fn files(&self) -> Result<Vec<DocFile>> {
-        let output_dir = normalize_dir(&self.config.output.dir);
+        let output_dirs = self.output_dirs();
         let mut files = Vec::new();
         for rel in self.markdown_under(&self.root)? {
-            if let Some(class) = self.classify_with(&rel, &output_dir) {
+            if let Some(class) = self.classify_with(&rel, &output_dirs) {
                 files.push(DocFile { path: rel, class });
             }
         }
@@ -108,7 +98,7 @@ impl Project {
     }
 
     /// Slot のディレクトリの中のファイル（Slot と ADR の候補）を、パスの辞書順で返す。シンボリックリンクも含む。
-    /// 除外するもの（.gitignore に書かれている、output.dir の中にある、ignore に当てはまる）と、
+    /// 除外するもの（.gitignore に書かれている、dir.html の中にある、ignore に当てはまる）と、
     /// 名前がドットで始まるファイルとディレクトリ（.DS_Store など）は除く。
     pub fn slot_dir_files(&self) -> Result<Vec<String>> {
         Ok(self
@@ -118,13 +108,30 @@ impl Project {
             .collect())
     }
 
+    /// 末尾の改行を整える YAML のファイル（ルートの中の設定ファイルと、YAML の Slot）。シンボリックリンクは書き換えないので除く。
+    /// targets が空ならすべて、そうでなければそのパス（ルートからの相対パス）だけ。
+    pub fn yaml_targets(&self, targets: &[String]) -> Result<Vec<String>> {
+        let mut files: Vec<String> = self
+            .walk_slots_dir()?
+            .into_iter()
+            .filter(|(rel, symlink)| !symlink && (rel.ends_with(".yaml") || rel.ends_with(".yml")))
+            .map(|(rel, _)| rel)
+            .collect();
+        if let Ok(rel) = self.config_path.strip_prefix(&self.root) {
+            files.push(crate::markdown::slash_path(rel));
+        }
+        files.retain(|path| targets.is_empty() || targets.contains(path));
+        files.sort();
+        Ok(files)
+    }
+
     /// Slot のディレクトリの中のファイルと、それがシンボリックリンクか。
     fn walk_slots_dir(&self) -> Result<Vec<(String, bool)>> {
         let dir = self.root.join(self.slots_dir());
         if !dir.is_dir() {
             return Ok(Vec::new());
         }
-        let output_dir = normalize_dir(&self.config.output.dir);
+        let output_dirs = self.output_dirs();
         let mut files = Vec::new();
         for entry in walker(&dir) {
             let entry = entry?;
@@ -135,7 +142,7 @@ impl Project {
                 continue;
             }
             let rel = relative(&self.root, entry.path())?;
-            if is_under(&rel, &output_dir) || self.ignore.is_match(&rel) {
+            if output_dirs.iter().any(|d| is_under(&rel, d)) || self.ignore.is_match(&rel) {
                 continue;
             }
             files.push((rel, file_type.is_symlink()));
@@ -161,21 +168,28 @@ impl Project {
         Ok(files)
     }
 
-    /// ルートからの相対パスを分類する。output.dir の中と ignore に当てはまるものは None。
+    /// ルートからの相対パスを分類する。docv build の出力先の中と ignore に当てはまるものは None。
     /// .gitignore は見ない。ファイルがあるかどうかも見ない。
     pub fn classify(&self, rel: &str) -> Option<Class> {
-        self.classify_with(rel, &normalize_dir(&self.config.output.dir))
+        self.classify_with(rel, &self.output_dirs())
+    }
+
+    /// docv build の出力先（dir.html と dir.image）。
+    fn output_dirs(&self) -> Vec<String> {
+        let mut dirs = vec![self.config.html_dir()];
+        dirs.extend(self.config.image_dir());
+        dirs
     }
 
     /// Slot のディレクトリの中の Markdown は、Slot ファイルとして読むので、管理対象にも管理外にもしない。
-    fn classify_with(&self, rel: &str, output_dir: &str) -> Option<Class> {
-        if is_under(rel, output_dir)
+    fn classify_with(&self, rel: &str, output_dirs: &[String]) -> Option<Class> {
+        if output_dirs.iter().any(|d| is_under(rel, d))
             || is_under(rel, &self.slots_dir())
             || self.ignore.is_match(rel)
         {
             return None;
         }
-        Some(if self.docs.is_match(rel) {
+        Some(if is_under(rel, &self.config.free_dir()) {
             Class::Managed
         } else {
             Class::Unmanaged
@@ -211,47 +225,19 @@ impl Project {
         Ok(files)
     }
 
-    /// overrides を当てた、そのファイルへの道具の設定。後に書いた overrides が優先する。
-    pub fn settings_of(&self, rel: &str) -> Settings {
-        let mut settings = Settings {
-            textlint: true,
-            style: true,
-            format: true,
-            mission_required: true,
-        };
-        for o in &self.config.overrides {
-            let hit = o
-                .paths
-                .iter()
-                .filter_map(|p| config::glob(p).ok())
-                .any(|g| g.is_match(rel));
-            if !hit {
-                continue;
-            }
-            if let Some(v) = o.textlint {
-                settings.textlint = v;
-            }
-            if let Some(v) = o.style {
-                settings.style = v;
-            }
-            if let Some(v) = o.format {
-                settings.format = v;
-            }
-            if let Some(v) = o.mission {
-                settings.mission_required = v == config::Requirement::Required;
-            }
-        }
-        settings
-    }
-
     /// Slot のディレクトリ（ルートからの相対パス）。
     pub fn slots_dir(&self) -> String {
-        normalize_dir(&self.config.slots.dir)
+        self.config.slots_dir()
     }
 
-    /// docv build の出力先。
+    /// docv build の HTML の出力先。
     pub fn out_dir(&self) -> PathBuf {
-        self.root.join(&self.config.output.dir)
+        self.root.join(self.config.html_dir())
+    }
+
+    /// docv build の JPG の出力先。dir.image を書いていなければ None。
+    pub fn image_dir(&self) -> Option<PathBuf> {
+        self.config.image_dir().map(|dir| self.root.join(dir))
     }
 
     pub fn title(&self) -> String {
@@ -296,12 +282,6 @@ fn relative(root: &Path, path: &Path) -> Result<String> {
     Ok(parts.join("/"))
 }
 
-fn normalize_dir(dir: &str) -> String {
-    dir.trim_start_matches("./")
-        .trim_end_matches('/')
-        .to_string()
-}
-
 fn is_under(path: &str, dir: &str) -> bool {
     !dir.is_empty()
         && path
@@ -321,9 +301,8 @@ mod tests {
         fs::write(path, text).unwrap();
     }
 
-    const CONFIG: &str = "docs:
-  - README.md
-  - docs/**/*.md
+    const CONFIG: &str = "dir:
+  free: docs
 ignore:
   - tmp/**
 ";
@@ -356,7 +335,7 @@ ignore:
         assert_eq!(
             summary,
             [
-                ("README.md", Class::Managed),
+                ("README.md", Class::Unmanaged),
                 ("docs/spec/a.md", Class::Managed),
                 ("docs/spec/sub/b.md", Class::Managed),
                 ("notes.md", Class::Unmanaged),
@@ -365,12 +344,7 @@ ignore:
         assert_eq!(project.slot_markdown().unwrap(), ["docv/adr/rust.md"]);
         assert_eq!(
             project.fix_targets(&[]).unwrap(),
-            [
-                "README.md",
-                "docs/spec/a.md",
-                "docs/spec/sub/b.md",
-                "docv/adr/rust.md",
-            ]
+            ["docs/spec/a.md", "docs/spec/sub/b.md", "docv/adr/rust.md",]
         );
         assert_eq!(
             project
@@ -381,26 +355,11 @@ ignore:
     }
 
     #[test]
-    fn applies_overrides_in_order() {
-        let dir = tempfile::tempdir().unwrap();
-        write(
-            dir.path(),
-            "docv.yaml",
-            "docs: [docs/**/*.md]\noverrides:\n  - paths: [docs/tmp/**]\n    textlint: false\n    mission: optional\n  - paths: [docs/tmp/keep.md]\n    textlint: true\n",
-        );
-        let project = Project::open(&Locate::default(), dir.path()).unwrap();
-        let memo = project.settings_of("docs/tmp/memo.md");
-        assert!(!memo.textlint && !memo.mission_required && memo.style && memo.format);
-        assert!(project.settings_of("docs/tmp/keep.md").textlint);
-        assert!(project.settings_of("docs/spec/a.md").mission_required);
-    }
-
-    #[test]
     fn uses_config_outside_root() {
         let config_dir = tempfile::tempdir().unwrap();
         let root_dir = tempfile::tempdir().unwrap();
         write(config_dir.path(), "trial.yaml", CONFIG);
-        write(root_dir.path(), "README.md", "# x\n");
+        write(root_dir.path(), "docs/a.md", "# x\n");
 
         let locate = Locate {
             config: Some(config_dir.path().join("trial.yaml")),

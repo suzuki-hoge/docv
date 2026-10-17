@@ -11,56 +11,26 @@ use crate::diagnostic::{Diagnostic, Level};
 use crate::markdown::{self, Document, Outline};
 use crate::style::{self, Style};
 use crate::textlint::Textlint;
-use crate::workspace::{Project, Settings};
-use crate::{adr, format, meta, slot};
-
-pub const PAST_WORDING: &[&str] = &[
-    "以前は",
-    "従来は",
-    "旧仕様",
-    "旧方式",
-    "に変更した",
-    "に変更しました",
-    "を廃止した",
-    "を廃止しました",
-    "未実装",
-    "実装予定",
-    "実装済み",
-    "今後は",
-    "将来的に",
-    "TODO",
-    "FIXME",
-];
-
-pub const PAST_HEADING: &[&str] = &[
-    "変更履歴",
-    "更新履歴",
-    "経緯",
-    "廃案",
-    "不採用",
-    "未実装",
-    "今後の予定",
-];
+use crate::workspace::Project;
+use crate::{adr, format, slot};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Options {
-    /// lint.textlint.enabled が true のときに textlint をかけるか。--no-textlint で false になる。
+    /// lint.textlint が enable のときに textlint をかけるか。--no-textlint で false になる。
     pub textlint: bool,
 }
 
 /// 管理対象のファイルと Slot を確かめる。targets が空ならすべて、そうでなければそのパス（ルートからの相対パス）だけ。
 pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Vec<Diagnostic>> {
-    let words = Words::new(project);
+    let style = Style::new(&project.config);
     let managed: HashSet<String> = project.managed()?.into_iter().collect();
     let mut diagnostics = Vec::new();
     let mut textlint_files = Vec::new();
     for path in project.targets(targets)? {
         let text = fs::read_to_string(project.root.join(&path))
             .with_context(|| format!("{path} を読めない"))?;
-        diagnostics.extend(check_file(project, &words, &managed, &path, &text));
-        if project.settings_of(&path).textlint {
-            textlint_files.push(path);
-        }
+        diagnostics.extend(check_file(project, &style, &managed, &path, &text));
+        textlint_files.push(path);
     }
     // Slot のディレクトリの中の .md のファイルには、Free ファイルのルールはかけず、整形と textlint だけをかける。
     for path in project.slot_markdown()? {
@@ -72,13 +42,27 @@ pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Ve
         let mut cx = Checker {
             project,
             path: &path,
-            settings: project.settings_of(&path),
             diagnostics: Vec::new(),
         };
         check_format(&mut cx, &text);
         diagnostics.extend(cx.diagnostics);
-        if project.settings_of(&path).textlint {
-            textlint_files.push(path);
+        textlint_files.push(path);
+    }
+    // docv.yaml と YAML の Slot は、末尾の改行だけを整形と連動させる。
+    if project.config.format.enabled {
+        for path in project.yaml_targets(targets)? {
+            let text = fs::read_to_string(project.root.join(&path))
+                .with_context(|| format!("{path} を読めない"))?;
+            let formatted = format::final_newline(&text);
+            if formatted != text {
+                diagnostics.push(Diagnostic {
+                    line: format::first_diff_line(&text, &formatted),
+                    path,
+                    rule: "format-diff".to_string(),
+                    level: Level::Error,
+                    message: "末尾の改行を 1 つにする。docv fix で整形する".to_string(),
+                });
+            }
         }
     }
     if targets.is_empty() {
@@ -94,33 +78,9 @@ pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Ve
     Ok(diagnostics)
 }
 
-struct Words {
-    wording: Vec<String>,
-    heading: Vec<String>,
-}
-
-impl Words {
-    /// lint.words.add は past-wording に足し、lint.words.remove は両方から外す。
-    fn new(project: &Project) -> Self {
-        let config = &project.config.lint.words;
-        let keep = |words: &[&str]| -> Vec<String> {
-            words
-                .iter()
-                .filter(|w| !config.remove.iter().any(|r| r == *w))
-                .map(|w| w.to_string())
-                .collect()
-        };
-        let mut wording = keep(PAST_WORDING);
-        wording.extend(config.add.iter().cloned());
-        let heading = keep(PAST_HEADING);
-        Words { wording, heading }
-    }
-}
-
 struct Checker<'a> {
     project: &'a Project,
     path: &'a str,
-    settings: Settings,
     diagnostics: Vec<Diagnostic>,
 }
 
@@ -138,7 +98,7 @@ impl Checker<'_> {
 
 fn check_file(
     project: &Project,
-    words: &Words,
+    style: &Style,
     managed: &HashSet<String>,
     path: &str,
     text: &str,
@@ -146,7 +106,6 @@ fn check_file(
     let mut cx = Checker {
         project,
         path,
-        settings: project.settings_of(path),
         diagnostics: Vec::new(),
     };
     let document = markdown::split(text);
@@ -155,28 +114,9 @@ fn check_file(
     check_frontmatter(&mut cx, &document);
     check_structure(&mut cx, &document, &outline);
 
-    let tags = meta::read(&document, &outline).tags;
-    let rules: HashSet<&str> = project.config.rules_of(&tags).collect();
-    if rules.contains("no-past-wording") {
-        check_wording(&mut cx, words, &outline);
-    }
-    if rules.contains("no-done-task") {
-        for &line in &outline.done_tasks {
-            cx.push(
-                line,
-                "done-task",
-                Level::Warn,
-                "終わったタスクが残っている。終わったタスクは消す",
-            );
-        }
-    }
     check_links(&mut cx, &outline);
-
-    if cx.settings.style {
-        let style = Style::resolve(project.config.lint.style.as_ref(), None);
-        for found in style::check(&style, path, &document, managed) {
-            cx.push(found.line, found.rule, Level::Error, found.message);
-        }
+    for found in style::check(style, path, &document, managed) {
+        cx.push(found.line, found.rule, Level::Error, found.message);
     }
 
     check_format(&mut cx, text);
@@ -186,7 +126,6 @@ fn check_file(
 /// 整形できないファイルは、Free ファイルなら frontmatter-invalid、ADR なら adr-invalid が出ているので、ここでは出さない。
 fn check_format(cx: &mut Checker, text: &str) {
     if cx.project.config.format.enabled
-        && cx.settings.format
         && let Ok(formatted) = format::format(text)
         && formatted != text
     {
@@ -237,8 +176,6 @@ fn check_frontmatter(cx: &mut Checker, document: &Document) {
     };
     let line_of = |key: &str| fm.map_or(1, |fm| fm.line_of_key(key));
 
-    // overrides で mission を optional にしたパスでは、mission を求めない。
-    let required = cx.settings.mission_required;
     match mapping.get("mission") {
         Some(Value::String(m)) => {
             if m.trim_end().contains('\n') {
@@ -256,27 +193,28 @@ fn check_frontmatter(cx: &mut Checker, document: &Document) {
             Level::Error,
             "mission は文字列で書く",
         ),
-        None if required => cx.push(
+        None => cx.push(
             1,
             "mission-missing",
             Level::Error,
             "mission がない。このファイルを読むと何が分かるかを 1 文で書く",
         ),
-        None => {}
     }
 
     match mapping.get("tags") {
         None => {}
         Some(Value::Sequence(tags)) => {
             for tag in tags {
-                match (tag, &cx.project.config.tags) {
-                    (Value::String(t), Some(known)) if !known.contains(t) => cx.push(
+                match tag {
+                    Value::String(t) if cx.project.config.tag_color(t).is_none() => cx.push(
                         line_of("tags"),
                         "tag-unknown",
                         Level::Error,
-                        format!("タグ {t} は docv.yaml の tags にない"),
+                        format!(
+                            "タグ {t} は docv.yaml の tags にない。使うなら、docv.yaml の tags に name と color を書いて足す"
+                        ),
                     ),
-                    (Value::String(_), _) => {}
+                    Value::String(_) => {}
                     _ => cx.push(
                         line_of("tags"),
                         "frontmatter-invalid",
@@ -305,35 +243,6 @@ fn check_structure(cx: &mut Checker, document: &Document, outline: &Outline) {
             Level::Error,
             format!("h1 が {} 個ある。1 つにする", h1.len()),
         );
-    }
-}
-
-fn check_wording(cx: &mut Checker, words: &Words, outline: &Outline) {
-    for prose in &outline.prose {
-        for word in &words.wording {
-            if prose.text.contains(word.as_str()) {
-                cx.push(
-                    prose.line,
-                    "past-wording",
-                    Level::Warn,
-                    format!(
-                        "「{word}」は過去や実装状態の言い回し。今の姿だけを書き、決めた経緯は ADR に残す"
-                    ),
-                );
-            }
-        }
-    }
-    for heading in &outline.headings {
-        for word in &words.heading {
-            if heading.prose.contains(word.as_str()) {
-                cx.push(
-                    heading.line,
-                    "past-heading",
-                    Level::Warn,
-                    format!("見出しの「{word}」は過去を扱う語。決めた経緯は ADR に残す"),
-                );
-            }
-        }
     }
 }
 
@@ -372,23 +281,15 @@ mod tests {
 
     const OPTIONS: Options = Options { textlint: true };
 
-    const CONFIG: &str = "docs:
-  - docs/**/*.md
-ignore:
+    const CONFIG: &str = "ignore:
   - docs/ignored/**
-tags: [仕様, 計画]
+tags:
+  - name: 仕様
+    color: blue
+  - name: 計画
+    color: green
 lint:
-  tags:
-    仕様: [no-past-wording]
-    計画: [no-done-task]
-  words:
-    add: [いずれ]
-    remove: [将来的に]
-overrides:
-  - paths: [docs/tmp/**]
-    textlint: false
-    style: false
-    mission: optional
+  bold: deny
 ";
 
     /// mission を書いた YAML front matter。
@@ -425,9 +326,7 @@ overrides:
                 "docs/plan/p.md",
                 &format!("{}\n# P\n\n- [ ] t\n", fm("tags: [計画]\n")),
             ),
-            ("docs/ignored/memo.md", "以前は TODO [x](missing.md)\n"),
-            // overrides で YAML front matter を求めないパス
-            ("docs/tmp/memo.md", "# メモ\n\n**太字**\n"),
+            ("docs/ignored/memo.md", "**太字** [x](missing.md)\n"),
             ("docv/service/service.md", "# サービス仕様\n"),
         ]);
         assert!(result.is_empty(), "{result:#?}");
@@ -453,7 +352,7 @@ overrides:
             [
                 "docs/spec/a.md:1: error mission-missing mission がない。このファイルを読むと何が分かるかを 1 文で書く".to_string(),
                 "docs/spec/b.md:2: error mission-multiline mission は 1 行で書く".to_string(),
-                "docs/spec/b.md:5: error tag-unknown タグ z は docv.yaml の tags にない".to_string(),
+                "docs/spec/b.md:5: error tag-unknown タグ z は docv.yaml の tags にない。使うなら、docv.yaml の tags に name と color を書いて足す".to_string(),
             ]
         );
         assert!(
@@ -467,41 +366,21 @@ overrides:
     fn reports_structure_problems() {
         let result = check(&[
             ("docs/spec/a.md", &format!("{}# A\n\n# B\n", fm(""))),
+            // 終わったタスクは確かめない
+            ("docs/plan/p.md", &format!("{}# P\n\n- [x] done\n", fm(""))),
+            // 書式の規則は、lint で deny にしたものと、章番号とリンクの表示文字を確かめる
             (
-                "docs/plan/p.md",
-                &format!("{}# P\n\n- [x] done\n", fm("tags: [計画]\n")),
+                "docs/spec/b.md",
+                &format!("{}# B\n\n## 1. 一\n\n**b** [a](a.md)\n\n## 二\n", fm("")),
             ),
         ]);
         assert_eq!(
             result,
             [
-                "docs/plan/p.md:7: warn done-task 終わったタスクが残っている。終わったタスクは消す",
                 "docs/spec/a.md:6: error title-count h1 が 2 個ある。1 つにする",
-            ]
-        );
-    }
-
-    #[test]
-    fn reports_wording_only_in_files_with_the_rule() {
-        let result = check(&[
-            (
-                "docs/spec/a.md",
-                &format!(
-                    "{}# A\n\n## 変更履歴\n\n以前は X だった。いずれ直す。将来的に直す。\n",
-                    fm("tags: [仕様]\n")
-                ),
-            ),
-            (
-                "docs/plan/p.md",
-                &format!("{}# P\n\n以前は\n", fm("tags: [計画]\n")),
-            ),
-        ]);
-        assert_eq!(
-            result,
-            [
-                "docs/spec/a.md:7: warn past-heading 見出しの「変更履歴」は過去を扱う語。決めた経緯は ADR に残す",
-                "docs/spec/a.md:9: warn past-wording 「いずれ」は過去や実装状態の言い回し。今の姿だけを書き、決めた経緯は ADR に残す",
-                "docs/spec/a.md:9: warn past-wording 「以前は」は過去や実装状態の言い回し。今の姿だけを書き、決めた経緯は ADR に残す",
+                "docs/spec/b.md:8: error link-text リンクの表示文字を spec/a.md にする",
+                "docs/spec/b.md:8: error style-bold 太字を使わない",
+                "docs/spec/b.md:10: error heading-number h2 の見出しを「2. 」で始める。章番号は 1 から順に振る",
             ]
         );
     }
@@ -512,7 +391,7 @@ overrides:
             (
                 "docs/spec/a.md",
                 &format!(
-                    "{}# A\n\n[x](missing.md) [y](https://example.com) [z](#top) [w](%E3%81%82.md) [v](/README.md)\n",
+                    "{}# A\n\n[x](missing.md) [y](https://example.com) [z](#top) [spec/あ.md](%E3%81%82.md) [v](/README.md)\n",
                     fm("")
                 ),
             ),
@@ -541,7 +420,7 @@ overrides:
         let result = check(&[
             (".gitignore", "memo.txt\n"),
             ("docv/service/words.yaml", "groups: []\n"),
-            // output.dir の既定は docv/build
+            // dir.html の既定は docv/build
             ("docv/build/.docv", ""),
             ("docv/build/index.html", "<html></html>\n"),
             ("docv/build/jpg/サービス仕様/用語集.jpg", ""),
@@ -556,11 +435,7 @@ overrides:
     #[test]
     fn checks_only_format_in_slot_markdown() {
         let dir = tempfile::tempdir().unwrap();
-        write(
-            dir.path(),
-            "docv.yaml",
-            "docs: [docs/**/*.md]\nformat:\n  enabled: true\n",
-        );
+        write(dir.path(), "docv.yaml", "format:\n  enabled: true\n");
         write(
             dir.path(),
             "docv/service/manual.md",
@@ -571,6 +446,7 @@ overrides:
             "docv/adr/a.md",
             "---\ndate: 2026-10-13\n---\n\n# A\n\n| 種類 | c |\n| ---- | - |\n",
         );
+        write(dir.path(), "docv/service/words.yaml", "groups: []");
         let project = Project::open(&Locate::default(), dir.path()).unwrap();
         let result: Vec<String> = run(&project, &[], OPTIONS)
             .unwrap()
@@ -579,7 +455,10 @@ overrides:
             .collect();
         assert_eq!(
             result,
-            ["docv/service/manual.md:3: error format-diff 整形が必要。docv fix で整形する"]
+            [
+                "docv/service/manual.md:3: error format-diff 整形が必要。docv fix で整形する",
+                "docv/service/words.yaml:1: error format-diff 末尾の改行を 1 つにする。docv fix で整形する",
+            ]
         );
     }
 

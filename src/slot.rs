@@ -1,6 +1,6 @@
 //! Slot。どのプロジェクトにも要るドキュメントを、docv が決めたミッションと形で書くファイル。docs/spec/slot.md。
 //!
-//! Slot ファイルは、slots.dir の下の、まとまりのディレクトリに `<まとまり>/<ID>.<拡張子>` の名前で置く。拡張子は Slot ごとに決まる（yaml か md）。
+//! Slot ファイルは、dir.slots の下の、まとまりのディレクトリに `<まとまり>/<ID>.<拡張子>` の名前で置く。拡張子は Slot ごとに決まる（yaml か md）。
 //! ファイルの中のパスは、すべてルートからの相対パス。
 
 use std::fs;
@@ -40,7 +40,7 @@ impl Group {
         }
     }
 
-    /// Slot ファイルを置くディレクトリの名前（slots.dir からの相対パス）。
+    /// Slot ファイルを置くディレクトリの名前（dir.slots からの相対パス）。
     pub fn dir(self) -> &'static str {
         match self {
             Group::Service => "service",
@@ -202,13 +202,13 @@ impl Def {
         }
     }
 
-    /// Slot ファイルの、slots.dir からの相対パス。
+    /// Slot ファイルの、dir.slots からの相対パス。
     pub fn file_name(&self) -> String {
         format!("{}/{}.{}", self.group.dir(), self.id, self.extension())
     }
 }
 
-/// slots.dir からの相対パス（`service/words.yaml`）から Slot を引く。
+/// dir.slots からの相対パス（`service/words.yaml`）から Slot を引く。
 pub fn def_of_file(rel: &str) -> Option<&'static Def> {
     DEFS.iter().find(|d| d.file_name() == rel)
 }
@@ -223,7 +223,7 @@ pub fn file_names() -> String {
 
 /// Slot の名前に近いパス（ディレクトリが違う `words.yaml`、番号が付いた `service/03-words.yaml`、
 /// 拡張子が違う `service/service.yaml`）なら、正しいパスを返す。
-/// dir は slots.dir。返すパスはルートからの相対パス。
+/// dir は dir.slots。返すパスはルートからの相対パス。
 pub fn suggest(dir: &str, rel: &str) -> Option<String> {
     let name = rel.rsplit('/').next().unwrap_or(rel);
     let (stem, _) = name.rsplit_once('.')?;
@@ -837,7 +837,7 @@ mod tests {
 
     fn project(files: &[(&str, &str)]) -> (tempfile::TempDir, Project) {
         let dir = tempfile::tempdir().unwrap();
-        write(dir.path(), "docv.yaml", "docs: [docs/**/*.md]\n");
+        write(dir.path(), "docv.yaml", "{}\n");
         for (path, text) in files {
             write(dir.path(), path, text);
         }

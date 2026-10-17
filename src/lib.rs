@@ -3,6 +3,7 @@ pub mod build;
 pub mod check;
 pub mod cli;
 pub mod config;
+pub mod config_view;
 pub mod desc;
 pub mod diagnostic;
 pub mod fix;

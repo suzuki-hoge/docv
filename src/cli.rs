@@ -60,7 +60,7 @@ enum Command {
         #[arg(long)]
         no_textlint: bool,
     },
-    /// 人間向けの HTML を作る。output.image が true なら、Slot のページを JPG にする
+    /// 人間向けの HTML を作る。dir.image を書いていれば、Slot のページを JPG にする
     Build,
     /// Slot の一覧を出し、Slot ファイルを作り、YAML の Slot のスキーマを出す
     #[command(subcommand)]
@@ -190,7 +190,7 @@ fn execute_in_project(project: &Project, command: Command) -> Result<ExitCode> {
         }
         Command::Build => {
             let out = project.out_dir();
-            build::run(project, &out)?;
+            build::run(project, &out, project.image_dir().as_deref())?;
             println!("{} に出力した", out.display());
             Ok(ExitCode::SUCCESS)
         }

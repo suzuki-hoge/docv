@@ -1,8 +1,8 @@
 //! docv build。人間向けの HTML と、設定で有効なら Slot のページの JPG を生成する。docv/system/system.md の「HTML の作り」。
 //!
-//! トップは 3 ページに分け、サイドバーで行き来する。
+//! トップは 4 ページに分け、サイドバーで行き来する。
 //! index.html（プロジェクト概要）に Slot ファイルのページへのカード、ADR.html に決定のつながりの図、
-//! プロジェクト詳細.html に Free ファイルのツリーを置く。
+//! プロジェクト詳細.html に Free ファイルのツリー、現在の設定.html に docv.yaml のすべての項目と今の値を置く。
 //! Slot は 1 つずつ独立したページにし、`<まとまり>/<Slot>.html` に置く。
 //! 画像にしても読めるように、折りたたみは使わない。OS ごとの手順のタブは、印刷の表示（JPG）ではすべて並べる。
 
@@ -22,10 +22,12 @@ use syntect::parsing::SyntaxSet;
 use syntect::util::LinesWithEndings;
 
 use crate::adr::{self, Adr};
+use crate::config_view::{self, Cell};
 use crate::jpg;
 use crate::markdown::{self, relative_path};
 use crate::meta;
 use crate::slot::{self, Content, DEFS, Group, Slot};
+use crate::textlint;
 use crate::workspace::Project;
 
 const STYLE: &str = include_str!("../assets/style.css");
@@ -34,10 +36,11 @@ const STYLE: &str = include_str!("../assets/style.css");
 const MARKER: &str = ".docv";
 const MARKER_TEXT: &str = "docv build の出力。このディレクトリは docv build のたびに作り直す。\n";
 
-/// トップの 3 ページ。サイドバーに、この順で並べる。
+/// トップの 4 ページ。サイドバーに、この順で並べる。
 const PAGE: &str = "index.html";
 const ADR_PAGE: &str = "ADR.html";
 const DETAIL_PAGE: &str = "プロジェクト詳細.html";
+const CONFIG_PAGE: &str = "現在の設定.html";
 
 /// サイドバーの項目。描いているページがどれに属するかを示すのにも使う。
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -45,6 +48,7 @@ enum Nav {
     Overview,
     Adr,
     Detail,
+    Config,
 }
 
 impl Nav {
@@ -53,6 +57,7 @@ impl Nav {
             Nav::Overview => "プロジェクト概要",
             Nav::Adr => "ADR",
             Nav::Detail => "プロジェクト詳細",
+            Nav::Config => "現在の設定",
         }
     }
 
@@ -61,6 +66,7 @@ impl Nav {
             Nav::Overview => PAGE,
             Nav::Adr => ADR_PAGE,
             Nav::Detail => DETAIL_PAGE,
+            Nav::Config => CONFIG_PAGE,
         }
     }
 }
@@ -80,9 +86,6 @@ const ADR_KEYS: &str = "document.addEventListener('keydown',function(e){if(e.alt
 /// 絞り込んでも列の幅が変わらないように、すべての行を出した状態のファイルとタグの列の幅で固定する。
 const TAG_FILTER: &str = "(function(){var tb=document.querySelector('table.docs');var hs=tb.tHead.rows[0].cells;var w0=hs[0].offsetWidth,w2=hs[2].offsetWidth;hs[0].style.width=w0+'px';hs[2].style.width=w2+'px';tb.style.tableLayout='fixed';var bs=[].slice.call(document.querySelectorAll('.tag-filter button'));var files=[].slice.call(document.querySelectorAll('table.docs tr[data-path]'));var dirs=[].slice.call(document.querySelectorAll('table.docs tr[data-dir]'));function apply(){var on=bs.filter(function(b){return b.getAttribute('aria-pressed')==='true';}).map(function(b){return b.getAttribute('data-tag');});var all=on.length===bs.length;files.forEach(function(r){var t=JSON.parse(r.getAttribute('data-tags'));r.hidden=!all&&!t.some(function(x){return on.indexOf(x)>=0;});});dirs.forEach(function(d){var p=d.getAttribute('data-dir')+'/';d.hidden=!files.some(function(r){return !r.hidden&&r.getAttribute('data-path').indexOf(p)===0;});});}function pressed(b){return b.getAttribute('aria-pressed')==='true';}function set(b,on){b.setAttribute('aria-pressed',on?'true':'false');}bs.forEach(function(b){b.addEventListener('click',function(){if(bs.every(pressed)){bs.forEach(function(x){set(x,x===b);});}else{set(b,!pressed(b));if(!bs.some(pressed)){bs.forEach(function(x){set(x,true);});}}apply();});});})();";
 
-/// タグの色の数。CSS の `.tag.c0`〜`.tag.c7`。
-const TAG_COLORS: usize = 8;
-
 /// 管理対象のファイル 1 つ。HTML ではツリーの 1 行になる。
 struct Page {
     source: String,
@@ -93,24 +96,24 @@ struct Page {
     body: String,
 }
 
-/// JPG を置くディレクトリ（出力先からの相対パス）。
-pub const JPG_DIR: &str = "jpg";
-
-/// docv build。出力先の中を作り直す。output.image が true なら、Slot のページを JPG にして jpg/ に置く。
+/// docv build。out（dir.html）の中を作り直す。image（dir.image）を書いていれば、Slot のページを JPG にしてそこに置く。
 /// JPG は Slot のページごとに 1 枚。見つけやすいように、まとまりと Slot の表示名をパスにする。
 /// Markdown から作るページ（md の Slot、ADR、Free ファイル）は、GitHub で md をそのまま見られるので JPG にしない。
-pub fn run(project: &Project, out: &Path) -> Result<()> {
+pub fn run(project: &Project, out: &Path, image: Option<&Path>) -> Result<()> {
     let out = prepare_out(out)?;
     let slots = render(project, &out)?;
-    if project.config.output.image {
+    write(&out.join(MARKER), MARKER_TEXT)?;
+    if let Some(image) = image {
+        let image = prepare_out(image)?;
         let shots: Vec<(String, String)> = slots
             .iter()
             .filter(|s| !matches!(s.content, Content::Markdown(_)))
             .map(|s| (page_path(s), jpg_path(s)))
             .collect();
-        jpg::capture(&out, &out, &shots)?;
+        jpg::capture(&out, &image, &shots)?;
+        write(&image.join(MARKER), MARKER_TEXT)?;
     }
-    finish_out(project, &out)
+    Ok(())
 }
 
 /// out にすべてのページを書き、読み込んだ Slot を返す。
@@ -135,6 +138,7 @@ fn render(project: &Project, out: &Path) -> Result<Vec<Slot>> {
         write(&out.join(ADR_PAGE), &site.render_adr_index())?;
     }
     write(&out.join(DETAIL_PAGE), &site.render_detail())?;
+    write(&out.join(CONFIG_PAGE), &site.render_config())?;
     for slot in &slots {
         write(&out.join(page_path(slot)), &site.render_slot(slot))?;
     }
@@ -147,22 +151,14 @@ fn render(project: &Project, out: &Path) -> Result<Vec<Slot>> {
     Ok(slots)
 }
 
-/// 出力先に、.gitignore（output.commit が false のとき）と、docv が作ったことを示す目印を置く。
-fn finish_out(project: &Project, out: &Path) -> Result<()> {
-    if !project.config.output.commit {
-        write(&out.join(".gitignore"), "*\n")?;
-    }
-    write(&out.join(MARKER), MARKER_TEXT)
-}
-
 /// Slot のページの、出力先からの相対パス。`サービス仕様/利用マニュアル.html`。
 fn page_path(slot: &Slot) -> String {
     format!("{}/{}.html", slot.def.group.label(), slot.def.label)
 }
 
-/// Slot の JPG の、出力先からの相対パス。`jpg/サービス仕様/用語集.jpg`。
+/// Slot の JPG の、dir.image からの相対パス。`サービス仕様/用語集.jpg`。
 fn jpg_path(slot: &Slot) -> String {
-    format!("jpg/{}/{}.jpg", slot.def.group.label(), slot.def.label)
+    format!("{}/{}.jpg", slot.def.group.label(), slot.def.label)
 }
 
 fn read_page(project: &Project, path: &str) -> Result<Page> {
@@ -269,6 +265,97 @@ impl Site<'_> {
         )
     }
 
+    /// 現在の設定.html。docv.yaml のすべての項目と今の値を、1 つの表に並べる。
+    fn render_config(&self) -> String {
+        *self.dir.borrow_mut() = self.out.to_path_buf();
+        let mut out = String::new();
+        self.config(&mut out);
+        self.page(
+            &format!(
+                "{} - {}",
+                Nav::Config.label(),
+                escape(&self.project.title())
+            ),
+            Nav::Config,
+            &out,
+        )
+    }
+
+    /// docv.yaml の項目の表と、docv が使う textlint のルールの表。
+    /// 配列の項目は箇条書きにし、選ぶ項目は候補を横に並べて、選んでいるものに色を付ける。値のない項目は `-` を出す。
+    fn config(&self, out: &mut String) {
+        let _ = writeln!(out, "<h2 class=\"group\">現在の設定</h2>");
+        let _ = writeln!(
+            out,
+            "<table class=\"config\">\n<thead><tr><th>項目</th><th>値</th></tr></thead>\n<tbody>"
+        );
+        for row in config_view::rows(&self.project.config, &self.project.title()) {
+            let _ = write!(out, "<tr><td><code>{}</code></td><td>", escape(row.key));
+            match &row.value {
+                Cell::Value(text) => {
+                    let _ = write!(out, "<code>{}</code>", escape(text));
+                }
+                Cell::Tags(tags) if tags.is_empty() => out.push('-'),
+                Cell::Tags(tags) => {
+                    for tag in tags {
+                        out.push_str(&self.tag(tag));
+                    }
+                }
+                Cell::List(items) if items.is_empty() => out.push('-'),
+                Cell::List(items) => {
+                    out.push_str("<ul>");
+                    for item in items {
+                        let _ = write!(out, "<li><code>{}</code></li>", escape(item));
+                    }
+                    out.push_str("</ul>");
+                }
+                Cell::Choice(items) => {
+                    out.push_str("<div class=\"choices\">");
+                    for (text, selected) in items {
+                        let _ = write!(
+                            out,
+                            "<span class=\"choice{}\">{}</span>",
+                            if *selected { " on" } else { "" },
+                            escape(text)
+                        );
+                    }
+                    out.push_str("</div>");
+                }
+            }
+            out.push_str("</td></tr>\n");
+        }
+        out.push_str("</tbody>\n</table>\n");
+
+        let _ = writeln!(
+            out,
+            "<h2 class=\"group\">textlint のルール</h2>\n<p class=\"note\">lint.textlint が enable のときに、docv check が textlint で検査するルール。個別の設定は不可。</p>"
+        );
+        for (title, enabled, column) in [
+            ("検査項目", true, "確かめること"),
+            ("非検査項目", false, "確かめないこと"),
+        ] {
+            let _ = writeln!(out, "<h3>{title}</h3>");
+            for preset in textlint::PRESETS {
+                let _ = writeln!(
+                    out,
+                    "<h4>{preset}</h4>\n<table class=\"textlint\">\n<thead><tr><th>ルール</th><th>{column}</th></tr></thead>\n<tbody>"
+                );
+                for rule in textlint::RULES
+                    .iter()
+                    .filter(|r| r.preset == *preset && r.enabled() == enabled)
+                {
+                    let _ = writeln!(
+                        out,
+                        "<tr><td><code>{}</code></td><td>{}</td></tr>",
+                        rule.name,
+                        escape(rule.desc)
+                    );
+                }
+                out.push_str("</tbody>\n</table>\n");
+            }
+        }
+    }
+
     /// Free ファイル 1 つのページ。Free ファイルを Markdown のまま HTML にする。
     fn render_doc(&self, page: &Page) -> String {
         let path = doc_page(&page.source);
@@ -295,13 +382,13 @@ impl Site<'_> {
         )
     }
 
-    /// HTML の全体。左にトップの 3 ページへのサイドバーを、右に h2 と h3 の目次を置く。印刷の表示（JPG）では、どちらも出さない。
+    /// HTML の全体。左にトップの 4 ページへのサイドバーを、右に h2 と h3 の目次を置く。印刷の表示（JPG）では、どちらも出さない。
     fn page(&self, title: &str, current: Nav, body: &str) -> String {
         let mut nav = format!(
             "<nav class=\"sidebar\">\n<p class=\"project\">{}</p>\n<ul>\n",
             escape(&self.project.title())
         );
-        for item in [Nav::Overview, Nav::Adr, Nav::Detail] {
+        for item in [Nav::Overview, Nav::Adr, Nav::Detail, Nav::Config] {
             if item == Nav::Adr && self.adrs.is_empty() {
                 continue;
             }
@@ -902,9 +989,17 @@ impl Site<'_> {
         }
     }
 
-    /// Free ファイルの並びで、タグが初めて出てきた順。タグの色とトグルの並びに使う。
+    /// Free ファイルで使っているタグ。docv.yaml の tags の順に並べる。tags にないタグ（check の error）は、後ろに出てきた順で並べる。
     fn tag_order(&self) -> Vec<&str> {
-        let mut order: Vec<&str> = Vec::new();
+        let used = |tag: &str| self.pages.iter().any(|p| p.tags.iter().any(|t| t == tag));
+        let mut order: Vec<&str> = self
+            .project
+            .config
+            .tags
+            .iter()
+            .map(|t| t.name.as_str())
+            .filter(|t| used(t))
+            .collect();
         for tag in self.pages.iter().flat_map(|p| &p.tags) {
             if !order.contains(&tag.as_str()) {
                 order.push(tag);
@@ -920,7 +1015,7 @@ impl Site<'_> {
             return;
         }
         let _ = writeln!(out, "<div class=\"tag-filter\">");
-        for (i, tag) in order.iter().enumerate() {
+        for tag in &order {
             let count = self
                 .pages
                 .iter()
@@ -929,7 +1024,7 @@ impl Site<'_> {
             let _ = writeln!(
                 out,
                 "<button type=\"button\" class=\"tag c{}\" data-tag=\"{}\" aria-pressed=\"true\">{}<span class=\"count\">{count}</span></button>",
-                i % TAG_COLORS,
+                self.tag_color(tag),
                 escape(tag),
                 escape(tag)
             );
@@ -937,15 +1032,29 @@ impl Site<'_> {
         let _ = writeln!(out, "</div>");
     }
 
-    /// ページのタグ。タグごとに色を決める。色は 8 色で、Free ファイルの並びで初めて出てきた順に割り当て、足りなければ最初から使い直す。
+    /// ページのタグ。
     fn tags(&self, page: &Page) -> String {
-        let order = self.tag_order();
         let mut out = String::new();
         for tag in &page.tags {
-            let color = order.iter().position(|t| t == tag).unwrap_or(0) % TAG_COLORS;
-            let _ = write!(out, "<span class=\"tag c{color}\">{}</span>", escape(tag));
+            out.push_str(&self.tag(tag));
         }
         out
+    }
+
+    fn tag(&self, tag: &str) -> String {
+        format!(
+            "<span class=\"tag c{}\">{}</span>",
+            self.tag_color(tag),
+            escape(tag)
+        )
+    }
+
+    /// タグの色（CSS の `.tag.c0`〜`.tag.c7`）。docv.yaml の tags に書いた色。tags にないタグ（check の error）は c0 にする。
+    fn tag_color(&self, tag: &str) -> usize {
+        self.project
+            .config
+            .tag_color(tag)
+            .map_or(0, |color| color.index())
     }
 
     // ---- Markdown ----
@@ -1576,7 +1685,7 @@ mod tests {
         write_file(
             dir.path(),
             "docv.yaml",
-            "title: demo\ndocs: [docs/**/*.md]\nignore: [docs/tmp/**]\n",
+            "title: demo\nignore: [docs/tmp/**]\ntags:\n  - name: 仕様\n    color: blue\n",
         );
         for (path, text) in files {
             write_file(dir.path(), path, text);
@@ -1622,16 +1731,51 @@ mod tests {
             ),
         ]);
         let out = dir.path().join("out");
-        run(&project, &out).unwrap();
+        run(&project, &out, None).unwrap();
 
-        // トップは 3 ページ。index.html（プロジェクト概要）には、Slot のページへのカードだけを置く
+        // トップは 4 ページ。index.html（プロジェクト概要）には、Slot のページへのカードだけを置く
         let index = fs::read_to_string(out.join(PAGE)).unwrap();
         let detail = fs::read_to_string(out.join(DETAIL_PAGE)).unwrap();
         let adr_index = fs::read_to_string(out.join(ADR_PAGE)).unwrap();
-        // サイドバーで 3 ページを行き来する。描いているページの項目に印を付ける
+        let config = fs::read_to_string(out.join(CONFIG_PAGE)).unwrap();
+        // サイドバーで 4 ページを行き来する。描いているページの項目に印を付ける
         assert!(
-            index.contains("<li><a href=\"index.html\" aria-current=\"page\">プロジェクト概要</a></li>\n<li><a href=\"ADR.html\">ADR</a></li>\n<li><a href=\"プロジェクト詳細.html\">プロジェクト詳細</a></li>"),
+            index.contains("<li><a href=\"index.html\" aria-current=\"page\">プロジェクト概要</a></li>\n<li><a href=\"ADR.html\">ADR</a></li>\n<li><a href=\"プロジェクト詳細.html\">プロジェクト詳細</a></li>\n<li><a href=\"現在の設定.html\">現在の設定</a></li>"),
             "{index}"
+        );
+        // 現在の設定.html に、docv.yaml のすべての項目を 1 つの表で並べる。選ぶ項目は、すべての候補を横に並べる
+        assert!(
+            config.contains("<a href=\"現在の設定.html\" aria-current=\"page\">"),
+            "{config}"
+        );
+        assert_eq!(
+            config.matches("<table class=\"config\"").count(),
+            1,
+            "{config}"
+        );
+        assert!(
+            config.contains("<tr><td><code>format.enabled</code></td><td><div class=\"choices\"><span class=\"choice\">true</span><span class=\"choice on\">false</span></div></td></tr>"),
+            "{config}"
+        );
+        assert!(
+            config.contains("<tr><td><code>dir.free</code></td><td><code>docs</code></td></tr>\n<tr><td><code>dir.slots</code></td><td><code>docv</code></td></tr>")
+                && config.contains("<tr><td><code>dir.image</code></td><td>-</td></tr>"),
+            "{config}"
+        );
+        // docv が決めた textlint のルールを、検査項目と非検査項目に分け、プリセットごとの表に並べる
+        assert!(
+            config.contains("<h3 id=\"検査項目\">検査項目</h3>\n<h4>ja-technical-writing</h4>\n<table class=\"textlint\">\n<thead><tr><th>ルール</th><th>確かめること</th></tr></thead>\n<tbody>\n<tr><td><code>sentence-length</code></td><td>一文を 100 文字以内にする</td></tr>"),
+            "{config}"
+        );
+        assert!(
+            config.contains("<h3 id=\"非検査項目\">非検査項目</h3>\n<h4>ja-technical-writing</h4>\n<table class=\"textlint\">\n<thead><tr><th>ルール</th><th>確かめないこと</th></tr></thead>\n<tbody>\n<tr><td><code>max-kanji-continuous-len</code></td><td>漢字が続く長さ</td></tr>"),
+            "{config}"
+        );
+        assert!(
+            config.contains(
+                "<tr><td><code>tags</code></td><td><span class=\"tag c0\">仕様</span></td></tr>"
+            ),
+            "{config}"
         );
         assert!(
             detail.contains("<a href=\"プロジェクト詳細.html\" aria-current=\"page\">"),
@@ -1802,7 +1946,7 @@ mod tests {
             assert_headings(&html);
         }
 
-        run(&project, &out).unwrap();
+        run(&project, &out, None).unwrap();
         assert_eq!(read(PAGE), index);
         assert_eq!(read(DETAIL_PAGE), detail);
         assert_eq!(read(ADR_PAGE), adr_index);
@@ -1840,7 +1984,7 @@ mod tests {
             ),
         ]);
         let out = dir.path().join("out");
-        run(&project, &out).unwrap();
+        run(&project, &out, None).unwrap();
         let page = fs::read_to_string(out.join("プロジェクト詳細/docs/a.html")).unwrap();
         // Markdown のリンクは、パーセントエンコードして出る。読めるように戻して比べる
         let bytes = page.as_bytes();
@@ -1872,16 +2016,15 @@ mod tests {
 
     #[test]
     fn does_not_link_files_without_page() {
-        let (dir, mut project) = project(&[
+        let (dir, project) = project(&[
             ("docs/a.md", "---\nmission: q\n---\n# A\n"),
             (
                 "docv/system/system.md",
                 "# システム仕様\n\n[memo](../../notes.md) ![図](../../a.svg)\n",
             ),
         ]);
-        project.config.output.commit = false;
         let out = dir.path().join("out");
-        run(&project, &out).unwrap();
+        run(&project, &out, None).unwrap();
         let page = fs::read_to_string(out.join("システム仕様/システム仕様.html")).unwrap();
         let detail = fs::read_to_string(out.join(DETAIL_PAGE)).unwrap();
         // ページのないファイルは、リンクにせず文字だけを出す。画像は元のファイルを相対パスで読む
@@ -1894,7 +2037,8 @@ mod tests {
         // ADR がないときは、ADR.html を作らず、サイドバーにも出さない
         assert!(!out.join(ADR_PAGE).exists());
         assert!(!detail.contains("ADR.html"), "{detail}");
-        assert_eq!(fs::read_to_string(out.join(".gitignore")).unwrap(), "*\n");
+        // 出力先に .gitignore は置かない
+        assert!(!out.join(".gitignore").exists());
     }
 
     #[test]
@@ -1908,7 +2052,7 @@ mod tests {
             ),
         ]);
         let out = dir.path().join("out");
-        run(&project, &out).unwrap();
+        run(&project, &out, None).unwrap();
         let page = fs::read_to_string(out.join("開発者向けガイド/ディレクトリ.html")).unwrap();
         let body: String = page
             .lines()
@@ -1937,7 +2081,7 @@ mod tests {
         let (dir, project) = project(&[]);
         let out = dir.path().join("docs");
         write_file(dir.path(), "docs/keep.txt", "keep");
-        let error = run(&project, &out).unwrap_err();
+        let error = run(&project, &out, None).unwrap_err();
         assert!(
             error
                 .to_string()
@@ -1950,12 +2094,12 @@ mod tests {
     fn rebuilds_everything_but_the_marker() {
         let (dir, project) = project(&[]);
         let out = dir.path().join("docv/build");
-        run(&project, &out).unwrap();
+        run(&project, &out, None).unwrap();
         write_file(&out, "jpg/a.jpg", "jpg");
         write_file(&out, "old.html", "old");
         // 途中で止まって index.html などがない出力先でも、目印があれば作り直せる
         fs::remove_file(out.join(PAGE)).unwrap();
-        run(&project, &out).unwrap();
+        run(&project, &out, None).unwrap();
         assert!(!out.join("jpg").exists());
         assert!(!out.join("old.html").exists());
         assert!(out.join(PAGE).is_file());
@@ -1968,7 +2112,7 @@ mod tests {
             path: "docv/service/words.yaml".to_string(),
             content: Content::Markdown(String::new()),
         };
-        assert_eq!(jpg_path(&slot), "jpg/サービス仕様/用語集.jpg");
+        assert_eq!(jpg_path(&slot), "サービス仕様/用語集.jpg");
     }
 
     #[test]

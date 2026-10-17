@@ -4,7 +4,7 @@ groups:
       - en: Slot
         desc: どのプロジェクトにも要るドキュメントを書くファイル（Slot ファイル）。docv がミッションと形を決める。`docv/` に `<まとまり>/<ID>.<拡張子>` の名前で置く。17 の Slot がある
       - en: Free
-        desc: プロジェクトがミッションと形を決める Markdown のファイル（Free ファイル）。AI Agent が読み書きし、詳細を記録する。`docs/` に置き、`docv.yaml` の `docs` に当てはまるファイル
+        desc: プロジェクトがミッションと形を決める Markdown のファイル（Free ファイル）。AI Agent が読み書きし、詳細を記録する。`docv.yaml` の `dir.free` のディレクトリ（既定は `docs/`）に置く
       - en: ADR
         desc: 決めたこと 1 つを、背景、選ばなかった案と一緒に残す記録。`docv/adr/` に 1 つの Markdown で置き、決めた後は書き換えない
   - name: 決まりの種類
@@ -21,9 +21,9 @@ groups:
   - name: ファイルの分類
     items:
       - ja: 管理対象
-        desc: "`docv.yaml` の `docs` に当てはまる Markdown。YAML front matter に `mission` が要り、check の対象になる"
+        desc: "`docv.yaml` の `dir.free` のディレクトリの下の Markdown。YAML front matter に `mission` が要り、check の対象になる"
       - ja: 管理外
-        desc: "`docs` にも `ignore` にも当てはまらない Markdown。docv は中身を見ない"
+        desc: "`dir.free` の外にあり、`ignore` にも当てはまらない Markdown。docv は中身を見ない"
   - name: 書き方
     items:
       - ja: ミッション
