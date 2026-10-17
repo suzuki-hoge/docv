@@ -24,7 +24,7 @@ use syntect::util::LinesWithEndings;
 use crate::adr::{self, Adr};
 use crate::config_view::{self, Cell};
 use crate::jpg;
-use crate::markdown::{self, relative_path};
+use crate::markdown::{self, relative_path, slug};
 use crate::meta;
 use crate::slot::{self, Content, DEFS, Group, Slot};
 use crate::textlint;
@@ -1651,19 +1651,6 @@ fn strip_paragraph(html: &str) -> String {
     }
 }
 
-/// 見出しのアンカー。GitHub と同じく、小文字にし、文字と数字と `-` `_` だけを残し、空白を `-` にする。
-pub fn slug(text: &str) -> String {
-    text.trim()
-        .to_lowercase()
-        .chars()
-        .filter_map(|c| match c {
-            ' ' => Some('-'),
-            c if c.is_alphanumeric() || c == '-' || c == '_' => Some(c),
-            _ => None,
-        })
-        .collect()
-}
-
 fn escape(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for c in s.chars() {
@@ -2154,11 +2141,5 @@ mod tests {
             html("```nolang\n<a>\n```\n"),
             "<pre><code class=\"language-nolang\">&lt;a&gt;\n</code></pre>\n"
         );
-    }
-
-    #[test]
-    fn makes_github_like_slugs() {
-        assert_eq!(slug("1. コマンド一覧"), "1-コマンド一覧");
-        assert_eq!(slug("Foo Bar（例）"), "foo-bar例");
     }
 }

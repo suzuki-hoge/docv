@@ -239,14 +239,48 @@ fn check_links(cx: &mut Checker, outline: &Outline) {
         .unwrap_or(Path::new(""))
         .to_path_buf();
     for link in &outline.links {
-        let Some((target, _)) = markdown::resolve_link(&base, &link.dest) else {
+        // ページ内のリンクは、このファイルの見出しを指す。
+        if let Some(fragment) = link.dest.strip_prefix('#') {
+            if !markdown::anchors(outline).contains(&markdown::percent_decode(fragment)) {
+                cx.push(
+                    link.line,
+                    "link-anchor",
+                    format!("リンク先の見出し #{fragment} がない"),
+                );
+            }
+            continue;
+        }
+        let Some((target, fragment)) = markdown::resolve_link(&base, &link.dest) else {
             continue;
         };
-        if !cx.project.root.join(&target).exists() {
+        let path = cx.project.root.join(&target);
+        if !path.exists() {
             cx.push(
                 link.line,
                 "link-broken",
                 format!("リンク先 {} がない", link.dest),
+            );
+            continue;
+        }
+        // アンカーは、Markdown のファイルの見出しを指すときだけ確かめる。
+        let Some(fragment) = fragment else {
+            continue;
+        };
+        if path.extension().is_none_or(|e| e != "md") {
+            continue;
+        }
+        let Ok(text) = fs::read_to_string(&path) else {
+            continue;
+        };
+        let anchors = markdown::anchors(&markdown::outline(&markdown::split(&text)));
+        if !anchors.contains(&markdown::percent_decode(&fragment)) {
+            cx.push(
+                link.line,
+                "link-anchor",
+                format!(
+                    "リンク先 {} に見出し #{fragment} がない",
+                    markdown::slash_path(&target)
+                ),
             );
         }
     }
@@ -300,7 +334,7 @@ lint:
     #[test]
     fn passes_valid_files() {
         let result = check(&[
-            ("README.md", "no frontmatter\n"),
+            ("README.md", "no frontmatter\n\n## X\n"),
             (
                 "docs/spec/a.md",
                 &format!(
@@ -377,7 +411,7 @@ lint:
             (
                 "docs/spec/a.md",
                 &format!(
-                    "{}# A\n\n[x](missing.md) [y](https://example.com) [z](#top) [spec/あ.md](%E3%81%82.md) [v](/README.md)\n",
+                    "{}# A\n\n[x](missing.md) [y](https://example.com) [z](#a) [spec/あ.md](%E3%81%82.md) [v](/README.md)\n",
                     fm("")
                 ),
             ),
@@ -398,6 +432,27 @@ lint:
         assert_eq!(
             result[2],
             "docv/service/words.yaml:1: slot-invalid 用語集の Slot の形に合わない: groups: invalid type: integer `1`, expected a sequence at line 1 column 9"
+        );
+    }
+
+    #[test]
+    fn reports_missing_anchors() {
+        let result = check(&[
+            (
+                "docs/spec/a.md",
+                &format!(
+                    "{}# A\n\n## 一\n\n## 一\n\n[x](#一-1) [x](#%E4%B8%80) [x](#%E4%BA%8C) [spec/b.md](b.md#2-二) [spec/b.md](b.md#1-一) [y](/docv.yaml#x)\n",
+                    fm("")
+                ),
+            ),
+            ("docs/spec/b.md", &format!("{}# B\n\n## 1. 一\n", fm(""))),
+        ]);
+        assert_eq!(
+            result,
+            [
+                "docs/spec/a.md:10: link-anchor リンク先 docs/spec/b.md に見出し #2-二 がない",
+                "docs/spec/a.md:10: link-anchor リンク先の見出し #%E4%BA%8C がない",
+            ]
         );
     }
 

@@ -1,5 +1,6 @@
 //! Markdown のファイルを、YAML front matter と、check が見る要素（見出し、リンク、地の文、タスク）に分ける。
 
+use std::collections::{HashMap, HashSet};
 use std::ops::Range;
 use std::path::{Component, Path, PathBuf};
 
@@ -201,6 +202,32 @@ pub fn resolve_link(base: &Path, dest: &str) -> Option<(PathBuf, Option<String>)
     Some((normalized, fragment))
 }
 
+/// 見出しのアンカー。GitHub と同じく、小文字にし、文字と数字と `-` `_` だけを残し、空白を `-` にする。
+pub fn slug(text: &str) -> String {
+    text.trim()
+        .to_lowercase()
+        .chars()
+        .filter_map(|c| match c {
+            ' ' => Some('-'),
+            c if c.is_alphanumeric() || c == '-' || c == '_' => Some(c),
+            _ => None,
+        })
+        .collect()
+}
+
+/// ファイルの見出しのアンカーの一覧。GitHub と同じく、同じアンカーが続けば -1、-2 を付ける。
+pub fn anchors(outline: &Outline) -> HashSet<String> {
+    let mut used: HashMap<String, usize> = HashMap::new();
+    let mut anchors = HashSet::new();
+    for heading in &outline.headings {
+        let base = slug(&heading.text);
+        let n = used.entry(base.clone()).or_insert(0);
+        anchors.insert(if *n == 0 { base } else { format!("{base}-{n}") });
+        *n += 1;
+    }
+    anchors
+}
+
 /// パスを `/` 区切りの文字列にする。
 pub fn slash_path(path: &Path) -> String {
     path.components()
@@ -223,7 +250,7 @@ pub fn relative_path(from_dir: &Path, to: &Path) -> String {
     parts.join("/")
 }
 
-fn percent_decode(s: &str) -> String {
+pub fn percent_decode(s: &str) -> String {
     let bytes = s.as_bytes();
     let mut out = Vec::with_capacity(bytes.len());
     let mut i = 0;
@@ -272,6 +299,20 @@ mod tests {
         assert_eq!(resolve_link(base, "../../../outside.md"), None);
         assert_eq!(resolve_link(base, "https://example.com"), None);
         assert_eq!(resolve_link(base, "#top"), None);
+    }
+
+    #[test]
+    fn makes_github_like_slugs() {
+        assert_eq!(slug("1. コマンド一覧"), "1-コマンド一覧");
+        assert_eq!(slug("Foo Bar（例）"), "foo-bar例");
+    }
+
+    #[test]
+    fn numbers_repeated_anchors() {
+        let outline = outline(&split("# T\n\n## A\n\n## A\n\n## A\n"));
+        let mut anchors: Vec<String> = anchors(&outline).into_iter().collect();
+        anchors.sort();
+        assert_eq!(anchors, ["a", "a-1", "a-2", "t"]);
     }
 
     #[test]
