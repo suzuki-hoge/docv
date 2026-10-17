@@ -20,6 +20,7 @@ pub struct Options {
 }
 
 /// 管理対象のファイルと Slot を確かめる。targets が空ならすべて、そうでなければそのパス（ルートからの相対パス）だけ。
+/// targets で絞るのは確かめるファイルだけで、ファイルにかける検査は、targets があってもなくても同じ。
 pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Vec<Diagnostic>> {
     let style = Style::new(&project.config);
     let mut diagnostics = Vec::new();
@@ -62,10 +63,14 @@ pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Ve
             }
         }
     }
-    if targets.is_empty() {
-        diagnostics.extend(slot::check(project)?);
-        diagnostics.extend(adr::check(project)?);
-    }
+    // Slot と ADR は、ファイルどうしのつながり（ADR の supersedes など）も見るので、すべて読んでから絞る。
+    let wanted = |path: &str| targets.is_empty() || targets.iter().any(|t| t == path);
+    diagnostics.extend(
+        slot::check(project)?
+            .into_iter()
+            .filter(|d| wanted(&d.path)),
+    );
+    diagnostics.extend(adr::check(project)?.into_iter().filter(|d| wanted(&d.path)));
     if options.textlint
         && let Some(textlint) = Textlint::new(project)
     {
@@ -424,6 +429,42 @@ lint:
             result[2],
             "docv/service/words.yaml:1: slot-invalid 用語集の Slot の形に合わない: groups: invalid type: integer `1`, expected a sequence at line 1 column 9"
         );
+    }
+
+    #[test]
+    fn checks_the_same_with_paths() {
+        let dir = tempfile::tempdir().unwrap();
+        write(dir.path(), "docv.yaml", CONFIG);
+        let files = [
+            ("docs/spec/a.md", "# A\n\n[x](missing.md)\n"),
+            ("docv/service/words.yaml", "groups: 1\n"),
+            (
+                "docv/adr/a.md",
+                "---\ngroup: g\ndate: 2026-01-01\nsupersedes: [none]\n---\n\n# A\n",
+            ),
+        ];
+        for (path, text) in files {
+            write(dir.path(), path, text);
+        }
+        let project = Project::open(&Locate::default(), dir.path()).unwrap();
+        let strings = |targets: &[String]| -> Vec<String> {
+            run(&project, targets, OPTIONS)
+                .unwrap()
+                .iter()
+                .map(|d| d.to_string())
+                .collect()
+        };
+        let all = strings(&[]);
+        // パスを渡すと、そのファイルだけを、パスを渡さないときと同じ検査で確かめる
+        for (path, _) in files {
+            let expected: Vec<String> = all
+                .iter()
+                .filter(|r| r.starts_with(&format!("{path}:")))
+                .cloned()
+                .collect();
+            assert!(!expected.is_empty(), "{path}");
+            assert_eq!(strings(&[path.to_string()]), expected, "{path}");
+        }
     }
 
     #[test]

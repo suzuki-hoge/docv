@@ -55,6 +55,8 @@ docv check docs/spec/order.md
 - format ( 設定次第 )
 - textlint ( 設定次第 )
 
+パスを渡しても、検査するファイルが絞られるだけで、検査内容は変わらない。
+
 現在の設定は [現在の設定](../../docv.yaml) を参照。
 
 ### docv fix
