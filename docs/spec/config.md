@@ -184,7 +184,7 @@ docv は、次のルールを使わない。
 新しく始めるプロジェクトでは、次の配置をすすめる。`docv init` は、この配置を前提にした `docv.yaml` を作る。
 
 ```
-README.md        # 管理外。Slot の include で章を埋め込める
+README.md        # 管理外
 docs/            # Free ファイル
   *.md           # 分類はディレクトリではなくタグで行う
   tmp/           # メモを置く。ignore に入れる

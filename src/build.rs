@@ -679,40 +679,7 @@ impl Site<'_> {
                 let _ = writeln!(out, "{html}");
             }
         }
-        self.extra(out, slot);
         body
-    }
-
-    /// Slot の body と include。
-    fn extra(&self, out: &mut String, slot: &Slot) {
-        let (body, include) = slot.content.body_and_include();
-        if let Some(body) = body {
-            let _ = writeln!(out, "{}", self.markdown(body, Path::new(""), false, 2));
-        }
-        for target in include {
-            let Ok(included) = slot::resolve_include(self.project, target) else {
-                continue;
-            };
-            let base = Path::new(&included.source)
-                .parent()
-                .unwrap_or(Path::new(""))
-                .to_path_buf();
-            let html = self.markdown(&included.markdown, &base, false, 2);
-            let fragment = included
-                .heading
-                .as_deref()
-                .map(|h| format!("#{}", slug(h)))
-                .unwrap_or_default();
-            // README.md のように、ページのないファイルから埋め込んだときは、出典をリンクにしない。
-            let from = match self.link(&included.source, &fragment) {
-                Some(href) => format!("<a href=\"{}\">{}</a>", escape(&href), escape(target)),
-                None => escape(target),
-            };
-            let _ = writeln!(
-                out,
-                "<div class=\"included\">{html}<p class=\"from\">出典: {from}</p></div>"
-            );
-        }
     }
 
     fn tools(&self, out: &mut String, title: &str, tools: &[slot::Tool]) {
@@ -1781,7 +1748,7 @@ mod tests {
             ("docs/tmp/memo.md", "# Memo\n"),
             (
                 "docv/service/install.yaml",
-                "steps:\n  - id: binary\n    name: 取る\n    items:\n      - os: macos\n        markdown: \"`curl`\"\n      - os: windows\n  - id: cargo\n    name: cargo\n    items:\n      markdown: \"`cargo install`\"\ninclude: [docs/spec/a.md#章]\n",
+                "steps:\n  - id: binary\n    name: 取る\n    items:\n      - os: macos\n        markdown: \"`curl`\"\n      - os: windows\n  - id: cargo\n    name: cargo\n    items:\n      markdown: \"`cargo install`\"\n",
             ),
             (
                 "docv/service/service.md",
@@ -1944,7 +1911,6 @@ mod tests {
             ),
             "{install}"
         );
-        assert!(install.contains("本文"), "{install}");
         // Markdown の Slot は、h1 を除き、見出しを下げて、そのまま出す。見出しには id を付ける。details は開く
         let service = read("サービス仕様/サービス仕様.html");
         assert!(service.contains("<h2 id=\"部品\">部品</h2>"), "{service}");

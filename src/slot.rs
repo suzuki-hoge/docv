@@ -248,9 +248,6 @@ pub struct Procedure {
     pub requirements: Vec<Tool>,
     #[serde(default)]
     pub steps: Vec<Step>,
-    pub body: Option<String>,
-    #[serde(default)]
-    pub include: Vec<String>,
 }
 
 /// 手順の 1 つ。items が複数あるときは、HTML で os ごとのタブにする。
@@ -305,9 +302,6 @@ pub struct Tool {
 pub struct Words {
     #[serde(default)]
     pub groups: Vec<WordGroup>,
-    pub body: Option<String>,
-    #[serde(default)]
-    pub include: Vec<String>,
 }
 
 /// 用語のまとまり。HTML では、name を h2 にし、items を表にする。
@@ -333,9 +327,6 @@ pub struct Word {
 pub struct Stack {
     #[serde(default)]
     pub stack: Vec<StackGroup>,
-    pub body: Option<String>,
-    #[serde(default)]
-    pub include: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -353,9 +344,6 @@ pub struct StackGroup {
 pub struct Layout {
     #[serde(default)]
     pub entries: Vec<LayoutEntry>,
-    pub body: Option<String>,
-    #[serde(default)]
-    pub include: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -370,9 +358,6 @@ pub struct LayoutEntry {
 pub struct Env {
     #[serde(default)]
     pub envs: Vec<EnvVar>,
-    pub body: Option<String>,
-    #[serde(default)]
-    pub include: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -397,9 +382,6 @@ pub struct Cost {
     /// 費用を理由に、やっていないこと。
     #[serde(default)]
     pub rejected_items: Vec<CostItem>,
-    pub body: Option<String>,
-    #[serde(default)]
-    pub include: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -442,20 +424,6 @@ impl Content {
             "cost" => Content::Cost(serde_yaml_ng::from_str(text)?),
             _ => unreachable!("YAML の Slot の ID は DEFS で確かめてある"),
         })
-    }
-
-    /// 本文（Markdown）と、埋め込む Markdown。
-    pub fn body_and_include(&self) -> (Option<&str>, &[String]) {
-        let (body, include) = match self {
-            Content::Procedure(c) => (&c.body, &c.include),
-            Content::Words(c) => (&c.body, &c.include),
-            Content::Stack(c) => (&c.body, &c.include),
-            Content::Layout(c) => (&c.body, &c.include),
-            Content::Env(c) => (&c.body, &c.include),
-            Content::Cost(c) => (&c.body, &c.include),
-            Content::Markdown(_) => return (None, &[]),
-        };
-        (body.as_deref(), include)
     }
 
     /// 中身が指すルートの中のパス。check で、あるかどうかを確かめる。(フィールド名, パス)
@@ -652,99 +620,8 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
                 );
             }
         }
-        for target in content.body_and_include().1 {
-            if let Err(message) = resolve_include(project, target) {
-                push(&file.path, line_of(target), "slot-include-missing", message);
-            }
-        }
     }
     Ok(diagnostics)
-}
-
-/// 埋め込む Markdown。
-pub struct Included {
-    /// 埋め込むファイルのルートからの相対パス。リンクの起点に使う。
-    pub source: String,
-    /// 指した見出しの文字列。ファイル全体なら None。
-    pub heading: Option<String>,
-    pub markdown: String,
-}
-
-/// include の 1 項目（`パス` か `パス#見出し`）を、埋め込む Markdown にする。
-/// ファイル全体なら YAML front matter と h1 を除き、見出しを指したら、その見出しの下から次の同じ深さ以上の見出しの手前まで。
-pub fn resolve_include(project: &Project, target: &str) -> Result<Included, String> {
-    let (path, heading) = match target.split_once('#') {
-        Some((path, heading)) => (path, Some(heading.trim())),
-        None => (target, None),
-    };
-    let text = fs::read_to_string(project.root.join(path))
-        .map_err(|_| format!("include の {path} がない"))?;
-    let document = markdown::split(&text);
-    let outline = markdown::outline(&document);
-    let lines: Vec<&str> = document.body.split_inclusive('\n').collect();
-    let index_of = |line: usize| line - document.body_start_line;
-
-    let mut found_heading = None;
-    let (start, end) = match heading {
-        None => {
-            let start = outline
-                .headings
-                .iter()
-                .find(|h| h.level == 1)
-                .map_or(0, |h| index_of(h.line) + 1);
-            (start, lines.len())
-        }
-        Some(heading) => {
-            let position = outline
-                .headings
-                .iter()
-                .position(|h| h.text == heading || strip_number(&h.text) == heading)
-                .ok_or_else(|| format!("include の {path} に見出し「{heading}」がない"))?;
-            let found = &outline.headings[position];
-            found_heading = Some(found.text.clone());
-            let end = outline.headings[position + 1..]
-                .iter()
-                .find(|h| h.level <= found.level)
-                .map_or(lines.len(), |h| index_of(h.line));
-            (index_of(found.line) + 1, end)
-        }
-    };
-    let markdown = lines[start.min(lines.len())..end.min(lines.len())].concat();
-    Ok(Included {
-        source: path.to_string(),
-        heading: found_heading,
-        markdown: trim_separators(&markdown),
-    })
-}
-
-/// 見出しの先頭の章番号（`1. `）を除く。
-pub fn strip_number(text: &str) -> &str {
-    let digits = text.chars().take_while(char::is_ascii_digit).count();
-    if digits > 0
-        && let Some(rest) = text[digits..].strip_prefix(". ")
-    {
-        return rest;
-    }
-    text
-}
-
-/// 前後の空行と、章の区切りの `---` を除く。
-fn trim_separators(markdown: &str) -> String {
-    let lines: Vec<&str> = markdown.lines().collect();
-    let is_blank = |l: &&str| l.trim().is_empty() || l.trim() == "---";
-    let start = lines
-        .iter()
-        .position(|l| !is_blank(l))
-        .unwrap_or(lines.len());
-    let end = lines
-        .iter()
-        .rposition(|l| !is_blank(l))
-        .map_or(start, |i| i + 1);
-    let mut text = lines[start..end].join("\n");
-    if !text.is_empty() {
-        text.push('\n');
-    }
-    text
 }
 
 /// yaml の Slot のテンプレ。docv slot gen で書く、項目のサンプル。
@@ -861,7 +738,7 @@ mod tests {
             ),
             (
                 "docv/guide/directory-tree.yaml",
-                "entries:\n  - path: src/\n    description: d\ninclude: [docs/a.md#ない]\n",
+                "entries:\n  - path: src/\n    description: d\n",
             ),
             ("docs/a.md", "# A\n\n## 1. ある\n"),
         ]);
@@ -874,7 +751,6 @@ mod tests {
             result,
             [
                 "docv/guide/directory-tree.yaml:2 slot-path-missing",
-                "docv/guide/directory-tree.yaml:4 slot-include-missing",
                 "docv/service/03-words.yaml:1 slot-unknown",
                 "docv/service/install.yaml:2 slot-invalid",
                 "docv/service/words.yaml:2 slot-invalid",
@@ -884,10 +760,10 @@ mod tests {
             ]
         );
         // ディレクトリが違う名前、番号を付けた名前には、正しいパスを示す
-        assert!(diagnostics[2].message.contains("docv/service/words.yaml"));
-        assert!(diagnostics[7].message.contains("docv/service/words.yaml"));
+        assert!(diagnostics[1].message.contains("docv/service/words.yaml"));
+        assert!(diagnostics[6].message.contains("docv/service/words.yaml"));
         // API 仕様書は md だけ。yaml には、md のパスを示す
-        assert!(diagnostics[5].message.contains("docv/system/api.md"));
+        assert!(diagnostics[4].message.contains("docv/system/api.md"));
     }
 
     #[test]
@@ -922,20 +798,5 @@ mod tests {
             _ => 0,
         };
         assert_eq!((count(&one), count(&many)), (1, 2));
-    }
-
-    #[test]
-    fn includes_a_section_or_a_whole_file() {
-        let (_dir, project) = project(&[(
-            "docs/a.md",
-            "---\nmission: q\n---\n\n# A\n\n前書き\n\n---\n\n## 1. 入れ方\n\n手順\n\n### 細かく\n\n細部\n\n---\n\n## 2. 次\n\n次の章\n",
-        )]);
-        let section = resolve_include(&project, "docs/a.md#入れ方").unwrap();
-        assert_eq!(section.markdown, "手順\n\n### 細かく\n\n細部\n");
-        assert_eq!(section.source, "docs/a.md");
-        let whole = resolve_include(&project, "docs/a.md").unwrap();
-        assert!(whole.markdown.starts_with("前書き\n"), "{}", whole.markdown);
-        assert!(!whole.markdown.contains("# A"));
-        assert!(resolve_include(&project, "docs/none.md").is_err());
     }
 }

@@ -33,6 +33,3 @@ groups:
       - ja: タグ
         en: Tags
         desc: Free ファイルに付ける分類。1 つのファイルに任意の数を付けられ、タグにルールを付けられる
-      - ja: 埋め込み
-        en: Include
-        desc: Slot に、既にある Markdown のファイルや章を埋め込む指定。Slot の項目の名前は `include`。Free ファイルの中身を 1 か所に保ったまま Slot に載せられる

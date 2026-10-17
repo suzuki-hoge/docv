@@ -60,7 +60,6 @@ table.words { table-layout: fixed; }
 table.words th:nth-child(1), table.words th:nth-child(2) { width: 9em; }
 table.words td:nth-child(1), table.words td:nth-child(2) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 h2 { font-size: 1.25em; margin: 28px 0 4px; padding-bottom: 2px; border-bottom: 1px solid #d8dee4; }
-.included { margin: 8px 0; padding-left: 12px; border-left: 3px solid #d8dee4; }
 .tag { display: inline-block; border: 1px solid #d8dee4; border-radius: 10px; padding: 0 7px; margin: 0 3px 2px 0; font-size: 0.8em; color: #3d444d; }
 /* タグの色。淡い 8 色を、出てきた順に割り当てる */
 .tag.c0 { background: #ddf4ff; border-color: #b6e3ff; }
