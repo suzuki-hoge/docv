@@ -21,6 +21,7 @@ docv desc                          # docv の概要を出す
 docv check                         # ルールに沿っているかを確かめる
 docv fix                           # 空行や表の余白を整形し、textlint で直せるところを直す
 docv build                         # HTML を作る（dir.image を書いていれば JPG も）
+docv open                          # 作った HTML をブラウザで開く
 docv slot list                     # Slot の一覧と、ミッションを出す
 docv slot gen service              # Slot を決まったパスに作る
 docv slot gen doc-guide            # ドキュメントのガイドラインの雛形を作る

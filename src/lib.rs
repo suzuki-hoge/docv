@@ -13,6 +13,7 @@ pub mod init;
 pub mod jpg;
 pub mod markdown;
 pub mod meta;
+pub mod open;
 pub mod schema;
 pub mod slot;
 pub mod slot_markdown;

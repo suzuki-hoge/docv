@@ -40,7 +40,7 @@ const MARKER: &str = ".docv";
 const MARKER_TEXT: &str = "docv build の出力。このディレクトリは docv build のたびに作り直す。\n";
 
 /// トップの 5 ページ。サイドバーに、この順で並べる。
-const PAGE: &str = "index.html";
+pub const PAGE: &str = "index.html";
 const ADR_PAGE: &str = "ADR.html";
 const DETAIL_PAGE: &str = "プロジェクト詳細.html";
 const CONFIG_PAGE: &str = "現在の設定.html";

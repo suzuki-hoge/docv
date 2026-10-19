@@ -8,7 +8,7 @@ use clap::{Parser, Subcommand};
 
 use crate::check::Options;
 use crate::workspace::{Locate, Project};
-use crate::{build, check, desc, fix, generate, init, schema};
+use crate::{build, check, desc, fix, generate, init, open, schema};
 
 /// 終了コード。docv/system/system.md の「終了コード」。
 pub const EXIT_FAILURE: u8 = 1;
@@ -65,6 +65,8 @@ enum Command {
         #[arg(long)]
         no_image: bool,
     },
+    /// docv build が作った HTML（プロジェクト概要）を、既定のブラウザで開く
+    Open,
     /// Slot の一覧を出し、Slot ファイルを作り、YAML の Slot のスキーマを出す
     #[command(subcommand)]
     Slot(SlotCommand),
@@ -191,6 +193,14 @@ fn execute_in_project(project: &Project, command: Command) -> Result<ExitCode> {
             let image = project.image_dir().filter(|_| !no_image);
             build::run(project, &out, image.as_deref())?;
             println!("{} に出力した", out.display());
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Open => {
+            let Some(program) = open::opener() else {
+                eprintln!("docv: docv open は、この OS に対応していない（macOS と Windows だけ）");
+                return Ok(ExitCode::from(EXIT_FAILURE));
+            };
+            open::run(program, &project.out_dir())?;
             Ok(ExitCode::SUCCESS)
         }
         Command::Init { .. }

@@ -9,6 +9,7 @@
 | [`docv check [path...]`](#docv-check)          | 管理対象のチェックを行う             | docv ルート      |
 | [`docv fix [path...]`](#docv-fix)              | 管理対象のフォーマットとリントを行う | docv ルート      |
 | [`docv build`](#docv-build)                    | 人間向けの HTML を作る               | docv ルート      |
+| [`docv open`](#docv-open)                      | 作った HTML をブラウザで開く         | docv ルート      |
 | [`docv slot list`](#docv-slot-list)            | Slot の一覧を出す                    | 任意             |
 | [`docv slot schema <slot>`](#docv-slot-schema) | YAML の Slot のスキーマを出す        | 任意             |
 | [`docv slot gen <slot>`](#docv-slot-gen)       | Slot ファイルを、決まったパスに作る  | docv ルート      |
@@ -84,6 +85,14 @@ Slot ( yaml ) の markdown 部は、名前が `_markdown` で終わる項目。�
 | オプション   | 意味                                                         |
 | ------------ | ------------------------------------------------------------ |
 | `--no-image` | `dir.image` を指定していても JPG を作らない。HTML だけを作る |
+
+### docv open
+
+`docv build` が `dir.html` に作ったプロジェクト概要（`index.html`）を、既定のブラウザで開く。
+
+- macOS は `open`、Windows は `explorer` で開く
+- ほかの OS には対応しない。対応していないと表示し、終了コード 1 で終わる
+- まだ `docv build` していなければ、何も開かずにエラーで終わる
 
 ### docv slot list
 
