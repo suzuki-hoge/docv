@@ -1470,7 +1470,7 @@ fn page(title: &str, nav: &str, body: &str, aside: &str) -> String {
 }
 
 /// 本文の h2 と h3 から、右のサイドバーの目次を作る。id のない見出しには、GitHub と同じ形の id を付ける。
-/// 見出しがなければ、目次は空にする。
+/// 見出しがなければ、目次の代わりに同じ幅の空の枠を置く。ページを移っても本文の位置が変わらないようにするため。
 fn outline(body: &str) -> (String, String) {
     let mut used: BTreeSet<String> = BTreeSet::new();
     let mut rest = body;
@@ -1522,19 +1522,20 @@ fn outline(body: &str) -> (String, String) {
         items.push((level.to_string(), id, text));
     }
     out.push_str(rest);
-    let mut aside = String::new();
-    if !items.is_empty() {
-        aside.push_str("<nav class=\"outline\">\n<p class=\"outline-title\">目次</p>\n<ul>\n");
-        for (level, id, text) in items {
-            let _ = writeln!(
-                aside,
-                "<li class=\"h{level}\"><a href=\"#{}\">{}</a></li>",
-                escape(&id),
-                text.trim()
-            );
-        }
-        aside.push_str("</ul>\n</nav>\n");
+    if items.is_empty() {
+        return (out, "<div class=\"outline\"></div>\n".to_string());
     }
+    let mut aside =
+        String::from("<nav class=\"outline\">\n<p class=\"outline-title\">目次</p>\n<ul>\n");
+    for (level, id, text) in items {
+        let _ = writeln!(
+            aside,
+            "<li class=\"h{level}\"><a href=\"#{}\">{}</a></li>",
+            escape(&id),
+            text.trim()
+        );
+    }
+    aside.push_str("</ul>\n</nav>\n");
     (out, aside)
 }
 
@@ -1842,7 +1843,12 @@ mod tests {
         let adr_entry = search.find("\"path\":\"docv/adr/go.md\"").unwrap();
         let free_entry = search.find("\"path\":\"docs/spec/a.md\"").unwrap();
         assert!(slot_entry < adr_entry && adr_entry < free_entry, "{search}");
+        // 見出しのないページは、目次の代わりに同じ幅の空の枠を置く
         assert!(!search.contains("<nav class=\"outline\">"), "{search}");
+        assert!(
+            search.contains("</main>\n<div class=\"outline\"></div>\n</body>"),
+            "{search}"
+        );
         // 現在の設定.html に、docv.yaml のすべての項目を 1 つの表で並べる。選ぶ項目は、すべての候補を横に並べる
         assert!(
             config.contains("<a href=\"現在の設定.html\" aria-current=\"page\">"),

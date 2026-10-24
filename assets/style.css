@@ -15,7 +15,7 @@ main { flex: 1; min-width: 0; max-width: 1040px; margin: 0 auto; padding: 32px 4
   .sidebar { position: static; width: auto; height: auto; padding: 12px 16px; border-right: none; border-bottom: 1px solid #d8dee4; }
   .sidebar ul { display: flex; gap: 8px; }
 }
-/* Free ファイルのページの右の目次。幅が足りないときと、印刷の表示では出さない */
+/* 右の目次。見出しのないページにも同じ幅の空の枠を置き、ページを移っても本文の位置を変えない。幅が足りないときと、印刷の表示では出さない */
 .outline { position: sticky; top: 0; flex: none; width: 220px; max-height: 100vh; overflow-y: auto; box-sizing: border-box; padding: 32px 16px; font-size: 0.85em; }
 .outline .outline-title { margin: 0 0 8px; font-weight: 600; color: #656d76; }
 .outline ul { list-style: none; margin: 0; padding: 0 0 0 10px; border-left: 1px solid #d8dee4; }
