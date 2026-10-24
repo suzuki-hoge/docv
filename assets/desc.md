@@ -35,6 +35,23 @@ docv の提供するもの
 
 `docv slot list` で一覧と、それぞれの Slot のミッションを確認でき、作成したい場合は `docv slot gen <slot>` で作成する
 
+### サービス仕様のページ分け
+
+サービス仕様は、ページに分けられる
+
+- 分けるときは、`docv/service/service.md` の代わりに、`docv/service/service/` の直下に 1 ページ 1 ファイルで Markdown を置く
+- どのページにも、YAML front matter に `order`（整数）を書く。ページは `order` の順に並ぶ。`order` は重ねない
+- 本文の h1 が、ページの名前になる。HTML では、ページを切り替えるタブの名前になる。h1 は重ねない
+- 分けないときは `docv/service/service.md` に書き、YAML front matter はいらない
+
+```markdown
+---
+order: 1
+---
+
+# 利用者向け機能
+```
+
 ## 3. YAML front matter
 
 `docs/` の Markdown ファイルを管理するための YAML front matter

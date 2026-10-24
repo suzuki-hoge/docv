@@ -49,15 +49,23 @@ fn text(def: &Def) -> String {
     }
 }
 
-/// 雛形のない md の Slot で、中身の形は自由だと伝える文。
+/// 雛形のない md の Slot で、中身の形は自由だと伝える文。ページに分けられる Slot は、分けるときの置き場所も伝える。
 fn md_note(def: &Def) -> Option<String> {
     if def.format != Format::Markdown || slot::md_template(def.id).is_some() {
         return None;
     }
-    Some(format!(
+    let mut note = format!(
         "{}は md の Slot で、中身の形は決めていない。ミッション「{}」に沿って、Markdown を自由に書く\n",
         def.label, def.mission
-    ))
+    );
+    if let Some(dir) = def.pages_dir() {
+        let _ = writeln!(
+            note,
+            "ページに分けるときは、このファイルの代わりに、dir.slot の下の {dir}/ に 1 ページ 1 つの Markdown で置く。書き方は docv desc の「{}のページ分け」",
+            def.label
+        );
+    }
+    Some(note)
 }
 
 /// docv slot gen --print の出力。Slot ファイルを作らずに、書く中身を出す。雛形のない md の Slot は、中身の形は自由だと伝える。
@@ -76,9 +84,24 @@ pub struct Generated {
 }
 
 /// Slot ファイルを作る。すでにあれば、force のときだけ書き直す。
+/// ページに分けた Slot のページがあれば、force でも作らない。分けたページと 1 つのファイルの両方を置かないため。
 pub fn run(project: &Project, slot: &str, force: bool) -> Result<Generated> {
     let def = find(slot)?;
     let rel = format!("{}/{}", project.slot_dir(), def.file_name());
+    if let Some(dir) = def.pages_dir() {
+        let prefix = format!("{}/", project.slot_dir());
+        let paged = project.slot_dir_files()?.iter().any(|path| {
+            path.strip_prefix(&prefix)
+                .and_then(slot::def_of_page)
+                .is_some_and(|d| d.id == def.id)
+        });
+        if paged {
+            bail!(
+                "{}/{dir}/ にページがある。ページに分けているときは、{rel} を作らない",
+                project.slot_dir()
+            );
+        }
+    }
     let path = project.root.join(&rel);
     if path.exists() && !force {
         bail!("{rel} がすでにある。書き直すなら --force を付ける");
@@ -160,6 +183,32 @@ mod tests {
         assert_eq!(read(&dir, "docv/service/words.yaml"), "groups: []\n");
         run(&project, "words", true).unwrap();
         assert_eq!(read(&dir, "docv/service/words.yaml"), words_text());
+    }
+
+    #[test]
+    fn does_not_create_the_whole_file_of_a_split_slot() {
+        let (dir, paged) = project();
+        write(
+            dir.path(),
+            "docv/service/service/user.md",
+            "---\norder: 1\n---\n\n# 利用者向け機能\n",
+        );
+        let error = run(&paged, "service", true).unwrap_err().to_string();
+        assert!(
+            error.contains("docv/service/service/ にページがある"),
+            "{error}"
+        );
+        assert!(!dir.path().join("docv/service/service.md").exists());
+        // 分けていなければ、1 つのファイルを作り、分けるときの置き場所を伝える
+        let (_dir, whole) = project();
+        let service = run(&whole, "service", false).unwrap();
+        assert_eq!(service.path, "docv/service/service.md");
+        assert!(
+            service
+                .note
+                .unwrap()
+                .contains("dir.slot の下の service/service/ に 1 ページ 1 つの Markdown で置く")
+        );
     }
 
     #[test]

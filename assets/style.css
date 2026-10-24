@@ -105,6 +105,12 @@ pre.preview { margin: 4px 0; white-space: pre; overflow-wrap: normal; overflow-x
 pre.preview .ln { display: inline-block; width: 3em; margin-right: 12px; text-align: right; color: #8c959f; user-select: none; }
 mark { background: #fff8c5; color: inherit; }
 
+/* 分けた Slot のページのタブ。ページへのリンクで、JS は使わない。開いているページのタブは、下の線とつなげる */
+.page-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 12px 0 20px; border-bottom: 1px solid #d8dee4; }
+.page-tabs a { margin-bottom: -1px; padding: 4px 14px; border: 1px solid transparent; border-radius: 6px 6px 0 0; color: #656d76; }
+.page-tabs a:hover { color: #0b6bcb; }
+.page-tabs a[aria-current="page"] { border-color: #d8dee4; border-bottom-color: #fff; background: #fff; color: #1f2328; font-weight: 600; }
+
 /* OS ごとの手順のタブ。JS は使わない。印刷の表示（JPG）では、すべての OS を並べる */
 .tabs > input { position: absolute; opacity: 0; pointer-events: none; }
 .tabs > label { display: inline-block; padding: 2px 12px; margin-right: 4px; border: 1px solid #d8dee4; border-bottom: none; border-radius: 6px 6px 0 0; cursor: pointer; color: #656d76; }

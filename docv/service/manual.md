@@ -58,6 +58,8 @@ docv check docs/spec/order.md
 | format ( 設定次第 )                       | ✅          | ✅ ( markdown 部のみ ) | ✅          | ✅         |
 | textlint ( 設定次第 )                     | ✅          | ✅ ( markdown 部のみ ) | ✅          | ✅         |
 
+Slot ( md ) のうち、ページに分けたサービス仕様は、YAML front matter の `order` と、ページどうしの `order` と h1 の重なりも検査する。
+
 Slot ( yaml ) の markdown 部は、名前が `_markdown` で終わる項目。値は `|` のブロックで書く。`|` で書いていない項目と、それ以外の項目を複数行で書いたものは、スキーマの検査で error にする。
 
 パスを渡しても、検査するファイルが絞られるだけで、検査内容は変わらない。
@@ -114,6 +116,8 @@ docv slot gen manual               # docv/service/manual.md を作る
 docv slot gen doc-guide            # docv/guide/doc-guide.md に、ガイドラインの雛形を作る
 docv slot gen doc-guide --print    # 運用中のファイルと雛形を見比べる
 ```
+
+サービス仕様をページに分けるときは、`docv/service/service/` の下にページを手で置く（[サービス仕様のページ分け](service.md#サービス仕様のページ分け)）。ページがあるときは、`docv slot gen service` は `docv/service/service.md` を作らずにエラーで終わる。
 
 ### docv slot schema
 

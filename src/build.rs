@@ -5,6 +5,7 @@
 //! プロジェクト詳細.html に Free ファイルのツリー、現在の設定.html に docv.yaml のすべての項目と今の値、
 //! 検索.html に Slot ファイル、ADR、Free ファイルの中身を探す入力欄を置く。
 //! Slot は 1 つずつ独立したページにし、`<まとまり>/<Slot>.html` に置く。
+//! 分けたサービス仕様は、ページごとに `<まとまり>/<Slot>/<ページの h1>.html` に置き、ページへのリンクをタブにして並べる。
 //! 画像にしても読めるように、折りたたみは使わない。OS ごとの手順のタブは、印刷の表示（JPG）ではすべて並べる。
 
 use std::cell::RefCell;
@@ -171,8 +172,17 @@ fn render(project: &Project, out: &Path) -> Result<Vec<Slot>> {
 }
 
 /// Slot のページの、出力先からの相対パス。`サービス仕様/利用マニュアル.html`。
+/// 分けた Slot のページは、Slot の名前のディレクトリの下に、ページの名前で置く。`サービス仕様/サービス仕様/管理者向け機能.html`。
 fn page_path(slot: &Slot) -> String {
-    format!("{}/{}.html", slot.def.group.label(), slot.def.label)
+    match &slot.page {
+        Some(page) => format!(
+            "{}/{}/{}.html",
+            slot.def.group.label(),
+            slot.def.label,
+            file_name(&page.title)
+        ),
+        None => format!("{}/{}.html", slot.def.group.label(), slot.def.label),
+    }
 }
 
 /// Slot の JPG の、dir.image からの相対パス。`サービス仕様/用語集.jpg`。
@@ -482,13 +492,19 @@ impl Site<'_> {
         page(title, &nav, &body, &aside)
     }
 
-    /// Slot のページ。
+    /// Slot のページ。分けた Slot のページの題には、ページの名前を前に付ける。
     fn render_slot(&self, slot: &Slot) -> String {
-        *self.dir.borrow_mut() = self.out.join(slot.def.group.label());
+        let path = page_path(slot);
+        let dir = Path::new(&path).parent().unwrap_or(Path::new(""));
+        *self.dir.borrow_mut() = self.out.join(dir);
         let mut out = String::new();
         self.slot(&mut out, slot);
+        let title = match &slot.page {
+            Some(page) => format!("{} - {}", escape(&page.title), slot.def.label),
+            None => slot.def.label.to_string(),
+        };
         self.page(
-            &format!("{} - {}", slot.def.label, escape(&self.project.title())),
+            &format!("{title} - {}", escape(&self.project.title())),
             Nav::Overview,
             &out,
         )
@@ -642,8 +658,33 @@ impl Site<'_> {
             icon(slot.def.id),
             slot.def.label
         );
+        self.page_tabs(out, slot);
         out.push_str(&self.slot_body(slot));
         let _ = writeln!(out, "</section>");
+    }
+
+    /// 分けた Slot のページのタブ。同じ Slot のすべてのページへのリンクを order の順に並べ、描いているページに印を付ける。
+    /// 分けていない Slot には出さない。
+    fn page_tabs(&self, out: &mut String, slot: &Slot) {
+        if slot.page.is_none() {
+            return;
+        }
+        let _ = write!(out, "<nav class=\"page-tabs\">");
+        for s in self.slots.iter().filter(|s| s.def.id == slot.def.id) {
+            let Some(page) = &s.page else { continue };
+            let _ = write!(
+                out,
+                "<a href=\"{}\"{}>{}</a>",
+                self.link(&s.path, "").unwrap_or_default(),
+                if s.path == slot.path {
+                    " aria-current=\"page\""
+                } else {
+                    ""
+                },
+                escape(&page.title)
+            );
+        }
+        let _ = writeln!(out, "</nav>");
     }
 
     /// Slot ごとの形の中身。
@@ -2170,6 +2211,81 @@ mod tests {
     }
 
     #[test]
+    fn builds_each_page_of_a_split_slot_with_tabs() {
+        let (dir, project) = project(&[
+            (
+                "docv/service/service/user.md",
+                "---\norder: 1\n---\n\n# 利用者向け機能\n\n## 注文\n\n[取り消し](admin.md#取り消し)\n",
+            ),
+            (
+                "docv/service/service/admin.md",
+                "---\norder: 2\n---\n\n# 管理者向け機能\n\n## 取り消し\n\n本文\n",
+            ),
+            (
+                "docs/a.md",
+                "---\nmission: a\n---\n\n# A\n\n[管理](../docv/service/service/admin.md)\n",
+            ),
+        ]);
+        let out = dir.path().join("out");
+        run(&project, &out, None).unwrap();
+        let read = |path: &str| fs::read_to_string(out.join(path)).unwrap();
+
+        // ページを 1 つずつ、Slot の名前のディレクトリの下に、ページの名前で置く。カードは先頭のページを開く
+        let index = read(PAGE);
+        assert!(
+            index.contains(
+                "<a class=\"card\" href=\"サービス仕様/サービス仕様/利用者向け機能.html\">"
+            ),
+            "{index}"
+        );
+        let user = read("サービス仕様/サービス仕様/利用者向け機能.html");
+        assert!(
+            user.contains("<title>利用者向け機能 - サービス仕様 - demo</title>"),
+            "{user}"
+        );
+        // Slot の名前の下に、すべてのページへのタブを order の順に並べ、開いているページに印を付ける
+        assert!(
+            user.contains("</svg>サービス仕様</h1>\n<nav class=\"page-tabs\"><a href=\"利用者向け機能.html\" aria-current=\"page\">利用者向け機能</a><a href=\"管理者向け機能.html\">管理者向け機能</a></nav>"),
+            "{user}"
+        );
+        assert!(
+            user.contains(
+                "<a href=\"../../index.html\" aria-current=\"page\">プロジェクト概要</a>"
+            ),
+            "{user}"
+        );
+        // ページの h1 は本文に出さない。目次と、ほかのページへのリンクは、ページごとに効く
+        assert!(!user.contains("<h1>利用者向け機能"), "{user}");
+        assert!(
+            user.contains("<li class=\"h2\"><a href=\"#注文\">注文</a></li>"),
+            "{user}"
+        );
+        assert!(
+            user.contains("<a href=\"%E7%AE%A1%E7%90%86%E8%80%85%E5%90%91%E3%81%91%E6%A9%9F%E8%83%BD.html#%E5%8F%96%E3%82%8A%E6%B6%88%E3%81%97\">取り消し</a>"),
+            "{user}"
+        );
+        let admin = read("サービス仕様/サービス仕様/管理者向け機能.html");
+        assert!(
+            admin.contains(
+                "<a href=\"管理者向け機能.html\" aria-current=\"page\">管理者向け機能</a>"
+            ),
+            "{admin}"
+        );
+        // Free ファイルからのリンクも、そのページに向く
+        let a = read("プロジェクト詳細/docs/a.html");
+        assert!(
+            a.contains("href=\"../../%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E4%BB%95%E6%A7%98/%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E4%BB%95%E6%A7%98/%E7%AE%A1%E7%90%86%E8%80%85%E5%90%91%E3%81%91%E6%A9%9F%E8%83%BD.html\">管理</a>"),
+            "{a}"
+        );
+        // 検索の索引も、ページごとに持つ
+        let search = read(SEARCH_PAGE);
+        assert!(
+            search.contains("{\"path\":\"docv/service/service/admin.md\",\"href\":\"サービス仕様/サービス仕様/管理者向け機能.html\""),
+            "{search}"
+        );
+    }
+
+    #[test]
     fn rebuilds_everything_but_the_marker() {
         let (dir, project) = project(&[]);
         let out = dir.path().join("output/docv/html");
@@ -2190,6 +2306,7 @@ mod tests {
             def: slot::def("words").unwrap(),
             path: "docv/service/words.yaml".to_string(),
             content: Content::Markdown(String::new()),
+            page: None,
         };
         assert_eq!(jpg_path(&slot), "サービス仕様/用語集.jpg");
     }
