@@ -12,7 +12,7 @@ tags: [仕様, 設定]
 ## 1. 例
 
 ```yaml
-# yaml-language-server: $schema=https://raw.githubusercontent.com/suzuki-hoge/docv/v1.0.1/assets/schema/docv.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/suzuki-hoge/docv/v1.1.0/assets/schema/docv.schema.json
 title: shop-app
 
 dir:
