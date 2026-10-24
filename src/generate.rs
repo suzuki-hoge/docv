@@ -179,7 +179,7 @@ mod tests {
     #[test]
     fn lists_every_slot_with_its_mission() {
         let list = list();
-        assert!(list.starts_with("install "), "{list}");
+        assert!(list.starts_with("overview "), "{list}");
         assert!(
             list.contains("service/manual.md            利用マニュアル: 利用者の使い方"),
             "{list}"

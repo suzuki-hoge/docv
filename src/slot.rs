@@ -73,17 +73,17 @@ pub struct Def {
 /// Slot の一覧。並び順は HTML に出す順。
 pub const DEFS: &[Def] = &[
     Def {
-        id: "install",
-        label: "インストール",
+        id: "overview",
+        label: "サービス概要",
         group: Group::Service,
-        mission: "利用者がこれを入れる手順",
-        format: Format::Yaml,
+        mission: "利用者に向けた、これが何で、誰の何を解決し、何ができるかの説明",
+        format: Format::Markdown,
     },
     Def {
         id: "service",
         label: "サービス仕様",
         group: Group::Service,
-        mission: "これの目的、利用者、解決すること、部品の構成",
+        mission: "機能と部品の構成と、それぞれの詳しい振る舞いと決まり",
         format: Format::Markdown,
     },
     Def {
@@ -92,6 +92,13 @@ pub const DEFS: &[Def] = &[
         group: Group::Service,
         mission: "利用者の使い方（CLI のコマンド、GUI の操作など）",
         format: Format::Markdown,
+    },
+    Def {
+        id: "install",
+        label: "インストール",
+        group: Group::Service,
+        mission: "利用者がこれを入れる手順",
+        format: Format::Yaml,
     },
     Def {
         id: "words",

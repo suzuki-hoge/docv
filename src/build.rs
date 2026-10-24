@@ -1332,6 +1332,10 @@ impl Site<'_> {
 /// Slot のアイコン。線で描いた 24 × 24 の SVG。外部の素材に頼らず、バイナリに持つ。
 fn icon(id: &str) -> String {
     let shapes = match id {
+        // 円の中の i（案内）
+        "overview" => {
+            r#"<circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.01"/>"#
+        }
         // 下向きの矢印と受け皿
         "install" => r#"<path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/>"#,
         // 箱
@@ -1840,10 +1844,16 @@ mod tests {
         assert!(!index.contains(">spec/</td>"), "{index}");
         assert!(!index.contains("<h1>"), "{index}");
         assert!(!detail.contains("<h1>"), "{detail}");
-        let install = index.find(">インストール</a>").unwrap();
+        // サービス仕様のまとまりは、サービス概要、サービス仕様、利用マニュアル、インストール、用語集の順
+        let overview = index.find(">サービス概要</span>").unwrap();
         let service = index.find(">サービス仕様</a>").unwrap();
         let manual = index.find(">利用マニュアル</a>").unwrap();
-        assert!(install < service && service < manual, "{index}");
+        let install = index.find(">インストール</a>").unwrap();
+        let words = index.find(">用語集</span>").unwrap();
+        assert!(
+            overview < service && service < manual && manual < install && install < words,
+            "{index}"
+        );
         assert!(
             index.contains(
                 "<a class=\"card\" href=\"サービス仕様/利用マニュアル.html\"><svg class=\"icon\""
