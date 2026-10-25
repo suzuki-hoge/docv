@@ -163,61 +163,11 @@ mark { background: #fff8c5; color: inherit; }
 <main>
 <section class="doc">
 <h1>docv</h1>
-<p>プロジェクトのドキュメントを、AI Agent が読み書きする Markdown（Free ファイル）と、人間が全体像を掴む HTML の 2 つの形で扱うためのフレームワーク。ドキュメントのルールと、そのルールを前提にした CLI からなる。</p>
-<pre><code>Slot ファイル（YAML、docv/）     ── Slot ごとのページ ───▶ HTML（と、その JPG）
-Free ファイル（Markdown、docs/） ── ミッションとタグのツリー ──▶ プロジェクト詳細.html
-                                 └─ mission ─────────────▶ AI Agent
-</code></pre>
-<ul>
-<li>インストール、サービス仕様、利用マニュアルのように、どのプロジェクトにも要るドキュメントは「Slot」に、docv が決めたミッションと形で書く。HTML には、規格の順にすべての Slot が並び、置いていない Slot はグレーになる</li>
-<li>Free ファイルは、ファイルごとにミッション（読むと何が分かるか）を宣言し、その範囲を超えて書き足さない。分類はタグで行い、タグにルールを付けられる</li>
-<li>図や API の定義は外の道具で作り、Slot からリンクするか埋め込む</li>
-<li>HTML は、CLI が LLM を使わずに作る。同じ入力からは毎回同じものができる。すべてローカルで完結する</li>
-</ul>
-<h2 id="使い方">使い方</h2>
-<pre><code class="language-sh"><span style="color:#323232;">docv init                          </span><span style="font-style:italic;color:#969896;"># docv.yaml を作る
-</span><span style="color:#323232;">docv desc                          </span><span style="font-style:italic;color:#969896;"># docv の概要を出す
-</span><span style="color:#323232;">docv check                         </span><span style="font-style:italic;color:#969896;"># ルールに沿っているかを確かめる
-</span><span style="color:#323232;">docv fix                           </span><span style="font-style:italic;color:#969896;"># 空行や表の余白を整形し、textlint で直せるところを直す
-</span><span style="color:#323232;">docv build                         </span><span style="font-style:italic;color:#969896;"># HTML を作る（dir.image を書いていれば JPG も、dir.index を書いていればインデックスも）
-</span><span style="color:#323232;">docv open                          </span><span style="font-style:italic;color:#969896;"># 作った HTML をブラウザで開く
-</span><span style="color:#323232;">docv slot list                     </span><span style="font-style:italic;color:#969896;"># Slot の一覧と、ミッションを出す
-</span><span style="color:#323232;">docv slot gen service              </span><span style="font-style:italic;color:#969896;"># Slot を決まったパスに作る
-</span><span style="color:#323232;">docv slot gen doc-guide            </span><span style="font-style:italic;color:#969896;"># ドキュメントのガイドラインの雛形を作る
-</span><span style="color:#323232;">docv slot schema install           </span><span style="font-style:italic;color:#969896;"># YAML の Slot のスキーマを出す
-</span></code></pre>
-<p>AI Agent には、<code>CLAUDE.md</code> などに次のように書いて伝える。</p>
-<pre><code>- セッションの最初に `docv desc` を実行し、docv の使い方を把握すること
-- ドキュメントを書く前に、`docv/guide/doc-guide.md`（ガイドライン）を読むこと
-</code></pre>
-<p>このリポジトリのサービス仕様、利用マニュアル、開発者向けガイドなどは、Slot（<code>docv/</code>）に書いてある。GitHub では、<code>docv-index.md</code> から clone せずに読める。clone すれば、<code>docv open</code> で HTML（<code>output/docv/html/</code>）を開き、検索、タグでの絞り込み、ADR のつながりの図も見られる。</p>
-<h2 id="ドキュメント">ドキュメント</h2>
-<h3 id="docv-の規格">docv の規格</h3>
-<p>サービス仕様（<code>docv/service/service/</code>）のページに書く。1 ページ目は <code>docv desc</code> と同じ <code>assets/desc.md</code>。</p>
-<ul>
-<li><a href="%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9/%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E4%BB%95%E6%A7%98/Slot.html"><code>slot.md</code></a> — Slot の一覧と、それぞれのファイルに書くことと形</li>
-<li><a href="%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9/%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E4%BB%95%E6%A7%98/Free.html"><code>free.md</code></a> — Free ファイルの YAML front matter とタグの形と、check が Free ファイルで確かめること</li>
-<li><a href="%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9/%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E4%BB%95%E6%A7%98/ADR.html"><code>adr.md</code></a> — ADR に書くことと形</li>
-<li><a href="%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9/%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E4%BB%95%E6%A7%98/%E8%A8%AD%E5%AE%9A%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB.html"><code>config.md</code></a> — <code>docv.yaml</code> に書くことと、各項目の解釈、check と fix で使う道具の設定</li>
-<li><a href="%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9/%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E4%BB%95%E6%A7%98/%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89.html"><code>cli.md</code></a> — コマンドが読み書きするファイルと、出力先、終了コード、メッセージの言語</li>
-<li><a href="%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9/%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E4%BB%95%E6%A7%98/%E3%83%93%E3%82%B8%E3%83%A5%E3%82%A2%E3%83%A9%E3%82%A4%E3%82%BA.html"><code>html.md</code></a> — docv build が作る HTML、JPG、インデックスの作り（README、Slot、ADR、現在の設定のページを含む）と、毎回同じ出力にする決まり</li>
-<li><code>docs/schema/</code> — <code>docv.yaml</code> と YAML の Slot の JSON Schema の写し（<code>assets/schema/</code> のファイルと同じもの）</li>
-</ul>
-<h3 id="これからと経緯">これからと経緯</h3>
-<ul>
-<li><code>docs/plan/</code> — やると決めたタスクと、まだ決まっていないこと（終わったら、決まったら消すので、ないこともある）</li>
-<li><code>docv/adr/</code> — 決めた経緯（ADR）</li>
-</ul>
+<p>プロジェクトのドキュメントを、AI Agent が読み書きする Markdown と、人間が全体像を掴む HTML の 2 つの形で扱うためのフレームワーク。</p>
+<p>本リポジトリのドキュメントも docv で管理している。</p>
+<p>閲覧はローカル取得して <code>docv open</code> するか、docv-index.md を GitHub で直接閲覧してほしい。</p>
 </section>
 </main>
-<nav class="outline">
-<p class="outline-title">目次</p>
-<ul>
-<li class="h2"><a href="#使い方">使い方</a></li>
-<li class="h2"><a href="#ドキュメント">ドキュメント</a></li>
-<li class="h3"><a href="#docv-の規格">docv の規格</a></li>
-<li class="h3"><a href="#これからと経緯">これからと経緯</a></li>
-</ul>
-</nav>
+<div class="outline"></div>
 </body>
 </html>
