@@ -1,3 +1,7 @@
+---
+mission: 利用者の使い方（CLI のコマンド、GUI の操作など）
+---
+
 # 利用マニュアル
 
 ## コマンド一覧
@@ -50,7 +54,7 @@ docv check docs/spec/order.md
 
 | 検査内容                                  | Slot ( md ) | Slot ( yaml )          | Free ( md ) | ADR ( md ) |
 | ----------------------------------------- | ----------- | ---------------------- | ----------- | ---------- |
-| YAML front matter およびタグ              |             |                        | ✅          | ✅         |
+| YAML front matter およびタグ              | ✅          |                        | ✅          | ✅         |
 | ドキュメントのリンク切れ                  | ✅          | ✅ ( markdown 部のみ ) | ✅          | ✅         |
 | 見出しの数と章番号                        | ✅          |                        | ✅          | ✅         |
 | Slot ファイルの名前とスキーマ             | ✅          | ✅                     |             |            |
@@ -58,7 +62,7 @@ docv check docs/spec/order.md
 | format ( 設定次第 )                       | ✅          | ✅ ( markdown 部のみ ) | ✅          | ✅         |
 | textlint ( 設定次第 )                     | ✅          | ✅ ( markdown 部のみ ) | ✅          | ✅         |
 
-Slot ( md ) のうち、ページに分けたサービス仕様は、YAML front matter の `order` と、ページどうしの `order` と h1 の重なりも検査する。
+Slot ( md ) の YAML front matter は、`mission` が `docv slot list` のミッションと同じかを検査する。ページに分けたサービス仕様は、YAML front matter の `order` と、ページどうしの `order` と h1 の重なりも検査する。
 
 Slot ( yaml ) の markdown 部は、名前が `_markdown` で終わる項目。値は `|` のブロックで書く。`|` で書いていない項目と、それ以外の項目を複数行で書いたものは、スキーマの検査で error にする。
 
@@ -105,6 +109,8 @@ Slot の名前、作るファイル、ミッションの一覧を表示する。
 Slot ファイルを、決まったパスに作る。
 
 YAML の Slot には、1 行目にスキーマの URL を書く。yaml-language-server に対応したエディタ（VS Code の YAML の拡張など）で、項目の補完と検証が効く。
+
+md の Slot には、YAML front matter の `mission` にミッションを書く。
 
 | オプション | 意味                                    |
 | ---------- | --------------------------------------- |

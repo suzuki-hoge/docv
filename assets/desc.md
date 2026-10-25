@@ -1,3 +1,7 @@
+---
+mission: 外から見た機能と、それぞれの振る舞いと決まり
+---
+
 # docv
 
 docv の解決したいこと
@@ -44,18 +48,32 @@ docv の提供するもの
 
 `docv slot list` で一覧と、それぞれの Slot のミッションを確認でき、作成したい場合は `docv slot gen <slot>` で作成する
 
+md の Slot には、YAML front matter の `mission` に、その Slot のミッションを `docv slot list` のとおりに書く
+
+- ミッションは docv が決めるもので、プロジェクトでは変えられない
+- `mission` がないか、ミッションと違えば、`docv check` が error にする。docv の版を上げてミッションが変わったときも、check で気づいて直す
+
+```markdown
+---
+mission: 利用者の使い方（CLI のコマンド、GUI の操作など）
+---
+
+# 利用マニュアル
+```
+
 ### サービス仕様のページ分け
 
 サービス仕様は、ページに分けられる
 
 - 分けるときは、`docv/service/service.md` の代わりに、`docv/service/service/` の直下に 1 ページ 1 ファイルで Markdown を置く
-- どのページにも、YAML front matter に `order`（整数）を書く。ページは `order` の順に並ぶ。`order` は重ねない
+- どのページにも、YAML front matter に `order`（整数）と `mission` を書く。ページは `order` の順に並ぶ。`order` は重ねない。`mission` は、分けないときと同じサービス仕様のミッション
 - 本文の h1 が、ページの名前になる。HTML では、ページを切り替えるタブの名前になる。h1 は重ねない
-- 分けないときは `docv/service/service.md` に書き、YAML front matter はいらない
+- 分けないときは `docv/service/service.md` に書き、YAML front matter には `mission` だけを書く
 
 ```markdown
 ---
 order: 1
+mission: 外から見た機能と、それぞれの振る舞いと決まり
 ---
 
 # 利用者向け機能

@@ -1,3 +1,7 @@
+---
+mission: 版の決め方と、利用者への届け方
+---
+
 # リリース
 
 版は `Cargo.toml` の `version` で決め、タグの push を合図に、GitHub Actions が各プラットフォーム向けのバイナリを GitHub Release に置く。

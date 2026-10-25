@@ -138,7 +138,7 @@ fn execute(cli: Cli) -> Result<ExitCode> {
             Ok(ExitCode::SUCCESS)
         }
         Command::Desc => {
-            print!("{}", desc::TEXT);
+            print!("{}", desc::text());
             Ok(ExitCode::SUCCESS)
         }
         command => {

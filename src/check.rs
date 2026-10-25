@@ -401,7 +401,10 @@ lint:
                 &format!("{}\n# P\n\n- [ ] t\n", fm("tags: [計画]\n")),
             ),
             ("docs/ignored/memo.md", "**太字** [x](missing.md)\n"),
-            ("docv/service/service.md", "# サービス仕様\n"),
+            (
+                "docv/service/service.md",
+                "---\nmission: 外から見た機能と、それぞれの振る舞いと決まり\n---\n\n# サービス仕様\n",
+            ),
         ]);
         assert!(result.is_empty(), "{result:#?}");
     }
@@ -492,7 +495,7 @@ lint:
     const SLOT_FILES: &[(&str, &str)] = &[
         (
             "docv/service/manual.md",
-            "# 利用マニュアル\n\n**太字** [切れた](none.md) [見出し](#ない)\n\n# 二つ目\n",
+            "---\nmission: 利用者の使い方（CLI のコマンド、GUI の操作など）\n---\n\n# 利用マニュアル\n\n**太字** [切れた](none.md) [見出し](#ない)\n\n# 二つ目\n",
         ),
         (
             "docv/adr/a.md",
@@ -508,10 +511,10 @@ lint:
     const SLOT_RESULTS: &[&str] = &[
         "docv/adr/a.md:4: adr-unknown-ref supersedes の none という ADR がない",
         "docv/adr/a.md:9: link-broken リンク先 none.md がない",
-        "docv/service/manual.md:3: link-anchor リンク先の見出し #ない がない",
-        "docv/service/manual.md:3: link-broken リンク先 none.md がない",
-        "docv/service/manual.md:3: style-bold 太字を使わない",
-        "docv/service/manual.md:5: title-count h1 が 2 個ある。1 つにする",
+        "docv/service/manual.md:7: link-anchor リンク先の見出し #ない がない",
+        "docv/service/manual.md:7: link-broken リンク先 none.md がない",
+        "docv/service/manual.md:7: style-bold 太字を使わない",
+        "docv/service/manual.md:9: title-count h1 が 2 個ある。1 つにする",
         "docv/service/words.yaml:8: link-broken リンク先 none.md がない",
         "docv/service/words.yaml:8: style-bold 太字を使わない",
         "docv/service/words.yaml:10: slot-markdown-style desc_markdown は Markdown なので、| のブロックで書く",
@@ -593,7 +596,7 @@ lint:
         write(
             dir.path(),
             "docv/service/manual.md",
-            "# M\n\n| a | b |\n| --- | --- |\n| 種類 | c |\n",
+            "---\nmission: 利用者の使い方（CLI のコマンド、GUI の操作など）\n---\n\n# M\n\n| a | b |\n| --- | --- |\n| 種類 | c |\n",
         );
         write(
             dir.path(),
@@ -610,7 +613,7 @@ lint:
         assert_eq!(
             result,
             [
-                "docv/service/manual.md:3: format-diff 整形が必要。docv fix で整形する",
+                "docv/service/manual.md:7: format-diff 整形が必要。docv fix で整形する",
                 "docv/service/words.yaml:1: format-diff 末尾の改行を 1 つにする。docv fix で整形する",
             ]
         );

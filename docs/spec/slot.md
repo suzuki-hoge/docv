@@ -19,7 +19,7 @@ tags: [仕様, ルール, 出力]
 - Slot のミッションに当たる詳しいことも、Slot の中に書く。Free ファイルへのリンクで済ませない
 - ファイルの中のパスは、すべてルートからの相対パスで書く。md の Slot の中のリンクは、ほかの Markdown と同じく、ファイルの場所からの相対パスで書く
 - YAML の文字列の項目には Markdown を書ける
-- `docv slot gen <slot>` で、Slot ファイルを決まったパスに作れる。YAML の Slot には項目のサンプルを書き、md の Slot は空のファイルを作る（`docv slot list` で一覧とミッションを出す）
+- `docv slot gen <slot>` で、Slot ファイルを決まったパスに作れる。YAML の Slot には項目のサンプルを書き、md の Slot には YAML front matter の `mission` だけを書く（`docv slot list` で一覧とミッションを出す）
 
 ---
 
@@ -141,8 +141,10 @@ groups:
 
 ## 4. md の Slot
 
-- 中身の形は決めない。YAML front matter は要らない
-- `docv slot gen` は空のファイルを作り、中身の形は自由だと表示する。Doc ガイド（`guide/doc-guide.md`）だけは、docv が勧めるガイドラインを書いた雛形を作る。作った雛形はプロジェクトのもので、自由に直してよい。docv の版を上げても書き換えない
+- 中身の形は決めない
+- YAML front matter には `mission` だけを書き、`docv slot list` のミッションと同じ文にする。ミッションは docv が決めるもので、プロジェクトでは変えない。ないか違えば、check が slot-mission の error にする。docv の版を上げてミッションが変わったときも、check で気づいて直す。ファイルを開けば、何を書く Slot かが分かるようにするため
+- `mission` がないか違っても、HTML には本文を出す
+- `docv slot gen` は、YAML front matter の `mission` だけを書いたファイルを作り、中身の形は自由だと表示する。Doc ガイド（`guide/doc-guide.md`）だけは、docv が勧めるガイドラインを書いた雛形を作る。雛形にも `mission` を書いてある。作った雛形はプロジェクトのもので、自由に直してよい。docv の版を上げても書き換えない
 - HTML では、最初の h1 を除き、いちばん浅い見出しが h2 になるように段を付け直して出す
 - 見出しには、Free ファイルのページと同じく、GitHub と同じ形のアンカーを付ける。`[docv init](#docv-init)` のようなページ内リンクが HTML でも GitHub でも飛べる
 - md の Slot のページは JPG にしない。md は GitHub でそのままプレビューできるため
@@ -150,13 +152,14 @@ groups:
 サービス仕様は、ページに分けられる。読む人ごとに仕様が分かれるサービス（利用者向けの機能と管理者向けの機能など）で、1 つのページが長くならないようにするため。
 
 - 分けるときは、`service/service.md` の代わりに、`service/service/` の直下に 1 ページ 1 つの Markdown で置く。ファイル名は自由。両方に置くと check の error になる
-- どのページにも、YAML front matter に `order`（整数）を書く。ページは `order` の順に並べる。`order` は重ねない
+- どのページにも、YAML front matter に `order`（整数）と `mission` を書く。ページは `order` の順に並べる。`order` は重ねない。`mission` は、分けないときと同じく、サービス仕様のミッションと同じ文にする
 - 本文の h1 が、ページの名前になる。h1 は重ねない
-- 分けないときは、今までどおり `service/service.md` に書き、YAML front matter はいらない
+- 分けないときは、今までどおり `service/service.md` に書く
 
 ```markdown
 ---
 order: 2
+mission: 外から見た機能と、それぞれの振る舞いと決まり
 ---
 
 # 管理者向け機能
@@ -171,6 +174,8 @@ order: 2
 | slot-unknown        | Slot のディレクトリに、Slot の名前でないファイルがある                                                              |
 | slot-invalid        | YAML の Slot の形に合わない。知らない項目、手順の `id` の重なり、`os` のない `item`、`ja` も `en` もない用語も含む  |
 |                     | 分けたサービス仕様のページの形に合わない。YAML front matter の `order` がない、知らない項目、`order` や h1 の重なり |
+|                     | md の Slot の YAML front matter に、知らない項目がある。閉じる `---` がない                                         |
+| slot-mission        | md の Slot の YAML front matter に `mission` がないか、`docv slot list` のミッションと違う                          |
 |                     | サービス仕様が、`service/service.md` と `service/service/` の両方にある                                             |
 | slot-path-missing   | パスの先がない                                                                                                      |
 | slot-markdown-style | `_markdown` で終わる項目を、`\|` のブロックで書いていない                                                           |
