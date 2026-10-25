@@ -1,4 +1,4 @@
-//! 現在の設定のページに並べる、docv.yaml のすべての項目と今の値。docs/spec/config.md の「現在の設定のページ」。
+//! 現在の設定のページに並べる、docv.yaml のすべての項目と今の値。docv/service/service/config.md の「現在の設定のページ」。
 
 use crate::config::{Config, Permission, Switch};
 

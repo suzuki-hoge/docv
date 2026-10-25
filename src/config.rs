@@ -1,4 +1,4 @@
-//! docv.yaml の読み込みと検証。項目の意味は docs/spec/config.md。
+//! docv.yaml の読み込みと検証。項目の意味は docv/service/service/config.md。
 //!
 //! docv.yaml にはツールの設定と、プロジェクト全体で共有する語彙だけを書く。ファイルごとの設定は YAML front matter に書く。
 
@@ -56,7 +56,7 @@ impl TagColor {
     }
 }
 
-/// dir。docv が読み書きするディレクトリ。どれもルートからの相対パス。docs/spec/config.md の 3 章。
+/// dir。docv が読み書きするディレクトリ。どれもルートからの相対パス。docv/service/service/config.md の 3 章。
 #[derive(Debug, Clone, Deserialize)]
 pub struct Dirs {
     /// 管理対象の Markdown（Free ファイル）を置くディレクトリ。
@@ -83,7 +83,7 @@ impl Default for Dirs {
     }
 }
 
-/// lint。docs/spec/config.md の 4 章と 5 章。
+/// lint。docv/service/service/config.md の 4 章と 5 章。
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct Lint {
     #[serde(default)]

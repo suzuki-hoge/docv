@@ -1,4 +1,4 @@
-//! ADR（意思決定の記録）。docs/spec/adr.md。
+//! ADR（意思決定の記録）。docv/service/service/adr.md。
 //!
 //! dir.slot の下の adr/ に、決定 1 つを 1 つの Markdown で置く。ファイル名（.md を除く）が id。
 //! システムが使う項目は YAML front matter に、決定の中身（背景、決めたこと、選ばなかった案など）は本文に書く。題は本文の h1。

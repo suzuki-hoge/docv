@@ -1,6 +1,6 @@
 ---
 mission: 費用（operation/cost.yaml）の項目と、それぞれの形
-tags: [仕様]
+tags: [スキーマ]
 ---
 
 # 費用のスキーマ

@@ -1,6 +1,6 @@
 ---
 mission: docv.yaml の項目と、それぞれの形
-tags: [仕様]
+tags: [スキーマ]
 ---
 
 # `docv.yaml` のスキーマ
@@ -9,7 +9,7 @@ tags: [仕様]
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "docv.yaml",
-  "description": "docv の設定ファイル。ツールの設定と、プロジェクト全体で共有する語彙を書く。ファイルごとの設定は YAML front matter に書く。項目の意味は `docs/spec/config.md` を参照。",
+  "description": "docv の設定ファイル。ツールの設定と、プロジェクト全体で共有する語彙を書く。ファイルごとの設定は YAML front matter に書く。項目の意味は `docv/service/service/config.md` を参照。",
   "type": "object",
   "additionalProperties": false,
   "properties": {
@@ -99,7 +99,7 @@ tags: [仕様]
       }
     },
     "lint": {
-      "description": "check の規則。項目の意味は `docs/spec/config.md` を参照。",
+      "description": "check の規則。項目の意味は `docv/service/service/config.md` を参照。",
       "type": "object",
       "additionalProperties": false,
       "properties": {

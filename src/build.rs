@@ -1,4 +1,4 @@
-//! docv build。人間向けの HTML と、設定で有効なら Slot のページの JPG を生成する。docv/system/system.md の「HTML の作り」。
+//! docv build。人間向けの HTML と、設定で有効なら Slot のページの JPG を生成する。docv/service/service/html.md。
 //!
 //! トップは 5 ページに分け、サイドバーで行き来する。
 //! index.html（プロジェクト概要）に Slot ファイルのページへのカード、ADR.html に決定のつながりの図、

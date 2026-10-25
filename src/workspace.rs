@@ -1,4 +1,4 @@
-//! ルートと設定ファイルの探索、ファイルの分類。docv/system/system.md の「処理の流れ」と「ファイルの分類」。
+//! ルートと設定ファイルの探索、ファイルの分類。docv/system/system.md の「処理の流れ」と、docv/service/service/config.md の「管理対象と管理外」。
 
 use std::path::{Path, PathBuf};
 

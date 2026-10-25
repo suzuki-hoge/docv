@@ -1,4 +1,4 @@
-//! docv check のルール。Free ファイルのルールは docs/spec/free.md の 3 章、書式の規則と textlint は docs/spec/config.md。
+//! docv check のルール。Free ファイルのルールは docv/service/service/free.md の 3 章、書式の規則と textlint は docv/service/service/config.md。
 
 use std::fs;
 use std::path::Path;

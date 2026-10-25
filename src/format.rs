@@ -1,4 +1,4 @@
-//! Markdown の整形。整形の形は docv/service/manual.md の docv fix の「整形の形」。
+//! Markdown の整形。整形の形は docv/service/service/config.md の「整形との連動」。
 
 use anyhow::{Result, anyhow, bail};
 use dprint_plugin_markdown::configuration::{

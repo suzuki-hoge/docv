@@ -1,11 +1,11 @@
 ---
-mission: docv.yaml に書くことと、各項目の解釈、check と fix で使う道具の設定
-tags: [仕様, 設定]
+order: 5
+mission: 外から見た機能と、それぞれの振る舞いと決まり
 ---
 
-# 設定ファイル（`docv.yaml`）
+# 設定ファイル
 
-リポジトリのルートに置く設定ファイル。型は [`assets/schema/docv.schema.json`](../../assets/schema/docv.schema.json) が正本。最初の章で項目を一覧にし、続く章で、一覧に書ききれない解釈の決まりと、`docv.yaml` で使うと決めたときだけ動く道具（書式の規則、textlint、整形）を書く。
+リポジトリのルートに置く設定ファイル（`docv.yaml`）。型は [`assets/schema/docv.schema.json`](../../../assets/schema/docv.schema.json) が正本。最初の章で項目を一覧にし、続く章で、一覧に書ききれない解釈の決まりと、`docv.yaml` で使うと決めたときだけ動く道具（書式の規則、textlint、整形）を書く。
 
 ---
 
@@ -44,7 +44,7 @@ format:
 | `dir.html`       |      | `output/docv/html` | docv build が HTML を出すディレクトリ                                                                           |
 | `dir.image`      |      |                    | docv build が Slot のページの JPG を出すディレクトリ。書かなければ JPG を作らない。JPG を作るには Chrome が要る |
 | `ignore`         |      |                    | 管理対象にも管理外にもしないファイルの glob の配列                                                              |
-| `tags`           |      |                    | 使うタグの一覧。タグごとに `name` と、HTML の色の `color` を書く（[`spec/free.md`](free.md) の「タグ」の章）    |
+| `tags`           |      |                    | 使うタグの一覧。タグごとに `name` と、HTML の色の `color` を書く（[Free](free.md) のページの「タグ」の章）      |
 | `lint.bold`      |      | allow              | 太字を使ってよいか（「書式の規則」の章）                                                                        |
 | `lint.italic`    |      | allow              | 斜体を使ってよいか（「書式の規則」の章）                                                                        |
 | `lint.dollar`    |      | allow              | コードの外の 1 行に `$` を 2 つ以上書いてよいか（「書式の規則」の章）                                           |
@@ -56,7 +56,7 @@ format:
 ## 2. 書くことと書かないこと
 
 - `docv.yaml` には、ツールの設定（`lint`、整形、出力）と、プロジェクト全体で共有する語彙（管理対象の範囲、タグの一覧、Slot の置き場所）だけを書く
-- ファイルごとの設定（ミッション、タグ）は、そのファイルの YAML front matter に書く（[`spec/free.md`](free.md) の「YAML front matter」の章）
+- ファイルごとの設定（ミッション、タグ）は、そのファイルの YAML front matter に書く（[Free](free.md) のページの「YAML front matter」の章）
 
 ---
 
@@ -84,7 +84,7 @@ format:
 
 - 既定はどれも `allow`（確かめない）
 - コードブロックとインラインコードの中は見ない
-- 章番号は、設定によらず常に確かめる（[`spec/free.md`](free.md) の「check のルール」の章）
+- 章番号は、設定によらず常に確かめる（[Free](free.md) のページの「check のルール」の章）
 - 管理対象のファイルのほか、md の Slot、ADR、YAML の Slot の Markdown の項目にもかける
 
 ---
@@ -191,7 +191,7 @@ docs/            # Free ファイル
   *.md           # 分類はディレクトリではなくタグで行う
   tmp/           # メモを置く。ignore に入れる
 docv/            # Slot ファイル
-  service/       # サービス仕様。ほかに system/、guide/、operation/
+  service/       # サービス。ほかに system/、guide/、operation/
     service.md
   adr/           # ADR
 output/docv/     # docv build の出力

@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1110" height="510" viewBox="0 0 1110 510" font-family="-apple-system, 'Hiragino Sans', 'Noto Sans JP', 'Yu Gothic', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect width="1110" height="510" fill="#ffffff"/>
+
+  <!-- 書く人と見る人 -->
+  <rect x="30" y="30" width="220" height="56" rx="28" fill="#ffffff" stroke="#57606a" stroke-width="1.5"/>
+  <text x="140" y="64" font-size="16" text-anchor="middle" fill="#1f2328">AI Agent</text>
+  <rect x="980" y="232" width="100" height="56" rx="28" fill="#ffffff" stroke="#57606a" stroke-width="1.5"/>
+  <text x="1030" y="266" font-size="16" text-anchor="middle" fill="#1f2328">人間</text>
+
+  <!-- リポジトリのドキュメント -->
+  <rect x="30" y="150" width="220" height="220" rx="8" fill="#f6f8fa" stroke="#8c959f" stroke-width="1.5"/>
+  <text x="140" y="176" font-size="14" font-weight="600" text-anchor="middle" fill="#1f2328">リポジトリのドキュメント</text>
+  <rect x="45" y="190" width="190" height="34" rx="4" fill="#ffffff" stroke="#8c959f"/>
+  <text x="140" y="212" font-size="13" text-anchor="middle" fill="#1f2328">docv.yaml</text>
+  <rect x="45" y="232" width="190" height="34" rx="4" fill="#ffffff" stroke="#8c959f"/>
+  <text x="140" y="254" font-size="13" text-anchor="middle" fill="#1f2328">Slot ファイル（docv/）</text>
+  <rect x="45" y="274" width="190" height="34" rx="4" fill="#ffffff" stroke="#8c959f"/>
+  <text x="140" y="296" font-size="13" text-anchor="middle" fill="#1f2328">Free ファイル（docs/）</text>
+  <rect x="45" y="316" width="190" height="34" rx="4" fill="#ffffff" stroke="#8c959f"/>
+  <text x="140" y="338" font-size="13" text-anchor="middle" fill="#1f2328">ADR（docv/adr/）</text>
+
+  <!-- docv -->
+  <rect x="330" y="150" width="200" height="220" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
+  <text x="430" y="236" font-size="17" font-weight="600" text-anchor="middle" fill="#1f2328">docv（CLI）</text>
+  <text x="430" y="262" font-size="13" text-anchor="middle" fill="#1f2328">単一のバイナリ</text>
+  <text x="430" y="290" font-size="12" text-anchor="middle" fill="#57606a">決まり、雛形、HTML の部品を</text>
+  <text x="430" y="308" font-size="12" text-anchor="middle" fill="#57606a">埋め込む</text>
+
+  <!-- 出力と Chrome -->
+  <rect x="600" y="150" width="200" height="56" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="700" y="183" font-size="15" text-anchor="middle" fill="#1f2328">HTML（dir.html）</text>
+  <rect x="600" y="232" width="200" height="56" rx="8" fill="#fff8c5" stroke="#9a6700" stroke-width="1.5"/>
+  <text x="700" y="256" font-size="15" text-anchor="middle" fill="#1f2328">Chrome</text>
+  <text x="700" y="276" font-size="12" text-anchor="middle" fill="#57606a">JPG を作るときだけ</text>
+  <rect x="600" y="314" width="200" height="56" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="700" y="347" font-size="15" text-anchor="middle" fill="#1f2328">JPG（dir.image）</text>
+
+  <!-- 外の道具と GitHub -->
+  <rect x="330" y="430" width="200" height="56" rx="8" fill="#fff8c5" stroke="#9a6700" stroke-width="1.5"/>
+  <text x="430" y="454" font-size="15" text-anchor="middle" fill="#1f2328">textlint（npx）</text>
+  <text x="430" y="474" font-size="12" text-anchor="middle" fill="#57606a">使うと決めたときだけ</text>
+  <rect x="30" y="430" width="220" height="56" rx="8" fill="#f6f8fa" stroke="#57606a" stroke-width="1.5"/>
+  <text x="140" y="454" font-size="15" text-anchor="middle" fill="#1f2328">GitHub</text>
+  <text x="140" y="474" font-size="12" text-anchor="middle" fill="#57606a">スキーマの公開、バイナリの配布</text>
+
+  <!-- つながり -->
+  <g stroke="#57606a" stroke-width="1.5" fill="none">
+    <line x1="140" y1="86" x2="140" y2="148" marker-end="url(#arrow)"/>
+    <polyline points="250,58 430,58 430,148" marker-end="url(#arrow)"/>
+    <line x1="328" y1="262" x2="252" y2="262" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+    <line x1="530" y1="178" x2="598" y2="178" marker-end="url(#arrow)"/>
+    <line x1="530" y1="260" x2="598" y2="260" marker-end="url(#arrow)"/>
+    <line x1="700" y1="206" x2="700" y2="230" marker-end="url(#arrow)"/>
+    <line x1="700" y1="288" x2="700" y2="312" marker-end="url(#arrow)"/>
+    <polyline points="1030,232 1030,178 802,178" marker-end="url(#arrow)"/>
+    <polyline points="1030,288 1030,342 802,342" marker-end="url(#arrow)"/>
+    <line x1="430" y1="370" x2="430" y2="428" marker-end="url(#arrow)"/>
+    <line x1="140" y1="370" x2="140" y2="428" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+  </g>
+  <g font-size="12" fill="#57606a">
+    <text x="150" y="122">書く</text>
+    <text x="340" y="50" text-anchor="middle">desc、check、fix など</text>
+    <text x="290" y="254" text-anchor="middle">読む・直す</text>
+    <text x="564" y="170" text-anchor="middle">build</text>
+    <text x="564" y="252" text-anchor="middle">撮らせる</text>
+    <text x="708" y="222">開く</text>
+    <text x="708" y="304">撮る</text>
+    <text x="915" y="150" text-anchor="middle">ローカルで見る</text>
+    <text x="915" y="166" text-anchor="middle">（検索したりリンクを辿れる）</text>
+    <text x="915" y="362" text-anchor="middle">GitHub で見る</text>
+    <text x="915" y="378" text-anchor="middle">（clone しなくても概要を把握できる）</text>
+    <text x="440" y="404">check、fix</text>
+    <text x="150" y="404">スキーマを参照（版のタグの URL）</text>
+  </g>
+</svg>

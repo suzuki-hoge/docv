@@ -4,7 +4,7 @@ groups:
     items:
       - en: Slot
         desc_markdown: |
-          どのプロジェクトにも要るドキュメントを書くファイル（Slot ファイル）。docv がミッションと形を決める。`docv/` に `<まとまり>/<ID>.<拡張子>` の名前で置く。18 の Slot がある
+          どのプロジェクトにも要るドキュメントを書くファイル（Slot ファイル）。docv がミッションと形を決める。`docv/` に `<まとまり>/<ID>.<拡張子>` の名前で置く。19 の Slot がある
       - en: Free
         desc_markdown: |
           プロジェクトがミッションと形を決める Markdown のファイル（Free ファイル）。AI Agent が読み書きし、詳細を記録する。`docv.yaml` の `dir.free` のディレクトリ（既定は `docs/`）に置く

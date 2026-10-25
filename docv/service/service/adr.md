@@ -1,6 +1,6 @@
 ---
-mission: ADR に書くことと形、HTML での見せ方
-tags: [仕様, ルール, 出力]
+order: 4
+mission: 外から見た機能と、それぞれの振る舞いと決まり
 ---
 
 # ADR
@@ -58,7 +58,7 @@ CLI は Rust で書き、単一のバイナリにして配る。
 | adr-invalid     | YAML front matter が ADR の形に合わない（知らない項目、`date` の形も含む）。本文に h1 がない |
 | adr-unknown-ref | `supersedes` の先の ADR がない。または、その決定より後の決定を指している                     |
 
-- 本文には、YAML front matter のほかは、Free ファイルと同じ検査（[`spec/free.md`](free.md) の「check のルール」の章）をかける
+- 本文には、YAML front matter のほかは、Free ファイルと同じ検査（[Free](free.md) のページの「check のルール」の章）をかける
 
 ---
 

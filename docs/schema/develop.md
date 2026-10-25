@@ -1,6 +1,6 @@
 ---
 mission: 開発コマンド（guide/develop.yaml）の項目と、それぞれの形
-tags: [仕様]
+tags: [スキーマ]
 ---
 
 # 開発コマンドのスキーマ

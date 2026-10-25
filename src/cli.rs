@@ -10,7 +10,7 @@ use crate::check::Options;
 use crate::workspace::{Locate, Project};
 use crate::{build, check, desc, fix, generate, init, open, schema};
 
-/// 終了コード。docv/system/system.md の「終了コード」。
+/// 終了コード。docv/service/service/cli.md の「終了コード」。
 pub const EXIT_FAILURE: u8 = 1;
 pub const EXIT_UNRUNNABLE: u8 = 2;
 

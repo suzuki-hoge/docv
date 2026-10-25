@@ -7,7 +7,7 @@ use anyhow::{Context, Result, bail};
 
 use crate::schema;
 
-/// 推奨する配置（docs/spec/config.md の 7 章）の docv.yaml。すべての項目を、既定の値でコメントに載せる。
+/// 推奨する配置（docv/service/service/config.md の 7 章）の docv.yaml。すべての項目を、既定の値でコメントに載せる。
 pub fn config_text() -> String {
     format!(
         "{}# docv の設定。項目の型と意味は、1 行目の URL のスキーマにある。

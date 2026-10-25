@@ -1,4 +1,4 @@
-//! HTML のページを 1 枚ずつ JPG にする。docv/service/service.md の「JPG」、docv/system/system.md の「JPG の撮り方」。
+//! HTML のページを 1 枚ずつ JPG にする。docv/service/service/html.md の「JPG」、docv/system/system.md の「Chrome とのやりとり」。
 //!
 //! ローカルの Chrome をヘッドレスで起動し、DevTools Protocol で操作して撮る。
 

@@ -41,10 +41,14 @@ AI Agent には、`CLAUDE.md` などに次のように書いて伝える。
 
 ### docv の規格
 
-- [`docs/spec/free.md`](docs/spec/free.md) — Free ファイルの YAML front matter とタグの形と、check が Free ファイルで確かめること
-- [`docs/spec/slot.md`](docs/spec/slot.md) — Slot の一覧と、それぞれのファイルに書くことと形、HTML での見せ方
-- [`docs/spec/adr.md`](docs/spec/adr.md) — ADR に書くことと形、HTML での見せ方
-- [`docs/spec/config.md`](docs/spec/config.md) — `docv.yaml` に書くことと、各項目の解釈、check と fix で使う道具の設定
+サービス仕様（[`docv/service/service/`](docv/service/service)）のページに書く。1 ページ目は `docv desc` と同じ `assets/desc.md`。
+
+- [`slot.md`](docv/service/service/slot.md) — Slot の一覧と、それぞれのファイルに書くことと形、HTML での見せ方
+- [`free.md`](docv/service/service/free.md) — Free ファイルの YAML front matter とタグの形と、check が Free ファイルで確かめること
+- [`adr.md`](docv/service/service/adr.md) — ADR に書くことと形、HTML での見せ方
+- [`config.md`](docv/service/service/config.md) — `docv.yaml` に書くことと、各項目の解釈、check と fix で使う道具の設定
+- [`cli.md`](docv/service/service/cli.md) — コマンドが読み書きするファイルと、出力先、終了コード、メッセージの言語
+- [`html.md`](docv/service/service/html.md) — docv build が作る HTML と JPG の作りと、毎回同じ出力にする決まり
 - [`docs/schema/`](docs/schema) — `docv.yaml` と YAML の Slot の JSON Schema の写し（`assets/schema/` のファイルと同じもの）
 
 ### これからと経緯

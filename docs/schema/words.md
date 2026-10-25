@@ -1,6 +1,6 @@
 ---
 mission: 用語集（service/words.yaml）の項目と、それぞれの形
-tags: [仕様]
+tags: [スキーマ]
 ---
 
 # 用語集のスキーマ

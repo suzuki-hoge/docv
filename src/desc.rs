@@ -2,7 +2,7 @@
 
 use crate::markdown;
 
-/// docv の概要の元のファイル。docv のサービス仕様（docv/service/service.md）と同じファイル。バイナリに埋め込むので、CLI の版と内容が一致する。
+/// docv の概要の元のファイル。docv のサービス仕様の 1 ページ目（docv/service/service/desc.md）と同じファイル。バイナリに埋め込むので、CLI の版と内容が一致する。
 const SOURCE: &str = include_str!("../assets/desc.md");
 
 /// docv の概要。元のファイルは md の Slot として YAML front matter の mission を持つので、それを除いた本文を出す。
@@ -19,6 +19,6 @@ mod tests {
 
     #[test]
     fn prints_the_body_without_frontmatter() {
-        assert!(text().starts_with("# docv\n"), "{}", text());
+        assert!(text().starts_with("# 概要\n"), "{}", text());
     }
 }

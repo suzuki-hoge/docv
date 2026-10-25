@@ -1,6 +1,6 @@
 ---
 mission: 技術スタック（system/stack.yaml）の項目と、それぞれの形
-tags: [仕様]
+tags: [スキーマ]
 ---
 
 # 技術スタックのスキーマ

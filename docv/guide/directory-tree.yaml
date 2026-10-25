@@ -17,7 +17,7 @@ entries:
       YAML の Slot と `docv.yaml` の JSON Schema。`docv slot schema` で出す。公開して、エディタの補完に使う
   - path: assets/desc.md
     desc_markdown: |
-      docv desc が出す docv の概要。Slot のサービス仕様と同じファイル
+      docv desc が出す docv の概要。Slot のサービス仕様の 1 ページ目と同じファイル
   - path: assets/style.css
     desc_markdown: |
       HTML の CSS
@@ -26,16 +26,16 @@ entries:
       HTML の検索のページの JS
   - path: docs/
     desc_markdown: |
-      このリポジトリのドキュメント。docv 自身で管理する
+      このリポジトリの Free ファイル（スキーマの写し）と図。docv 自身で管理する
   - path: docv/
     desc_markdown: |
       このリポジトリの Slot ファイル
   - path: docv/adr/
     desc_markdown: |
       決めた経緯（ADR）
-  - path: docs/spec/
-    desc_markdown: |
-      docv のルールの詳細（Slot、Free ファイル、ADR、`docv.yaml`）
   - path: docs/schema/
     desc_markdown: |
       `docv.yaml` と YAML の Slot のスキーマの写し。HTML で公開する
+  - path: docs/figure/
+    desc_markdown: |
+      ドキュメントに載せる図（SVG）。`docv/` には Slot のほかのファイルを置けないので、ここに置く

@@ -12,14 +12,8 @@ ignore:
   - docs/plan/**
 
 tags:
-  - name: 仕様
+  - name: スキーマ
     color: blue
-  - name: ルール
-    color: green
-  - name: 設定
-    color: yellow
-  - name: 出力
-    color: purple
 
 lint:
   bold: deny

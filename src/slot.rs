@@ -1,4 +1,4 @@
-//! Slot。どのプロジェクトにも要るドキュメントを、docv が決めたミッションと形で書くファイル。docs/spec/slot.md。
+//! Slot。どのプロジェクトにも要るドキュメントを、docv が決めたミッションと形で書くファイル。docv/service/service/slot.md。
 //!
 //! Slot ファイルは、dir.slot の下の、まとまりのディレクトリに `<まとまり>/<ID>.<拡張子>` の名前で置く。拡張子は Slot ごとに決まる（yaml か md）。
 //! サービス仕様とシステム仕様は、`<まとまり>/<ID>/` の直下に 1 ページ 1 つの md で置いて、ページに分けられる。ページの名前は h1、並びは YAML front matter の order。
@@ -759,7 +759,7 @@ impl SlotFile {
 fn slot_files(project: &Project) -> Result<Vec<SlotFile>> {
     let dir = project.slot_dir();
     let prefix = format!("{dir}/");
-    // adr/ は ADR のディレクトリ。Slot としては読まない（docs/spec/adr.md）。
+    // adr/ は ADR のディレクトリ。Slot としては読まない（docv/service/service/adr.md）。
     let adr_dir = format!("{prefix}{}/", crate::adr::DIR);
     Ok(project
         .slot_dir_files()?

@@ -1,4 +1,4 @@
-//! textlint を npx で実行する。使うルールとその値は docv が決め、docv の版ごとに固定する。docs/spec/config.md の 5 章。
+//! textlint を npx で実行する。使うルールとその値は docv が決め、docv の版ごとに固定する。docv/service/service/config.md の 5 章。
 
 use std::collections::hash_map::DefaultHasher;
 use std::fs;

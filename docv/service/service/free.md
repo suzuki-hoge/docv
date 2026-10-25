@@ -1,11 +1,11 @@
 ---
-mission: Free ファイルの YAML front matter とタグの形と、check が Free ファイルで確かめること
-tags: [仕様, ルール]
+order: 3
+mission: 外から見た機能と、それぞれの振る舞いと決まり
 ---
 
-# Free ファイル
+# Free
 
-docv が管理する Free ファイル（`docv.yaml` の `dir.free` のディレクトリの下の Markdown）のルール。何をどう書くかはガイドライン（Slot の Doc ガイド、`guide/doc-guide.md`）で、プロジェクトが決める。Slot のルールは [`spec/slot.md`](slot.md)、ADR のルールは [`spec/adr.md`](adr.md)、`docv.yaml` は [`spec/config.md`](config.md) に書く。
+docv が管理する Free ファイル（`docv.yaml` の `dir.free` のディレクトリの下の Markdown）のルール。何をどう書くかはガイドライン（Slot の Doc ガイド、`guide/doc-guide.md`）で、プロジェクトが決める。Slot のルールは [Slot](slot.md)、ADR のルールは [ADR](adr.md)、`docv.yaml` は [設定ファイル](config.md) のページに書く。
 
 ---
 
@@ -49,7 +49,7 @@ tags:
 
 ## 3. check のルール
 
-`docv check` が Free ファイルで確かめるルール。`docv.yaml` で使うと決めたときだけ確かめるもの（太字などの書式の規則、整形、textlint）は [`spec/config.md`](config.md) に書く。
+`docv check` が Free ファイルで確かめるルール。`docv.yaml` で使うと決めたときだけ確かめるもの（太字などの書式の規則、整形、textlint）は [設定ファイル](config.md) のページに書く。
 
 ### YAML front matter
 

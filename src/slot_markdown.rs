@@ -1,4 +1,4 @@
-//! YAML の Slot の中の Markdown。docs/spec/slot.md の 3 章。
+//! YAML の Slot の中の Markdown。docv/service/service/slot.md の 3 章。
 //!
 //! キーが `_markdown` で終わる項目の値を Markdown として扱い、`|` のブロックで書く。それ以外の文字列は 1 行で書く。
 //! `|` のブロックは中身を 1 行ずつそのまま持つので、Markdown の N 行目は、YAML の「中身の 1 行目 + N」行目になる。

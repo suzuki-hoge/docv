@@ -1,6 +1,6 @@
 ---
 mission: ディレクトリ（guide/directory-tree.yaml）の項目と、それぞれの形
-tags: [仕様]
+tags: [スキーマ]
 ---
 
 # ディレクトリのスキーマ

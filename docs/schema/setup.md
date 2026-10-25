@@ -1,6 +1,6 @@
 ---
 mission: 環境構築（guide/setup.yaml）の項目と、それぞれの形
-tags: [仕様]
+tags: [スキーマ]
 ---
 
 # 環境構築のスキーマ
