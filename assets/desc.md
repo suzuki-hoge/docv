@@ -166,17 +166,7 @@ CLI は Rust で書く
 
 ## 5. コマンド
 
-主要ユースケースのみここで紹介する
-
-すべてのコマンドは `docv --help` で確認
-
-- `docv init`: `docv.yaml` を作る
-- `docv desc`: docv の概要を見る
-- `docv {check|fix} [path...]`: ドキュメントを検査する / 自動修正する
-- `docv build`: HTML ( 設定次第で JPG も ) を作る
-- `docv slot list`: Slot 一覧を見る
-- `docv slot gen <slot>`: Slot ファイルを作る
-- `docv slot schema <slot>`: YAML の Slot のスキーマを確認する
+すべてのコマンドは `docv --help` と `docv <sub-command> --help` で確認する
 
 新たに導入する場合は `docv init` し、`docv slot gen doc-guide` でガイドラインを作り、`docv slot gen` と `docv check` で作成・調整を進める
 
@@ -188,18 +178,7 @@ CLI は Rust で書く
 
 ## 7. スキーマ ( docv ファイル )
 
-Slot ファイルのうち、次のページは YAML である
-
-- `install`: インストール
-- `words`: 用語集
-- `stack`: 技術スタック
-- `directory-tree`: ディレクトリ
-- `setup`: 環境構築
-- `env`: 環境変数
-- `develop`: 開発コマンド
-- `cost`: 費用
-
-これらのスキーマは `docv slot schema <slot>` で確認する
+YAML の Slot は `docv slot list` で確認し、そのスキーマは `docv slot schema <slot>` で確認する
 
 ## 8. ルール、ガイドライン、設定
 
