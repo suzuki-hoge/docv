@@ -12,7 +12,7 @@ mission: 外から見た機能と、それぞれの振る舞いと決まり
 ## 1. 例
 
 ```yaml
-# yaml-language-server: $schema=https://raw.githubusercontent.com/suzuki-hoge/docv/v1.2.1/assets/schema/docv.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/suzuki-hoge/docv/v1.3.0/assets/schema/docv.schema.json
 title: shop-app
 
 dir:

@@ -173,14 +173,14 @@ mark { background: #fff8c5; color: inherit; }
 </table>
 <h2 id="手順">手順</h2>
 <ol class="steps">
-<li><p class="step-name">バイナリを取る</p><div class="tabs"><input type="radio" name="tab-install-binary" id="tab-install-binary-0" checked><label for="tab-install-binary-0">Windows</label><input type="radio" name="tab-install-binary" id="tab-install-binary-1"><label for="tab-install-binary-1">macOS</label><input type="radio" name="tab-install-binary" id="tab-install-binary-2"><label for="tab-install-binary-2">Linux</label><div class="panel"><p class="panel-os">Windows</p><p>GitHub Release から <code>docv-1.2.1-x86_64-pc-windows-msvc.zip</code> を取り、展開した docv.exe を PATH の通った場所に置く。</p>
+<li><p class="step-name">バイナリを取る</p><div class="tabs"><input type="radio" name="tab-install-binary" id="tab-install-binary-0" checked><label for="tab-install-binary-0">Windows</label><input type="radio" name="tab-install-binary" id="tab-install-binary-1"><label for="tab-install-binary-1">macOS</label><input type="radio" name="tab-install-binary" id="tab-install-binary-2"><label for="tab-install-binary-2">Linux</label><div class="panel"><p class="panel-os">Windows</p><p>GitHub Release から <code>docv-1.3.0-x86_64-pc-windows-msvc.zip</code> を取り、展開した docv.exe を PATH の通った場所に置く。</p>
 </div><div class="panel"><p class="panel-os">macOS</p><p>GitHub Release からバイナリを取り、パスの通った場所に置く。arm64 の例。</p>
-<pre><code class="language-sh"><span style="color:#323232;">curl -L https://github.com/suzuki-hoge/docv/releases/download/v1.2.1/docv-1.2.1-aarch64-apple-darwin.tar.gz </span><span style="font-weight:bold;color:#a71d5d;">| </span><span style="color:#323232;">tar xz
+<pre><code class="language-sh"><span style="color:#323232;">curl -L https://github.com/suzuki-hoge/docv/releases/download/v1.3.0/docv-1.3.0-aarch64-apple-darwin.tar.gz </span><span style="font-weight:bold;color:#a71d5d;">| </span><span style="color:#323232;">tar xz
 </span><span style="color:#323232;">mv docv /usr/local/bin/
 </span></code></pre>
 <p>ブラウザでダウンロードしたバイナリは、macOS の Gatekeeper に止められることがある。curl で取れば止められない。</p>
 </div><div class="panel"><p class="panel-os">Linux</p><p>GitHub Release からバイナリを取り、パスの通った場所に置く。x86_64 の例。</p>
-<pre><code class="language-sh"><span style="color:#323232;">curl -L https://github.com/suzuki-hoge/docv/releases/download/v1.2.1/docv-1.2.1-x86_64-unknown-linux-musl.tar.gz </span><span style="font-weight:bold;color:#a71d5d;">| </span><span style="color:#323232;">tar xz
+<pre><code class="language-sh"><span style="color:#323232;">curl -L https://github.com/suzuki-hoge/docv/releases/download/v1.3.0/docv-1.3.0-x86_64-unknown-linux-musl.tar.gz </span><span style="font-weight:bold;color:#a71d5d;">| </span><span style="color:#323232;">tar xz
 </span><span style="color:#323232;">mv docv /usr/local/bin/
 </span></code></pre>
 </div></div></li>
