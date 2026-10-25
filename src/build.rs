@@ -16,7 +16,10 @@ use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
 use anyhow::{Context, Result, bail};
-use pulldown_cmark::{CodeBlockKind, CowStr, Event, HeadingLevel, Parser, Tag, TagEnd, html};
+use pulldown_cmark::{
+    CodeBlockKind, CowStr, Event, HeadingLevel, LinkType, Parser, Tag, TagEnd, TextMergeStream,
+    html,
+};
 use serde::Serialize;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Theme, ThemeSet};
@@ -1176,7 +1179,10 @@ impl Site<'_> {
         top: usize,
         ids: bool,
     ) -> String {
-        let parsed: Vec<Event> = Parser::new_ext(text, markdown::OPTIONS).collect();
+        // 文字を 1 つにまとめてから、URL を探す。パーサーは、`_` などの前で文字を分けて出すことがある。
+        let parsed = link_bare_urls(
+            TextMergeStream::new(Parser::new_ext(text, markdown::OPTIONS)).collect(),
+        );
         let mut dropped_h1 = !drop_h1;
         let mut skipping = false;
         let mut kept = Vec::new();
@@ -1720,6 +1726,94 @@ fn highlight(lang: &str, code: &str) -> Option<String> {
         html.push_str(&styled_line_to_highlighted_html(&ranges, IncludeBackground::No).ok()?);
     }
     Some(html)
+}
+
+/// 本文の文字の中の、http:// と https:// で始まる URL をリンクにする。`[文字](URL)` の形で書かなくても、HTML から辿れるように。
+/// リンク、画像、コードブロックの中と、HTML で書いた `<a>` の中の文字は変えない。
+fn link_bare_urls(events: Vec<Event>) -> Vec<Event> {
+    let mut out = Vec::with_capacity(events.len());
+    // リンクにしない範囲の深さ。
+    let mut inside = 0usize;
+    for event in events {
+        match &event {
+            Event::Start(Tag::Link { .. } | Tag::Image { .. } | Tag::CodeBlock(_)) => inside += 1,
+            Event::End(TagEnd::Link | TagEnd::Image | TagEnd::CodeBlock) => {
+                inside = inside.saturating_sub(1);
+            }
+            Event::InlineHtml(html) if html.starts_with("<a ") || html.starts_with("<a>") => {
+                inside += 1;
+            }
+            Event::InlineHtml(html) if html.starts_with("</a>") => {
+                inside = inside.saturating_sub(1)
+            }
+            Event::Text(text) if inside == 0 => {
+                let urls = bare_urls(text);
+                if !urls.is_empty() {
+                    let mut last = 0;
+                    for (start, end) in urls {
+                        if last < start {
+                            out.push(Event::Text(CowStr::from(text[last..start].to_string())));
+                        }
+                        let url = &text[start..end];
+                        out.push(Event::Start(Tag::Link {
+                            link_type: LinkType::Autolink,
+                            dest_url: CowStr::from(url.to_string()),
+                            title: CowStr::from(""),
+                            id: CowStr::from(""),
+                        }));
+                        out.push(Event::Text(CowStr::from(url.to_string())));
+                        out.push(Event::End(TagEnd::Link));
+                        last = end;
+                    }
+                    if last < text.len() {
+                        out.push(Event::Text(CowStr::from(text[last..].to_string())));
+                    }
+                    continue;
+                }
+            }
+            _ => {}
+        }
+        out.push(event);
+    }
+    out
+}
+
+/// 文の中の URL の位置（始まり、終わり）。URL は、空白、`<`、`>`、ASCII でない文字の前で終わる。日本語の文に続けて書いても、URL に文が混ざらないように。
+/// 末尾の句読点と、対になっていない `)` は URL に含めない。英数字の直後から始まるものは URL と見なさない。
+fn bare_urls(text: &str) -> Vec<(usize, usize)> {
+    let mut found = Vec::new();
+    let mut from = 0;
+    while let Some(start) = ["https://", "http://"]
+        .iter()
+        .filter_map(|scheme| text[from..].find(scheme).map(|i| from + i))
+        .min()
+    {
+        let scheme = if text[start..].starts_with("https://") {
+            "https://".len()
+        } else {
+            "http://".len()
+        };
+        let mut end = text[start..]
+            .find(|c: char| c.is_whitespace() || c == '<' || c == '>' || !c.is_ascii())
+            .map_or(text.len(), |i| start + i);
+        loop {
+            let url = &text[start..end];
+            match url.chars().last() {
+                Some('.' | ',' | ':' | ';' | '!' | '?' | '*' | '_' | '~' | '\'' | '"') => end -= 1,
+                Some(')') if url.matches(')').count() > url.matches('(').count() => end -= 1,
+                _ => break,
+            }
+        }
+        let after_word = text[..start]
+            .chars()
+            .last()
+            .is_some_and(|c| c.is_ascii_alphanumeric());
+        if end > start + scheme && !after_word {
+            found.push((start, end));
+        }
+        from = end.max(start + scheme);
+    }
+    found
 }
 
 /// `<details>` を開いた状態にする。
@@ -2315,6 +2409,53 @@ mod tests {
             page: None,
         };
         assert_eq!(jpg_path(&slot), "サービス仕様/用語集.jpg");
+    }
+
+    #[test]
+    fn links_bare_urls() {
+        let html = |text: &str| {
+            let mut out = String::new();
+            let events = link_bare_urls(
+                TextMergeStream::new(Parser::new_ext(text, markdown::OPTIONS)).collect(),
+            );
+            html::push_html(&mut out, events.into_iter());
+            out
+        };
+        let a = |url: &str| format!("<a href=\"{url}\">{url}</a>");
+        let url = "https://github.com/suzuki-hoge/docv/blob/main/assets/desc.md";
+        assert_eq!(
+            html(&format!("- 詳細は {url} を参照 ( 内容は同じ )\n")),
+            format!(
+                "<ul>\n<li>詳細は {} を参照 ( 内容は同じ )</li>\n</ul>\n",
+                a(url)
+            )
+        );
+        // URL は、ASCII でない文字の前で終わる。末尾の句読点と、対になっていない ) は含めない
+        assert_eq!(
+            html(
+                "詳細はhttps://example.com/a_b_c。(http://example.com/x(1)) と https://example.com.\n"
+            ),
+            format!(
+                "<p>詳細は{}。({}) と {}.</p>\n",
+                a("https://example.com/a_b_c"),
+                a("http://example.com/x(1)"),
+                a("https://example.com")
+            )
+        );
+        // すでにリンクのもの、コード、英数字に続くもの、scheme だけのものは変えない
+        let kept = "[https://example.com](https://example.com) <https://example.com/b> `https://example.com/c` xhttps://example.com https://\n\n```\nhttps://example.com/d\n```\n";
+        assert_eq!(
+            html(kept),
+            format!(
+                "<p>{} {} <code>https://example.com/c</code> xhttps://example.com https://</p>\n<pre><code>https://example.com/d\n</code></pre>\n",
+                a("https://example.com"),
+                a("https://example.com/b")
+            )
+        );
+        assert_eq!(
+            html("<a href=\"https://example.com\">https://example.com</a>\n"),
+            "<p><a href=\"https://example.com\">https://example.com</a></p>\n"
+        );
     }
 
     #[test]
