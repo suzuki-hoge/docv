@@ -1397,6 +1397,10 @@ fn icon(id: &str) -> String {
         "words" => {
             r#"<path d="M5 5a2 2 0 0 1 2-2h12v15H7a2 2 0 0 0-2 2z"/><path d="M5 20a2 2 0 0 0 2 2h12v-4"/><path d="M9.5 13l2.5-6 2.5 6"/><path d="M10.4 11h3.2"/>"#
         }
+        // 線でつないだ 3 つの箱（部品の構成図）
+        "system-overview" => {
+            r#"<rect x="3" y="3" width="7" height="5" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="8.5" y="16" width="7" height="5" rx="1"/><path d="M6.5 8v3.5h11V8"/><path d="M12 11.5V16"/>"#
+        }
         // 重なった層
         "stack" => {
             r#"<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 12.5l9 5 9-5"/><path d="M3 17l9 5 9-5"/>"#
@@ -1995,6 +1999,17 @@ mod tests {
             overview < service && service < manual && manual < install && install < words,
             "{index}"
         );
+        // システムのまとまりは、システム概要、システム仕様、技術スタック、API 仕様書、DB 仕様書の順
+        let at = |label: &str| index.find(&format!(">{label}</")).unwrap();
+        let system = [
+            "システム概要",
+            "システム仕様",
+            "技術スタック",
+            "API 仕様書",
+            "DB 仕様書",
+        ]
+        .map(at);
+        assert!(system.is_sorted(), "{index}");
         assert!(
             index.contains(
                 "<a class=\"card\" href=\"サービス/利用マニュアル.html\"><svg class=\"icon\""
