@@ -174,8 +174,8 @@ fn render(project: &Project, out: &Path) -> Result<Vec<Slot>> {
     Ok(slots)
 }
 
-/// Slot のページの、出力先からの相対パス。`サービス仕様/利用マニュアル.html`。
-/// 分けた Slot のページは、Slot の名前のディレクトリの下に、ページの名前で置く。`サービス仕様/サービス仕様/管理者向け機能.html`。
+/// Slot のページの、出力先からの相対パス。`サービス/利用マニュアル.html`。
+/// 分けた Slot のページは、Slot の名前のディレクトリの下に、ページの名前で置く。`サービス/サービス仕様/管理者向け機能.html`。
 fn page_path(slot: &Slot) -> String {
     match &slot.page {
         Some(page) => format!(
@@ -188,7 +188,7 @@ fn page_path(slot: &Slot) -> String {
     }
 }
 
-/// Slot の JPG の、dir.image からの相対パス。`サービス仕様/用語集.jpg`。
+/// Slot の JPG の、dir.image からの相対パス。`サービス/用語集.jpg`。
 fn jpg_path(slot: &Slot) -> String {
     format!("{}/{}.jpg", slot.def.group.label(), slot.def.label)
 }
@@ -1985,7 +1985,7 @@ mod tests {
         assert!(!index.contains(">spec/</td>"), "{index}");
         assert!(!index.contains("<h1>"), "{index}");
         assert!(!detail.contains("<h1>"), "{detail}");
-        // サービス仕様のまとまりは、サービス概要、サービス仕様、利用マニュアル、インストール、用語集の順
+        // サービスのまとまりは、サービス概要、サービス仕様、利用マニュアル、インストール、用語集の順
         let overview = index.find(">サービス概要</span>").unwrap();
         let service = index.find(">サービス仕様</a>").unwrap();
         let manual = index.find(">利用マニュアル</a>").unwrap();
@@ -1997,7 +1997,7 @@ mod tests {
         );
         assert!(
             index.contains(
-                "<a class=\"card\" href=\"サービス仕様/利用マニュアル.html\"><svg class=\"icon\""
+                "<a class=\"card\" href=\"サービス/利用マニュアル.html\"><svg class=\"icon\""
             ),
             "{index}"
         );
@@ -2044,7 +2044,7 @@ mod tests {
 
         // Slot は 1 つずつ独立したページ。同じ id の手順は os ごとのタブ、ほかは 1 つの手順
         let read = |path: &str| fs::read_to_string(out.join(path)).unwrap();
-        let install = read("サービス仕様/インストール.html");
+        let install = read("サービス/インストール.html");
         assert!(install.contains("</svg>インストール</h1>"), "{install}");
         // Slot のページのサイドバーは、1 つ上のトップのページを指す
         assert!(
@@ -2075,7 +2075,7 @@ mod tests {
             "{install}"
         );
         // Markdown の Slot は、h1 を除き、見出しを下げて、そのまま出す。見出しには id を付ける。details は開く
-        let service = read("サービス仕様/サービス仕様.html");
+        let service = read("サービス/サービス仕様.html");
         assert!(service.contains("<h2 id=\"部品\">部品</h2>"), "{service}");
         assert!(
             // Markdown の中のリンクは、pulldown-cmark が和名をパーセントエンコードする
@@ -2084,7 +2084,7 @@ mod tests {
         );
         assert!(service.contains("<details open>"), "{service}");
         // md の Slot の見出しには id が付き、ページ内リンクで飛べる
-        let manual = read("サービス仕様/利用マニュアル.html");
+        let manual = read("サービス/利用マニュアル.html");
         assert!(
             manual.contains("<a href=\"#demo-run\">demo run</a>"),
             "{manual}"
@@ -2095,7 +2095,7 @@ mod tests {
         );
         // 名前に空白のある Slot のページは、リンクで空白を %20 にする
         assert!(
-            index.contains("href=\"システム仕様/DB%20仕様書.html\""),
+            index.contains("href=\"システム/DB%20仕様書.html\""),
             "{index}"
         );
         let cost = read("運用/費用.html");
@@ -2218,7 +2218,7 @@ mod tests {
         let page = String::from_utf8(decoded).unwrap();
         // ページのあるファイルは、出力先の中の相対パスで向ける
         assert!(
-            page.contains("href=\"../../システム仕様/システム仕様.html#部品\""),
+            page.contains("href=\"../../システム/システム仕様.html#部品\""),
             "{page}"
         );
         assert!(
@@ -2238,7 +2238,7 @@ mod tests {
         ]);
         let out = dir.path().join("out");
         run(&project, &out, None).unwrap();
-        let page = fs::read_to_string(out.join("システム仕様/システム仕様.html")).unwrap();
+        let page = fs::read_to_string(out.join("システム/システム仕様.html")).unwrap();
         let detail = fs::read_to_string(out.join(DETAIL_PAGE)).unwrap();
         // ページのないファイルは、リンクにせず文字だけを出す。画像は元のファイルを相対パスで読む
         assert!(page.contains("<p>memo <img src=\"../../a.svg\""), "{page}");
@@ -2333,12 +2333,10 @@ mod tests {
         // ページを 1 つずつ、Slot の名前のディレクトリの下に、ページの名前で置く。カードは先頭のページを開く
         let index = read(PAGE);
         assert!(
-            index.contains(
-                "<a class=\"card\" href=\"サービス仕様/サービス仕様/利用者向け機能.html\">"
-            ),
+            index.contains("<a class=\"card\" href=\"サービス/サービス仕様/利用者向け機能.html\">"),
             "{index}"
         );
-        let user = read("サービス仕様/サービス仕様/利用者向け機能.html");
+        let user = read("サービス/サービス仕様/利用者向け機能.html");
         assert!(
             user.contains("<title>利用者向け機能 - サービス仕様 - demo</title>"),
             "{user}"
@@ -2364,7 +2362,7 @@ mod tests {
             user.contains("<a href=\"%E7%AE%A1%E7%90%86%E8%80%85%E5%90%91%E3%81%91%E6%A9%9F%E8%83%BD.html#%E5%8F%96%E3%82%8A%E6%B6%88%E3%81%97\">取り消し</a>"),
             "{user}"
         );
-        let admin = read("サービス仕様/サービス仕様/管理者向け機能.html");
+        let admin = read("サービス/サービス仕様/管理者向け機能.html");
         assert!(
             admin.contains(
                 "<a href=\"管理者向け機能.html\" aria-current=\"page\">管理者向け機能</a>"
@@ -2374,13 +2372,13 @@ mod tests {
         // Free ファイルからのリンクも、そのページに向く
         let a = read("プロジェクト詳細/docs/a.html");
         assert!(
-            a.contains("href=\"../../%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E4%BB%95%E6%A7%98/%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E4%BB%95%E6%A7%98/%E7%AE%A1%E7%90%86%E8%80%85%E5%90%91%E3%81%91%E6%A9%9F%E8%83%BD.html\">管理</a>"),
+            a.contains("href=\"../../%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9/%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E4%BB%95%E6%A7%98/%E7%AE%A1%E7%90%86%E8%80%85%E5%90%91%E3%81%91%E6%A9%9F%E8%83%BD.html\">管理</a>"),
             "{a}"
         );
         // 検索の索引も、ページごとに持つ
         let search = read(SEARCH_PAGE);
         assert!(
-            search.contains("{\"path\":\"docv/service/service/admin.md\",\"href\":\"サービス仕様/サービス仕様/管理者向け機能.html\""),
+            search.contains("{\"path\":\"docv/service/service/admin.md\",\"href\":\"サービス/サービス仕様/管理者向け機能.html\""),
             "{search}"
         );
     }
@@ -2408,7 +2406,7 @@ mod tests {
             content: Content::Markdown(String::new()),
             page: None,
         };
-        assert_eq!(jpg_path(&slot), "サービス仕様/用語集.jpg");
+        assert_eq!(jpg_path(&slot), "サービス/用語集.jpg");
     }
 
     #[test]

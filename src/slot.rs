@@ -35,8 +35,8 @@ impl Group {
 
     pub fn label(self) -> &'static str {
         match self {
-            Group::Service => "サービス仕様",
-            Group::System => "システム仕様",
+            Group::Service => "サービス",
+            Group::System => "システム",
             Group::Developer => "開発者向けガイド",
             Group::Operate => "運用",
         }
