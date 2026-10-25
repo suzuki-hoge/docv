@@ -84,7 +84,7 @@ pub const DEFS: &[Def] = &[
         id: "service",
         label: "サービス仕様",
         group: Group::Service,
-        mission: "機能と部品の構成と、それぞれの詳しい振る舞いと決まり",
+        mission: "外から見た機能と、それぞれの振る舞いと決まり",
         format: Format::Markdown,
     },
     Def {
@@ -119,7 +119,7 @@ pub const DEFS: &[Def] = &[
         id: "system",
         label: "システム仕様",
         group: Group::System,
-        mission: "システムの内部の動きと、従う決まり",
+        mission: "部品の構成と役割、部品の間の流れと、部品をまたいで守る決まり",
         format: Format::Markdown,
     },
     Def {
