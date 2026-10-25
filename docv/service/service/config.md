@@ -95,12 +95,12 @@ format:
 
 - 既定では使わない。`enable` にしたときだけ、`docv check` が textlint をかけ、`docv fix` が自動修正できるところを直す。かけるのは、管理対象のファイル、`dir.slot` の中の Markdown（md の Slot と ADR）、YAML の Slot の Markdown の項目
 - YAML の Slot の Markdown の項目には、`ja-no-mixed-period`（文末を「。」で終える）をかけない。項目の多くは HTML で表のセルに出す短い説明で、textlint が段落として扱わない Free ファイルの表のセルと、扱いを揃えるため
-- textlint は Node.js で動くので、使うときだけ Node.js（npx）が必要になる。docv のバイナリには textlint を入れない。`enable` なのに Node.js が見つからないときは、終了コード 2 で終わる
+- textlint は Node.js で動くので、使うときだけ Node.js（npx）が必要になる。`enable` なのに Node.js が見つからないときは、終了コード 2 で終わる
 - 結果は、ほかのルールと同じ形の error で出す。ルール ID は `textlint/<プリセット>/<ルール>`（例: textlint/ja-technical-writing/sentence-length）。下の表では、プリセットごとにルールの名前だけを書く
 - `--no-textlint` で、textlint だけを飛ばせる
-- docv は、textlint と 2 つのプリセット（ja-technical-writing、ja-spacing）を npx で取ってくる。版は、docv の版ごとに決める。プロジェクトに `package.json` はいらない。初めて実行するときは、ネットワークが必要
-- プリセットのルールは、使わないものも含めて、すべて docv が値を決める。プリセットの既定には頼らないので、同じ docv なら同じ結果になる
-- textlint の設定ファイルは OS のキャッシュのディレクトリに作る。リポジトリにはファイルを作らない
+- プロジェクトに `package.json` はいらない。初めて実行するときは、textlint を取ってくるのにネットワークが必要
+- 使うルールとその値は、docv の版ごとに固定する。同じ docv なら同じ結果になる
+- docv が textlint をどう動かすかは、[システム仕様](../../system/system.md) の「textlint とのやりとり」の章に書く
 
 ### 検査項目
 
@@ -209,16 +209,3 @@ output/docv/     # docv build の出力
 - `docv.yaml` の先頭に、yaml-language-server の書式でスキーマの URL を書くと、エディタで補完と検証が効く
 - URL には docv の版を含める。`docv init` は、実行した CLI の版の URL を書く
 - `docv init --print` で、すべての項目を既定の値でコメントにした `docv.yaml` を出す。スキーマの写しは `docs/schema/config.md` に置く
-
----
-
-## 9. 現在の設定のページ
-
-`docv build` は、HTML の「現在の設定」のページに、`docv.yaml` のすべての項目と今の値を 1 つの表で並べる。何を設定でき、どれが効いているかを、スキーマを読まずに見るためのページ。
-
-- 項目は、`dir.html` のように、キーを `.` でつないだ名前で出す。並びは、この章までの説明と同じく、スキーマの順
-- 書いていない項目は、既定の値で出す。値のない項目は `-` を出す
-- 配列の項目は、要素を箇条書きにする
-- 選ぶ項目（true か false、allow か deny など）は、候補を横に並べ、選んでいる候補に色を付ける
-- 表の後に、textlint の検査項目と非検査項目（「textlint」の章）を、それぞれ表で並べる
-- Slot ファイルや Free ファイルから `docv.yaml` へのリンクは、HTML ではこのページに向ける

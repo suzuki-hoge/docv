@@ -16,7 +16,7 @@ mission: 外から見た機能と、それぞれの振る舞いと決まり
 - サービス仕様とシステム仕様だけは、ページに分けて `service/service/` と `system/system/` に置ける（「md の Slot」の章）
 - `docv/adr/` は ADR の置き場所で、Slot としては読まない（[ADR](adr.md) のページ）
 - `dir.slot` の中でも、除外に当たるファイル（[設定ファイル](config.md) のページの「管理対象と管理外」の章）と、名前がドットで始まるファイルとディレクトリ（`.DS_Store` など）は読まない。それ以外で Slot の名前でないファイルは、check が slot-unknown の error にする
-- Slot を置くかどうかは任意。プロジェクトに当てはまらない Slot は作らない（例: 利用者の手元に入れるものがなければ、インストールの Slot はいらない）。`index.html` には置いていない Slot のカードも並べ、グレーにしてリンクにしない
+- Slot を置くかどうかは任意。プロジェクトに当てはまらない Slot は作らない（例: 利用者の手元に入れるものがなければ、インストールの Slot はいらない）
 - Slot のミッションに当たる詳しいことも、Slot の中に書く。Free ファイルへのリンクで済ませない
 - ファイルの中のパスは、すべてルートからの相対パスで書く。md の Slot の中のリンクは、ほかの Markdown と同じく、ファイルの場所からの相対パスで書く
 - YAML の文字列の項目には Markdown を書ける
@@ -61,72 +61,11 @@ HTML には、この表の順に、まとまりごとに並べる。
 
 ## 3. YAML の Slot の項目
 
-<details>
-<summary>手順の Slot（インストール、環境構築、開発コマンド）</summary>
-
-| 項目           | 中身                                                                         |
-| -------------- | ---------------------------------------------------------------------------- |
-| `requirements` | 前提とされるもの。`name`、`version`、`purpose_markdown`、`url`               |
-| `steps`        | 手順の配列。`id`、`name`、`items`。`items` は `os` と `body_markdown` を持つ |
-
-- `id` は手順ごとに重ねない
-- `body_markdown` は、その手順の中身（コマンド、説明など）を Markdown で書く
-- `items` が 1 つなら、配列にしなくてよい。HTML ではタブにしない
-- `items` が複数あるときは、HTML で `os` ごとのタブにする。どの `item` にも `os` を書き、`os` は重ねない。タブは書いた順に並べる。`os` は windows、macos、linux など
-
-````yaml
-steps:
-  - id: binary
-    name: バイナリを取る
-    items:
-      - os: windows
-        body_markdown: |
-          リリースのページから zip を取り、展開する
-      - os: macos
-        body_markdown: |
-          ```sh
-          curl -L https://example.com/example-macos.tar.gz | tar xz
-          ```
-  - id: cargo
-    name: ソースから入れる
-    items:
-      body_markdown: |
-        `cargo install example`
-````
-
-</details>
-
-<details>
-<summary>用語集、技術スタック、ディレクトリ</summary>
-
-| Slot           | 項目      | 中身                                                                                                                 |
-| -------------- | --------- | -------------------------------------------------------------------------------------------------------------------- |
-| words          | `groups`  | 用語のまとまりの配列。`name` と `items`。`items` は `ja`、`en`、`desc_markdown`。`ja` と `en` はどちらかがあればよい |
-| stack          | `stack`   | 層の配列。`group`、`image`（任意。図があれば出す）、`items`                                                          |
-|                |           | `items` は `name`、`version`、`purpose_markdown`、`url`                                                              |
-| directory-tree | `entries` | `path` と `desc_markdown` の配列。パスの親子でツリーにし、兄弟は書いた順に並べる                                     |
-
-</details>
-
-<details>
-<summary>環境変数、費用</summary>
-
-| Slot | 項目             | 中身                                                                                    |
-| ---- | ---------------- | --------------------------------------------------------------------------------------- |
-| env  | `envs`           | `key`、`desc_markdown`、`secret`、`local_from_markdown`、`release_from_markdown` の配列 |
-| cost | `accepted_items` | 費用をかけて使っているもの。`name`、`desc_markdown`、`monthly`、`ref` の配列            |
-|      | `rejected_items` | 費用を理由にやっていないこと。形は `accepted_items` と同じ                              |
-
-- 環境変数の `secret` は、秘密の値か。`local_from_markdown` と `release_from_markdown` には、どこで設定しているかを書く
-  - `local_from_markdown`: ローカル環境（Docker Compose、`.env` など）
-  - `release_from_markdown`: ステージングや本番（ECS のタスク定義、SSM など）
-- 費用の `monthly` は 1 か月あたりの金額で、数でも文字列（「3 ドル」など）でもよい。予算が変われば、`accepted_items` と `rejected_items` の間で項目を移す
-
-</details>
-
+- 項目の形と意味は、Slot ごとのスキーマ（JSON Schema）で決める。`docv slot schema <slot>` で出す。元のファイルは `assets/schema/<ID>.schema.json` で、`docs/schema/` に写しを置く
+- `docv slot gen` は、YAML の Slot の 1 行目に、yaml-language-server の書式でスキーマの URL を書く。URL は、実行した CLI の版のタグの `assets/schema/` を指す。エディタで項目の補完と検証が効く
 - 名前が `_markdown` で終わる項目は Markdown。値は、1 行でも必ず `|` のブロックで書く。`|-`、`|+`、字下げの数を付けた `|2` などは使わない。それ以外の文字列の項目は、Markdown として扱わず、1 行で書く
 - Markdown の項目の中のリンクは、ルートからの相対パスで書く
-- どの YAML の Slot にも、`appendix_markdown` を書ける。HTML では、スキーマで決めた項目のあとに続けて出す。見出しは h2 から始まるように段を付け直す。項目に収まらない補足を書く
+- どの YAML の Slot にも、`appendix_markdown` を書ける。項目に収まらない補足を書く
 
 ```yaml
 groups:
@@ -137,9 +76,6 @@ groups:
           どのプロジェクトにも要るドキュメントを書くファイル。`docv/` に置く
 ```
 
-- YAML の Slot には、項目の型と意味を書いたスキーマ（JSON Schema）がある。`docv slot schema <slot>` で出す。元のファイルは `assets/schema/<ID>.schema.json` で、`docs/schema/` に写しを置く
-- `docv slot gen` は、YAML の Slot の 1 行目に、yaml-language-server の書式でスキーマの URL を書く。URL は、実行した CLI の版のタグの `assets/schema/` を指す。エディタで項目の補完と検証が効く
-
 ---
 
 ## 4. md の Slot
@@ -148,9 +84,6 @@ groups:
 - YAML front matter には `mission` だけを書き、`docv slot list` のミッションと同じ文にする。ミッションは docv が決めるもので、プロジェクトでは変えない。ないか違えば、check が slot-mission の error にする。docv の版を上げてミッションが変わったときも、check で気づいて直す。ファイルを開けば、何を書く Slot かが分かるようにするため
 - `mission` がないか違っても、HTML には本文を出す
 - `docv slot gen` は、YAML front matter の `mission` だけを書いたファイルを作り、中身の形は自由だと表示する。Doc ガイド（`guide/doc-guide.md`）だけは、docv が勧めるガイドラインを書いた雛形を作る。雛形にも `mission` を書いてある。作った雛形はプロジェクトのもので、自由に直してよい。docv の版を上げても書き換えない
-- HTML では、最初の h1 を除き、いちばん浅い見出しが h2 になるように段を付け直して出す
-- 見出しには、Free ファイルのページと同じく、GitHub と同じ形のアンカーを付ける。`[docv init](#docv-init)` のようなページ内リンクが HTML でも GitHub でも飛べる
-- md の Slot のページは JPG にしない。md は GitHub でそのままプレビューできるため
 
 サービス仕様とシステム仕様は、ページに分けられる。1 つのページが長くならないようにするため。読む人ごとに仕様が分かれるサービス（利用者向けの機能と管理者向けの機能など）や、部品の多いシステム（画面、サーバ、バッチなど）で分ける。
 
@@ -175,7 +108,7 @@ mission: 外から見た機能と、それぞれの振る舞いと決まり
 | ID                  | 内容                                                                                                                              |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | slot-unknown        | Slot のディレクトリに、Slot の名前でないファイルがある                                                                            |
-| slot-invalid        | YAML の Slot の形に合わない。知らない項目、手順の `id` の重なり、`os` のない `item`、`ja` も `en` もない用語も含む                |
+| slot-invalid        | YAML の Slot の形に合わない。知らない項目、手順の `id` や `os` の重なり、`os` のない `item`、`ja` も `en` もない用語も含む        |
 |                     | 分けたサービス仕様とシステム仕様のページの形に合わない。YAML front matter の `order` がない、知らない項目、`order` や h1 の重なり |
 |                     | md の Slot の YAML front matter に、知らない項目がある。閉じる `---` がない                                                       |
 |                     | 同じ Slot が、1 つのファイル（`service/service.md` など）と、ページのディレクトリ（`service/service/` など）の両方にある          |
@@ -188,21 +121,3 @@ mission: 外から見た機能と、それぞれの振る舞いと決まり
 - YAML の Slot の Markdown の項目には、リンク、書式の規則、整形、textlint の検査をかける。見出しの検査はかけない。項目の中に h1 はなく、HTML では見出しの段を付け直すため。指摘の行番号は、YAML の行番号で出す
 
 - directory-tree の `path` の先がなくなったら、ディレクトリの Slot が実装からずれたということ。実装とずれたことに気づけるのは、ここだけ
-
----
-
-## 6. HTML での見せ方
-
-- Slot は 1 つずつ独立したページ（`<まとまり>/<Slot>.html`）にする。`index.html`（プロジェクト概要）には、まとまりの見出しの下に、「一覧」の章の順で、すべての Slot のカードを横に並べる。画面の幅に収まらなければ折り返す。紙面を縦に使いすぎず、画像にしてもすべてのカードが写るため。置いていない Slot のカードは、グレーにしてリンクにしない。どのミッションのドキュメントがないかを見せるため。カードの幅は固定し、画面の幅に合わせない。幅は、いちばん長い Slot の名前（7 文字）が折り返さない大きさ
-- Slot のカードと、Slot のページの見出しには、Slot ごとのアイコンを付ける。アイコンは、docv が Slot ごとに持つ線画の SVG で、外部の素材を使わない
-- Slot のページには、Slot の名前の見出しを出す。「一覧」の章のミッションは HTML には出さない。ミッションは、AI Agent がどの Slot に書くかを決める手がかりにする
-- 折りたたみは使わない。`details` も、Markdown の中の `<details>` も、開いて出す。画像にしても、すべての中身が読めるようにするため
-- 開閉するのは、OS ごとの手順のタブだけ。JPG では、すべての OS の手順を並べて写す
-- 分けたサービス仕様とシステム仕様は、ページを 1 つずつ `サービス/サービス仕様/<h1>.html` と `システム/システム仕様/<h1>.html` にする。Slot の名前の見出しの下に、すべてのページへのリンクを `order` の順にタブとして並べ、開いているページのタブに印を付ける。カードは、先頭のページを開く
-- 用語集は、まとまりごとに `name` を h2 にし、`items` を「日本語 | 英語 | 意味」の表にする
-- 見た目に凝らない。見出し、段落、箇条書き、表だけで出す
-- ディレクトリは、1 つの表に 1 段だけを「名前 | 説明」で出し、入れ子は表を分けて出す。いちばん上の段の表を先に置き、下の段を持つディレクトリごとに、そのパスの h2 と、その下の 1 段の表を後ろに並べる。並びは、親の次にその子の順。下の段を持つディレクトリの名前は、その表へのページ内リンクにする。表の名前はコードの書式にし、h2 のパスはコードの書式にしない。名前の列の幅は、表どうしで揃える。入れ子を折りたたみで見せないのは、画像にしても読めるようにするため。`entries` に書いていない途中のディレクトリは、説明なしで出す
-- 見出しは、ページの先頭の h1（Slot の名前）が 1 つだけで、その下に h2 を並べる。段は飛ばさない（h1 の次に h3 や h4 を置かない）
-  - Markdown（md の Slot、`appendix_markdown`、`details`、手順の中身）の見出しは、置く場所に合わせて段を付け直す。md の Slot と `appendix_markdown` は h2 から、`details` と手順の中身は h3 から
-- 手順（インストール、環境構築）は、「手順」の h2 の下に番号付きで並べる
-- 開発コマンドは、順番のない項目なので番号を付けない。先頭に目次（項目へのページ内リンク）を置き、各項目を h2 で始める

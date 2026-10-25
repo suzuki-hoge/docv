@@ -36,6 +36,15 @@ textlint を使うときだけ Node.js が、JPG を作るときだけ Chrome �
 
 `docv.yaml` と YAML の Slot の JSON Schema（`assets/schema/`）は、埋め込むほかにリポジトリでも公開する。`docv init` と `docv slot gen` は、ファイルの 1 行目に、版のタグを含む URL を書いて参照させる。新しい版の docv が書く URL は、その版のタグを push するまで開けない。
 
+## textlint とのやりとり
+
+check と fix は、`lint.textlint` が enable のときだけ textlint を動かす。textlint と 2 つのプリセット（ja-technical-writing、ja-spacing）は、npx で取ってくる。それぞれの版は、docv の版ごとに決める。
+
+- 設定ファイルは docv が作り、OS のキャッシュのディレクトリに書く。プリセットの既定に頼らず、使わないルールも含めて、すべての値を書く
+- YAML の Slot の Markdown の項目は、OS のキャッシュのディレクトリに一時的なファイルとして書いて渡し、使い終わったら消す
+- リポジトリには、ファイルを作らない
+- 終了コード 1 は指摘として読み、それより大きい終了コードは失敗として扱う
+
 ## Chrome とのやりとり
 
 build は、ローカルの Chrome をヘッドレスで起動し、DevTools Protocol で出力先の HTML を開いて撮る。印刷の表示にし、ページの高さに画面を合わせて、Slot のページを 1 枚ずつ撮る。
