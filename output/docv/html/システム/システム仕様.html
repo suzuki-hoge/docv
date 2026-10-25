@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>システム仕様 - docv</title>
+<style>
+/* docv build の HTML の見た目。中身を読めることだけを考え、飾らない。 */
+
+body { margin: 0; color: #1f2328; font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif; line-height: 1.7; }
+body { display: flex; align-items: flex-start; }
+main { flex: 1; min-width: 0; max-width: 1040px; margin: 0 auto; padding: 32px 40px 80px; }
+/* トップの 5 ページを行き来するサイドバー。印刷の表示（JPG）では出さない */
+.sidebar { position: sticky; top: 0; flex: none; width: 200px; height: 100vh; box-sizing: border-box; padding: 32px 16px; border-right: 1px solid #d8dee4; background: #f6f8fa; }
+.sidebar .project { margin: 0 0 12px; font-weight: 600; }
+.sidebar ul { list-style: none; margin: 0; padding: 0; }
+.sidebar a { display: block; padding: 4px 10px; border-radius: 6px; color: #1f2328; }
+.sidebar a:hover { color: #0b6bcb; }
+.sidebar a[aria-current="page"] { background: #fff; color: #0b6bcb; font-weight: 600; }
+@media (max-width: 760px) {
+  body { display: block; }
+  .sidebar { position: static; width: auto; height: auto; padding: 12px 16px; border-right: none; border-bottom: 1px solid #d8dee4; }
+  .sidebar ul { display: flex; gap: 8px; }
+}
+/* 右の目次。見出しのないページにも同じ幅の空の枠を置き、ページを移っても本文の位置を変えない。幅が足りないときと、印刷の表示では出さない */
+.outline { position: sticky; top: 0; flex: none; width: 220px; max-height: 100vh; overflow-y: auto; box-sizing: border-box; padding: 32px 16px; font-size: 0.85em; }
+.outline .outline-title { margin: 0 0 8px; font-weight: 600; color: #656d76; }
+.outline ul { list-style: none; margin: 0; padding: 0 0 0 10px; border-left: 1px solid #d8dee4; }
+.outline li { margin: 4px 0; }
+.outline li.h3 { padding-left: 1em; }
+.outline a { color: #3d444d; }
+.outline a:hover { color: #0b6bcb; }
+@media (max-width: 1200px) { .outline { display: none; } }
+@media print { body { display: block; } .sidebar, .outline { display: none; } }
+a { color: #0b6bcb; text-decoration: none; }
+code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
+:not(pre) > code { background: #f6f8fa; padding: 0.1em 0.3em; border-radius: 4px; }
+pre { background: #f6f8fa; padding: 10px 12px; border-radius: 6px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+table { border-collapse: collapse; width: 100%; margin: 8px 0 16px; font-size: 0.93em; }
+th, td { border: 1px solid #d8dee4; padding: 5px 9px; text-align: left; vertical-align: top; }
+th { background: #f6f8fa; white-space: nowrap; }
+td code { white-space: nowrap; }
+img { max-width: 100%; }
+
+h1 { font-size: 2em; margin: 0 0 8px; }
+h2.group { font-size: 1.5em; margin: 28px 0 0; padding-bottom: 4px; border-bottom: 2px solid #1f2328; }
+main > h2.group:first-child { margin-top: 0; }
+h3 { font-size: 1.25em; margin: 32px 0 0; padding-bottom: 2px; border-bottom: 1px solid #d8dee4; }
+h4 { font-size: 1.02em; margin: 20px 0 4px; }
+/* index.html の Slot のカード。まとまりの中で横に並べる。幅は名前の 7 文字が収まる固定で、はみ出たら横にスクロールする */
+.cards { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 8px; }
+.card { flex: none; box-sizing: border-box; width: 170px; display: flex; align-items: center; gap: 6px; padding: 12px 8px; border: 1px solid #d8dee4; border-radius: 8px; color: #1f2328; font-weight: 600; white-space: nowrap; }
+.card .icon { width: 24px; height: 24px; flex: none; color: #0b6bcb; }
+.slot > h1 { display: flex; align-items: center; gap: 12px; }
+.slot > h1 .icon { width: 32px; height: 32px; flex: none; color: #0b6bcb; }
+a.card:hover { border-color: #0b6bcb; color: #0b6bcb; }
+/* ファイルのない Slot のカード。リンクにしない */
+.card.missing { color: #8c959f; background: #f6f8fa; cursor: default; user-select: none; }
+.card.missing .icon { color: #afb8c1; }
+.note, .from { color: #656d76; font-size: 0.85em; }
+.summary { font-size: 1.1em; }
+/* 開発コマンドの先頭の目次 */
+ul.toc { margin: 8px 0 16px; padding-left: 1.2em; }
+ul.toc li { margin: 2px 0; }
+/* 用語集の表。まとまりの表どうしで、列の幅をそろえる */
+table.words { table-layout: fixed; }
+table.words th:nth-child(1), table.words th:nth-child(2) { width: 9em; }
+table.words td:nth-child(1), table.words td:nth-child(2) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+h2 { font-size: 1.25em; margin: 28px 0 4px; padding-bottom: 2px; border-bottom: 1px solid #d8dee4; }
+.tag { display: inline-block; border: 1px solid #d8dee4; border-radius: 10px; padding: 0 7px; margin: 0 3px 2px 0; font-size: 0.8em; color: #3d444d; }
+/* タグの色。淡い 8 色を、出てきた順に割り当てる */
+.tag.c0 { background: #ddf4ff; border-color: #b6e3ff; }
+.tag.c1 { background: #dafbe1; border-color: #aceebb; }
+.tag.c2 { background: #fff8c5; border-color: #f5e08a; }
+.tag.c3 { background: #ffebe9; border-color: #ffcecb; }
+.tag.c4 { background: #fbefff; border-color: #ecd8ff; }
+.tag.c5 { background: #fff1e5; border-color: #ffd8b5; }
+.tag.c6 { background: #e6fbf7; border-color: #b3ece2; }
+.tag.c7 { background: #ffeff7; border-color: #ffd3eb; }
+/* Free ファイルのツリー。ディレクトリの行は薄い水色で、ファイルの行と見分ける */
+/* プロジェクト詳細のタグのトグル。選んでいないタグは薄くする */
+.tag-filter { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 4px; }
+.tag-filter button { font-family: inherit; font-size: 0.85em; line-height: 1.6; padding: 1px 10px; margin: 0; cursor: pointer; }
+.tag-filter button[aria-pressed="false"] { opacity: 0.35; }
+.tag-filter .count { margin-left: 6px; font-weight: 600; }
+/* Free ファイルのツリーの列。ファイルとタグは中身の幅で折り返さず、ミッションは残りの幅に 1 行で収め、はみ出たら … にする */
+table.docs td:nth-child(1), table.docs td:nth-child(3) { white-space: nowrap; }
+table.docs td:nth-child(2) { width: 100%; max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+table.docs tr.dir td { padding: 0; }
+table.docs tr.dir div { padding: 5px 9px; background: #eef7fc; color: #3d444d; font-weight: 600; }
+/* ディレクトリの表。表どうしで、名前の列の幅をそろえる。収まらない名前は折り返す */
+table.tree { table-layout: fixed; }
+table.tree th:nth-child(1) { width: 14em; }
+table.tree td:nth-child(1) { overflow-wrap: anywhere; }
+/* 現在の設定の表。選ぶ項目は候補を横に並べ、選んでいる候補に色を付ける */
+table.config td:nth-child(1), table.textlint td:nth-child(1) { width: 14em; white-space: nowrap; }
+table.config ul { margin: 0; padding-left: 1.2em; }
+.choices { display: flex; flex-wrap: wrap; gap: 6px; }
+.choice { padding: 0 8px; border: 1px solid #d8dee4; border-radius: 6px; color: #8c959f; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
+.choice.on { border-color: #9fcff5; background: #ddf0fd; color: #0a5aa8; font-weight: 600; }
+.num { text-align: right; white-space: nowrap; }
+.step-name { font-weight: 600; margin: 0 0 4px; }
+.steps > li { margin-bottom: 12px; }
+
+/* 検索のページ。結果はファイルごとに、パス、タグ、ヒットした行の前後のプレビューを並べる。プレビューの長い行は折り返さず、横にスクロールする */
+form.search input { width: 100%; box-sizing: border-box; margin: 12px 0 4px; padding: 8px 12px; border: 1px solid #d8dee4; border-radius: 6px; font: inherit; }
+form.search input:focus { outline: none; border-color: #0b6bcb; }
+.hit { margin: 20px 0 0; }
+.hit-file { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0 0 4px; }
+.hit-file a { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; }
+pre.preview { margin: 4px 0; white-space: pre; overflow-wrap: normal; overflow-x: auto; }
+pre.preview .ln { display: inline-block; width: 3em; margin-right: 12px; text-align: right; color: #8c959f; user-select: none; }
+mark { background: #fff8c5; color: inherit; }
+
+/* 分けた Slot のページのタブ。ページへのリンクで、JS は使わない。開いているページのタブは、下の線とつなげる */
+.page-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 12px 0 20px; border-bottom: 1px solid #d8dee4; }
+.page-tabs a { margin-bottom: -1px; padding: 4px 14px; border: 1px solid transparent; border-radius: 6px 6px 0 0; color: #656d76; }
+.page-tabs a:hover { color: #0b6bcb; }
+.page-tabs a[aria-current="page"] { border-color: #d8dee4; border-bottom-color: #fff; background: #fff; color: #1f2328; font-weight: 600; }
+
+/* OS ごとの手順のタブ。JS は使わない。印刷の表示（JPG）では、すべての OS を並べる */
+.tabs > input { position: absolute; opacity: 0; pointer-events: none; }
+.tabs > label { display: inline-block; padding: 2px 12px; margin-right: 4px; border: 1px solid #d8dee4; border-bottom: none; border-radius: 6px 6px 0 0; cursor: pointer; color: #656d76; }
+.tabs > input:checked + label { background: #f6f8fa; color: #1f2328; font-weight: 600; }
+.tabs > .panel { display: none; border: 1px solid #d8dee4; padding: 8px 12px; }
+.tabs > input:nth-of-type(1):checked ~ .panel:nth-of-type(1),
+.tabs > input:nth-of-type(2):checked ~ .panel:nth-of-type(2),
+.tabs > input:nth-of-type(3):checked ~ .panel:nth-of-type(3),
+.tabs > input:nth-of-type(4):checked ~ .panel:nth-of-type(4),
+.tabs > input:nth-of-type(5):checked ~ .panel:nth-of-type(5),
+.tabs > input:nth-of-type(6):checked ~ .panel:nth-of-type(6) { display: block; }
+.panel-os { display: none; }
+@media print {
+  .tabs > label { display: none; }
+  .tabs > .panel { display: block; margin-bottom: 8px; }
+  .panel-os { display: block; margin: 0 0 4px; font-weight: 600; color: #656d76; }
+}
+
+/* ADR。まとまりごとに、決定のつながりを過去から未来へ左から右に並べる。カードの幅は固定して題を折り返し、並びきらなければ横にスクロールする */
+.lanes { display: flex; flex-direction: column; gap: 8px; margin: 12px 0 20px; }
+.lane { display: flex; align-items: stretch; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.adr-box { flex: none; box-sizing: border-box; width: 220px; display: flex; flex-direction: column; overflow-wrap: anywhere; padding: 8px 14px; border: 1px solid #1f2328; border-radius: 6px; color: #1f2328; font-weight: 600; }
+.adr-box.superseded { border-style: dashed; border-color: #8c959f; color: #656d76; background: #f6f8fa; }
+.arrow { flex: none; align-self: center; color: #656d76; font-size: 1.2em; }
+/* 決定のページの下の、前後の決定のカード */
+.adr-nav { display: flex; justify-content: space-between; gap: 16px; margin: 40px 0 0; padding-top: 16px; border-top: 1px solid #d8dee4; }
+.adr-nav > div { display: flex; align-items: stretch; gap: 8px; }
+.label { font-weight: 600; margin: 12px 0 2px; }
+</style>
+</head>
+<body>
+<nav class="sidebar">
+<p class="project">docv</p>
+<ul>
+<li><a href="../README.html">README</a></li>
+<li><a href="../index.html" aria-current="page">プロジェクト概要</a></li>
+<li><a href="../ADR.html">ADR</a></li>
+<li><a href="../プロジェクト詳細.html">プロジェクト詳細</a></li>
+<li><a href="../現在の設定.html">現在の設定</a></li>
+<li><a href="../検索.html">検索</a></li>
+</ul>
+</nav>
+<main>
+<section class="slot" id="system">
+<h1><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>システム仕様</h1>
+<p>部品の全体像は、<a href="%E3%82%B7%E3%82%B9%E3%83%86%E3%83%A0%E6%A6%82%E8%A6%81.html">システム概要</a>。コマンドから見た振る舞いは、サービス仕様に書く。読み書きするファイルと終了コードは <a href="../%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9/%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E4%BB%95%E6%A7%98/%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89.html">コマンド</a>、HTML と JPG は <a href="../%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9/%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E4%BB%95%E6%A7%98/%E3%83%93%E3%82%B8%E3%83%A5%E3%82%A2%E3%83%A9%E3%82%A4%E3%82%BA.html">ビジュアライズ</a> のページ。</p>
+<h2 id="処理の流れ">処理の流れ</h2>
+<ol>
+<li><code>docv.yaml</code> を読み、スキーマで確かめる。init、desc、slot list、slot schema と、<code>--print</code> を付けた slot gen は、<code>docv.yaml</code> を読まない</li>
+<li>ルート以下のファイルを分類し、Slot、ADR、Free ファイルを読む</li>
+<li>コマンドに応じて、次の部品を使う</li>
+</ol>
+<table><thead><tr><th>コマンド</th><th>使う部品</th></tr></thead><tbody>
+<tr><td>check</td><td>埋め込んだスキーマと決まりで確かめる。<code>lint.textlint</code> が enable なら、npx で textlint を呼ぶ</td></tr>
+<tr><td>fix</td><td><code>lint.textlint</code> が enable なら、textlint に自動修正させる。続けて、埋め込んだ整形の道具で整形し、書き戻す</td></tr>
+<tr><td>build</td><td>HTML を <code>dir.html</code> に書き、<code>dir.index</code> を書いていればインデックスも書く。そのあと、<code>dir.image</code> を書いていれば、Chrome に JPG を撮らせる</td></tr>
+</tbody></table>
+<h2 id="バイナリに埋め込むもの">バイナリに埋め込むもの</h2>
+<p>Rust で書いた単一のバイナリにし、次のものを埋め込む。利用者に Rust の環境はいらない。</p>
+<ul>
+<li>Slot のテンプレ（<code>assets/template/</code>。YAML の Slot の項目のサンプルと、ドキュメントのガイドラインの雛形）</li>
+<li>YAML の Slot と <code>docv.yaml</code> のスキーマ（<code>assets/schema/</code>）</li>
+<li>docv の概要（<code>docv desc</code> が出す <code>assets/desc.md</code>）。サービス仕様の 1 ページ目（<code>docv/service/service/desc.md</code>）は、このファイルへのシンボリックリンク</li>
+<li>HTML の CSS（<code>assets/style.css</code>）</li>
+<li>検索のページの JS（<code>assets/search.js</code>）</li>
+<li>Markdown の整形に使う dprint-plugin-markdown</li>
+<li>コードブロックの色付けに使う syntect と、その構文の定義とテーマ</li>
+</ul>
+<p>textlint を使うときだけ Node.js が、JPG を作るときだけ Chrome が要る。どちらもバイナリには入れない。</p>
+<h2 id="スキーマの公開">スキーマの公開</h2>
+<p><code>docv.yaml</code> と YAML の Slot の JSON Schema（<code>assets/schema/</code>）は、埋め込むほかにリポジトリでも公開する。<code>docv init</code> と <code>docv slot gen</code> は、ファイルの 1 行目に、版のタグを含む URL を書いて参照させる。新しい版の docv が書く URL は、その版のタグを push するまで開けない。</p>
+<h2 id="textlint-とのやりとり">textlint とのやりとり</h2>
+<p>check と fix は、<code>lint.textlint</code> が enable のときだけ textlint を動かす。textlint と 2 つのプリセット（ja-technical-writing、ja-spacing）は、npx で取ってくる。それぞれの版は、docv の版ごとに決める。</p>
+<ul>
+<li>設定ファイルは docv が作り、OS のキャッシュのディレクトリに書く。プリセットの既定に頼らず、使わないルールも含めて、すべての値を書く</li>
+<li>YAML の Slot の Markdown の項目は、OS のキャッシュのディレクトリに一時的なファイルとして書いて渡し、使い終わったら消す</li>
+<li>リポジトリには、ファイルを作らない</li>
+<li>終了コード 1 は指摘として読み、それより大きい終了コードは失敗として扱う</li>
+</ul>
+<h2 id="chrome-とのやりとり">Chrome とのやりとり</h2>
+<p>build は、ローカルの Chrome をヘッドレスで起動し、DevTools Protocol で出力先の HTML を開いて撮る。印刷の表示にし、ページの高さに画面を合わせて、Slot のページを 1 枚ずつ撮る。</p>
+<p>Chrome が見つからないときや、DevTools に接続できないときは、error で終わる。HTML は、それまでに書き終えている。</p>
+
+</section>
+</main>
+<nav class="outline">
+<p class="outline-title">目次</p>
+<ul>
+<li class="h2"><a href="#処理の流れ">処理の流れ</a></li>
+<li class="h2"><a href="#バイナリに埋め込むもの">バイナリに埋め込むもの</a></li>
+<li class="h2"><a href="#スキーマの公開">スキーマの公開</a></li>
+<li class="h2"><a href="#textlint-とのやりとり">textlint とのやりとり</a></li>
+<li class="h2"><a href="#chrome-とのやりとり">Chrome とのやりとり</a></li>
+</ul>
+</nav>
+</body>
+</html>

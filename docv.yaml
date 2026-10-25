@@ -6,6 +6,7 @@ dir:
   slot: docv
   html: output/docv/html
   image: output/docv/image
+  index: .
 
 ignore:
   - docs/tmp/**

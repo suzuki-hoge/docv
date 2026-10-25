@@ -3,6 +3,9 @@ entries:
   - path: docv.yaml
     desc_markdown: |
       このリポジトリの docv の設定
+  - path: docv-index.md
+    desc_markdown: |
+      docv build が書くインデックス。GitHub で Slot ファイルと JPG を辿る入り口で、README からリンクする
   - path: src/
     desc_markdown: |
       CLI のソースコード。コマンドごとにファイルを分ける
@@ -39,3 +42,6 @@ entries:
   - path: docs/figure/
     desc_markdown: |
       ドキュメントに載せる図（SVG）。`docv/` には Slot のほかのファイルを置けないので、ここに置く
+  - path: output/
+    desc_markdown: |
+      docv build の出力（HTML と JPG）。コミットする

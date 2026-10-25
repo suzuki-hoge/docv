@@ -13,7 +13,7 @@ steps:
         - コードを `cargo fmt` で整え、`cargo clippy` と `cargo test` を通す
         - `make check-doc-guide` で docv を install し、Doc ガイドの雛形を整えて確かめる。以降は、install した docv で実行する
         - このリポジトリのドキュメントを `docv fix` で整え、`docv check` を通す
-        - `docv build` で、HTML を `output/docv/html/` に、JPG を `output/docv/image/` に作り直す。`output/` は `.gitignore` に入れてあり、コミットしない
+        - `docv build` で、HTML を `output/docv/html/` に、JPG を `output/docv/image/` に、インデックスを `docv-index.md` に作り直す。どれもコミットする。GitHub で `docv-index.md` から JPG を辿れるようにし、clone してすぐ `docv open` で HTML を見られるようにするため
 
         textlint を使うので Node.js が、JPG を作るので Chrome が要る。
   - id: check-doc-guide

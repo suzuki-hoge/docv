@@ -35,7 +35,7 @@ AI Agent には、`CLAUDE.md` などに次のように書いて伝える。
 - ドキュメントを書く前に、`docv/guide/doc-guide.md`（ガイドライン）を読むこと
 ```
 
-このリポジトリのサービス仕様、利用マニュアル、開発者向けガイドなどは、Slot（[`docv/`](docv)）に書いてある。`docv build` で HTML（`output/docv/html/`）にして見られる。
+このリポジトリのサービス仕様、利用マニュアル、開発者向けガイドなどは、Slot（[`docv/`](docv)）に書いてある。GitHub では、[`docv-index.md`](docv-index.md) から clone せずに読める。clone すれば、`docv open` で HTML（`output/docv/html/`）を開き、検索、タグでの絞り込み、ADR のつながりの図も見られる。
 
 ## ドキュメント
 
