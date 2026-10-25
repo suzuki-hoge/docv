@@ -23,11 +23,13 @@ mission: 外から見た機能と、それぞれの振る舞いと決まり
 | init     | `docv.yaml` だけ。`--print` のときは書かない                                                                                                                                                                                       |
 | slot gen | 指定した Slot ファイルだけ。`--print` のときは書かない                                                                                                                                                                             |
 | fix      | 管理対象のファイル、`dir.slot` の中の Markdown（md の Slot と ADR）、YAML の Slot だけ。整形と textlint の自動修正だけをする。YAML の Slot は、Markdown の項目の中身だけを直す。`docv.yaml` と YAML の Slot は、末尾の改行も整える |
-| build    | `dir.html` と `dir.image` の中だけ。目印の `.docv` を残して中を消し、作り直す。`--no-image` のときは `dir.image` に触れない                                                                                                        |
+| build    | `dir.html` と `dir.image` の中と、`dir.index` を書いたときの `docv-index.md` だけ。出力先は、目印の `.docv` を残して中を消し、作り直す。`--no-image` のときは `dir.image` に触れない                                               |
 
 - ほかのコマンドは、ファイルを書かない
 - `CLAUDE.md`、リポジトリのルートの `.gitignore`、hook の設定は、どのコマンドも書かない
 - build は、出力先に `.docv`（docv が作った目印）がなく、空でもないときは、何も書かずにエラーで終わる。`dir.html` や `dir.image` を間違えて既存のディレクトリを指しても消さないため
+- build は、すでにある `docv-index.md` の 1 行目に docv の印のコメントがないときも、何も書かずにエラーで終わる。手で書いた同じ名前のファイルを消さないため
+- `dir.index` を消しても、build は `docv-index.md` を消さない
 
 ---
 

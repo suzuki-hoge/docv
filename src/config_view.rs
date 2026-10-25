@@ -38,6 +38,13 @@ pub fn rows(config: &Config, title: &str) -> Vec<Row> {
                 .image_dir()
                 .map_or(Cell::List(Vec::new()), Cell::Value),
         ),
+        // dir.index も、書いていなければ `-` を出す。
+        row(
+            "dir.index",
+            config
+                .index_dir()
+                .map_or(Cell::List(Vec::new()), Cell::Value),
+        ),
         row("ignore", list(&config.ignore)),
         row(
             "tags",
@@ -109,6 +116,7 @@ mod tests {
     color: red
 dir:
   image: out/jpg
+  index: .
 lint:
   bold: deny
   textlint: enable
@@ -128,6 +136,8 @@ dir.html
   output/docv/html
 dir.image
   out/jpg
+dir.index
+  .
 ignore
 tags
   - 仕様

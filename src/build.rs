@@ -7,6 +7,7 @@
 //! Slot は 1 つずつ独立したページにし、`<まとまり>/<Slot>.html` に置く。
 //! 分けたサービス仕様とシステム仕様は、ページごとに `<まとまり>/<Slot>/<ページの h1>.html` に置き、ページへのリンクをタブにして並べる。
 //! 画像にしても読めるように、折りたたみは使わない。OS ごとの手順のタブは、印刷の表示（JPG）ではすべて並べる。
+//! dir.index を書いていれば、Slot ファイルへのリンクを並べたインデックス（docv-index.md）も書く（index.rs）。
 
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
@@ -29,6 +30,7 @@ use syntect::util::LinesWithEndings;
 
 use crate::adr::{self, Adr};
 use crate::config_view::{self, Cell};
+use crate::index;
 use crate::jpg;
 use crate::markdown::{self, relative_path, slug};
 use crate::meta;
@@ -49,8 +51,8 @@ const README_PAGE: &str = "README.html";
 
 /// トップの 5 ページ。サイドバーに、README のページに続けて、この順で並べる。
 pub const PAGE: &str = "index.html";
-const ADR_PAGE: &str = "ADR.html";
-const DETAIL_PAGE: &str = "プロジェクト詳細.html";
+pub(crate) const ADR_PAGE: &str = "ADR.html";
+pub(crate) const DETAIL_PAGE: &str = "プロジェクト詳細.html";
 const CONFIG_PAGE: &str = "現在の設定.html";
 const SEARCH_PAGE: &str = "検索.html";
 
@@ -128,9 +130,14 @@ struct SearchEntry {
 /// docv build。out（dir.html）の中を作り直す。image（dir.image）を書いていれば、Slot のページを JPG にしてそこに置く。
 /// JPG は Slot のページごとに 1 枚。見つけやすいように、まとまりと Slot の表示名をパスにする。
 /// Markdown から作るページ（md の Slot、ADR、Free ファイル）は、GitHub で md をそのまま見られるので JPG にしない。
+/// dir.index を書いていれば、インデックスも書く。書けないインデックスがあれば、何も書かずに error で終わる。
 pub fn run(project: &Project, out: &Path, image: Option<&Path>) -> Result<()> {
+    let index = index::path(project);
+    if let Some(index) = &index {
+        index::ensure_writable(index)?;
+    }
     let out = prepare_out(out)?;
-    let slots = render(project, &out)?;
+    let slots = render(project, &out, index.as_deref())?;
     write(&out.join(MARKER), MARKER_TEXT)?;
     if let Some(image) = image {
         let image = prepare_out(image)?;
@@ -145,8 +152,8 @@ pub fn run(project: &Project, out: &Path, image: Option<&Path>) -> Result<()> {
     Ok(())
 }
 
-/// out にすべてのページを書き、読み込んだ Slot を返す。
-fn render(project: &Project, out: &Path) -> Result<Vec<Slot>> {
+/// out にすべてのページを書き、index があればインデックスを書いて、読み込んだ Slot を返す。
+fn render(project: &Project, out: &Path, index: Option<&Path>) -> Result<Vec<Slot>> {
     let mut pages = Vec::new();
     for path in project.managed()? {
         pages.push(read_page(project, &path)?);
@@ -189,6 +196,10 @@ fn render(project: &Project, out: &Path) -> Result<Vec<Slot>> {
     for page in &pages {
         write(&out.join(doc_page(&page.source)), &site.render_doc(page))?;
     }
+    if let Some(path) = index {
+        let text = index::render(project, path, &slots, !pages.is_empty(), !adrs.is_empty());
+        write(path, &text)?;
+    }
     Ok(slots)
 }
 
@@ -207,7 +218,7 @@ fn page_path(slot: &Slot) -> String {
 }
 
 /// Slot の JPG の、dir.image からの相対パス。`サービス/用語集.jpg`。
-fn jpg_path(slot: &Slot) -> String {
+pub(crate) fn jpg_path(slot: &Slot) -> String {
     format!("{}/{}.jpg", slot.def.group.label(), slot.def.label)
 }
 

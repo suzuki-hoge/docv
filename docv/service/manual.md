@@ -87,6 +87,9 @@ Slot ( yaml ) の markdown 部は、名前が `_markdown` で終わる項目。�
 - `docv.yaml` で `dir.image` を指定すると、Slot のページを JPG にしてそこに出す
   - 要 Google Chrome または Chromium
   - JPG はマシンのフォントで変わる。チームで共有するなら、GitHub Actions などの決まった環境で作る
+- `docv.yaml` で `dir.index` を指定すると、Slot ファイルへのリンクを並べた `docv-index.md` を書く
+  - README からリンクすると、GitHub でリポジトリを開いた人が、clone しなくても Slot ファイルを読める
+  - YAML の Slot は JPG へリンクするので、`dir.image` も指定し、JPG を git で管理する
 
 | オプション   | 意味                                                         |
 | ------------ | ------------------------------------------------------------ |

@@ -19,7 +19,7 @@ tags: [スキーマ]
       "minLength": 1
     },
     "dir": {
-      "description": "docv が読み書きするディレクトリ。どれもルートからの相対パス。どの 2 つも、同じディレクトリにも、一方が他方を含む関係にもできない。",
+      "description": "docv が読み書きするディレクトリ。どれもルートからの相対パス。`index` を除くどの 2 つも、同じディレクトリにも、一方が他方を含む関係にもできない。",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -45,6 +45,10 @@ tags: [スキーマ]
           "description": "docv build が Slot のページの JPG を出すディレクトリ。書かなければ JPG を作らない。JPG を作るには Chrome が要る。",
           "type": "string",
           "minLength": 1
+        },
+        "index": {
+          "description": "docv build がインデックス（`docv-index.md`）を書くディレクトリ。`.`（ルート）だけを書ける。書かなければインデックスを作らない。",
+          "const": "."
         }
       }
     },

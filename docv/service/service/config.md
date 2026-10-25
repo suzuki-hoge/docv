@@ -18,6 +18,7 @@ title: shop-app
 dir:
   free: docs
   image: output/docv/image
+  index: .
 ignore:
   - docs/tmp/**
 
@@ -43,6 +44,7 @@ format:
 | `dir.slot`       |      | `docv`             | Slot ファイルを置くディレクトリ                                                                                 |
 | `dir.html`       |      | `output/docv/html` | docv build が HTML を出すディレクトリ                                                                           |
 | `dir.image`      |      |                    | docv build が Slot のページの JPG を出すディレクトリ。書かなければ JPG を作らない。JPG を作るには Chrome が要る |
+| `dir.index`      |      |                    | docv build がインデックス（`docv-index.md`）を書くディレクトリ。`.`（ルート）だけを書ける。書かなければ作らない |
 | `ignore`         |      |                    | 管理対象にも管理外にもしないファイルの glob の配列                                                              |
 | `tags`           |      |                    | 使うタグの一覧。タグごとに `name` と、HTML の色の `color` を書く（[Free](free.md) のページの「タグ」の章）      |
 | `lint.bold`      |      | allow              | 太字を使ってよいか（「書式の規則」の章）                                                                        |
@@ -66,6 +68,7 @@ format:
 - `dir.free`、`dir.slot`、`dir.html`、`dir.image`（書いたとき）は、どの 2 つも同じディレクトリにできず、一方が他方を含むこともできない。ルートも書けない。違反すると、`docv.yaml` が正しくないとして、check、fix、build などの `docv.yaml` を読むコマンドが、何もせずに終了コード 2 で終わる
 - `dir.free` の外にあり、`ignore` にも当てはまらない `.md` のファイルは管理外になる。中身は見ない
 - `ignore` に当てはまるファイルは、check と HTML のどちらにも出さない
+- `dir.index` は、`.`（ルート）だけを書ける。キーだけを書いて値を書かないこともできない。ほかの dir とは比べない
 - `.gitignore` に書かれたファイルと、`dir.html` と `dir.image` の中は、`ignore` に書かなくても常に除く
 - docv build の出力を git で管理するかは、プロジェクトの `.gitignore` で決める。docv は `.gitignore` を書かない
 - パスと glob は、すべてルートからの相対パスで書く。`*` は `/` をまたがず、`**` はまたぐ
@@ -186,7 +189,8 @@ docv は、次のルールを使わない。
 新しく始めるプロジェクトでは、次の配置をすすめる。`docv init` は、この配置を前提にした `docv.yaml` を作る。
 
 ```
-README.md        # 管理外。HTML では README のページにする
+README.md        # 管理外。HTML では README のページにする。docv-index.md へリンクする
+docv-index.md    # docv build が作るインデックス（dir.index）
 docs/            # Free ファイル
   *.md           # 分類はディレクトリではなくタグで行う
   tmp/           # メモを置く。ignore に入れる

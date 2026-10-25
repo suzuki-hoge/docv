@@ -193,6 +193,9 @@ fn execute_in_project(project: &Project, command: Command) -> Result<ExitCode> {
             let image = project.image_dir().filter(|_| !no_image);
             build::run(project, &out, image.as_deref())?;
             println!("{} に出力した", out.display());
+            if let Some(index) = crate::index::path(project) {
+                println!("{} を書いた", index.display());
+            }
             Ok(ExitCode::SUCCESS)
         }
         Command::Open => {

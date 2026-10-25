@@ -26,6 +26,8 @@ dir:
   html: output/docv/html
   # docv build が Slot のページの JPG を出すディレクトリ。書かなければ JPG を作らない。JPG を作るには Chrome が要る
   # image: output/docv/image
+  # docv build が、Slot ファイルへのリンクを並べたインデックス（docv-index.md）を書くディレクトリ。ルート（.）だけを書ける。書かなければ作らない
+  index: .
 
 # 管理対象にも管理外にもしないファイルの glob
 ignore:
@@ -87,6 +89,7 @@ mod tests {
         assert_eq!(config.free_dir(), "docs");
         assert_eq!(config.slot_dir(), "docv");
         assert_eq!(config.image_dir(), None);
+        assert_eq!(config.index_dir().as_deref(), Some("."));
         let error = run(&path, false).unwrap_err().to_string();
         assert!(error.contains("すでにある"), "{error}");
         fs::write(&path, "dir:\n  free: notes\n").unwrap();

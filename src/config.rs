@@ -70,6 +70,8 @@ pub struct Dirs {
     pub html: String,
     /// docv build が Slot のページの JPG を出すディレクトリ。書かなければ JPG を作らない。
     pub image: Option<String>,
+    /// docv build がインデックス（docv-index.md）を書くディレクトリ。`.`（ルート）だけを書ける。書かなければ作らない。
+    pub index: Option<String>,
 }
 
 impl Default for Dirs {
@@ -79,6 +81,7 @@ impl Default for Dirs {
             slot: default_slot(),
             html: default_html(),
             image: None,
+            index: None,
         }
     }
 }
@@ -164,6 +167,11 @@ impl Config {
         self.dir.image.as_deref().map(normalize_dir)
     }
 
+    /// インデックスを書くディレクトリ。書いていなければ None で、インデックスを作らない。
+    pub fn index_dir(&self) -> Option<String> {
+        self.dir.index.as_deref().map(normalize_dir)
+    }
+
     /// tags に書いたタグの色。tags にないタグなら None。
     pub fn tag_color(&self, name: &str) -> Option<TagColor> {
         self.tags.iter().find(|t| t.name == name).map(|t| t.color)
@@ -212,6 +220,7 @@ fn validate_semantics(config: &Config) -> Result<()> {
     let is_root = |dir: &str| dir.is_empty() || dir == ".";
     let under = |path: &str, dir: &str| path == dir || path.starts_with(&format!("{dir}/"));
     // dir の 4 つは、どれも別々のディレクトリにする。同じか、どれかがどれかを含めば error。
+    // dir.index はルートだけを書け（スキーマで決める）、ほかの 4 つはルートを書けないので、比べない。
     let mut dirs = vec![
         ("free", config.free_dir()),
         ("slot", config.slot_dir()),
@@ -274,6 +283,7 @@ mod tests {
         assert_eq!(config.slot_dir(), "docv");
         assert_eq!(config.html_dir(), "output/docv/html");
         assert_eq!(config.image_dir(), None);
+        assert_eq!(config.index_dir(), None);
         assert!(!config.format.enabled);
         assert!(config.tags.is_empty());
     }
@@ -309,6 +319,21 @@ mod tests {
         let error = error_of("dir:\n  free: .\n");
         assert!(error.contains("/dir/free: ルートは書けない"), "{error}");
         assert!(parse("dir:\n  html: out/html\n  image: out/jpg\n").is_ok());
+    }
+
+    #[test]
+    fn reads_index_only_at_root() {
+        let config = parse("dir:\n  index: .\n").unwrap();
+        assert_eq!(config.index_dir().as_deref(), Some("."));
+        // ルートのほかは書けない。キーだけ（値なし）も書けない
+        for text in [
+            "dir:\n  index: docs\n",
+            "dir:\n  index: ./\n",
+            "dir:\n  index:\n",
+        ] {
+            let error = error_of(text);
+            assert!(error.contains("/dir/index"), "{text}: {error}");
+        }
     }
 
     #[test]

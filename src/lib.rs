@@ -9,6 +9,7 @@ pub mod diagnostic;
 pub mod fix;
 pub mod format;
 pub mod generate;
+pub mod index;
 pub mod init;
 pub mod jpg;
 pub mod markdown;

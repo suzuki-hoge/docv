@@ -20,7 +20,7 @@ docv init                          # docv.yaml を作る
 docv desc                          # docv の概要を出す
 docv check                         # ルールに沿っているかを確かめる
 docv fix                           # 空行や表の余白を整形し、textlint で直せるところを直す
-docv build                         # HTML を作る（dir.image を書いていれば JPG も）
+docv build                         # HTML を作る（dir.image を書いていれば JPG も、dir.index を書いていればインデックスも）
 docv open                          # 作った HTML をブラウザで開く
 docv slot list                     # Slot の一覧と、ミッションを出す
 docv slot gen service              # Slot を決まったパスに作る
@@ -48,7 +48,7 @@ AI Agent には、`CLAUDE.md` などに次のように書いて伝える。
 - [`adr.md`](docv/service/service/adr.md) — ADR に書くことと形
 - [`config.md`](docv/service/service/config.md) — `docv.yaml` に書くことと、各項目の解釈、check と fix で使う道具の設定
 - [`cli.md`](docv/service/service/cli.md) — コマンドが読み書きするファイルと、出力先、終了コード、メッセージの言語
-- [`html.md`](docv/service/service/html.md) — docv build が作る HTML と JPG の作り（README、Slot、ADR、現在の設定のページを含む）と、毎回同じ出力にする決まり
+- [`html.md`](docv/service/service/html.md) — docv build が作る HTML、JPG、インデックスの作り（README、Slot、ADR、現在の設定のページを含む）と、毎回同じ出力にする決まり
 - [`docs/schema/`](docs/schema) — `docv.yaml` と YAML の Slot の JSON Schema の写し（`assets/schema/` のファイルと同じもの）
 
 ### これからと経緯
