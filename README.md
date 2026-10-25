@@ -48,7 +48,7 @@ AI Agent には、`CLAUDE.md` などに次のように書いて伝える。
 - [`adr.md`](docv/service/service/adr.md) — ADR に書くことと形
 - [`config.md`](docv/service/service/config.md) — `docv.yaml` に書くことと、各項目の解釈、check と fix で使う道具の設定
 - [`cli.md`](docv/service/service/cli.md) — コマンドが読み書きするファイルと、出力先、終了コード、メッセージの言語
-- [`html.md`](docv/service/service/html.md) — docv build が作る HTML と JPG の作り（Slot、ADR、現在の設定のページを含む）と、毎回同じ出力にする決まり
+- [`html.md`](docv/service/service/html.md) — docv build が作る HTML と JPG の作り（README、Slot、ADR、現在の設定のページを含む）と、毎回同じ出力にする決まり
 - [`docs/schema/`](docs/schema) — `docv.yaml` と YAML の Slot の JSON Schema の写し（`assets/schema/` のファイルと同じもの）
 
 ### これからと経緯

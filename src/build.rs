@@ -1,6 +1,6 @@
 //! docv build。人間向けの HTML と、設定で有効なら Slot のページの JPG を生成する。docv/service/service/html.md。
 //!
-//! トップは 5 ページに分け、サイドバーで行き来する。
+//! トップは 5 ページに分け、サイドバーで行き来する。ルートに README.md があれば、README のページをサイドバーの先頭に足す。
 //! index.html（プロジェクト概要）に Slot ファイルのページへのカード、ADR.html に決定のつながりの図、
 //! プロジェクト詳細.html に Free ファイルのツリー、現在の設定.html に docv.yaml のすべての項目と今の値、
 //! 検索.html に Slot ファイル、ADR、Free ファイルの中身を探す入力欄を置く。
@@ -43,7 +43,11 @@ const SEARCH: &str = include_str!("../assets/search.js");
 const MARKER: &str = ".docv";
 const MARKER_TEXT: &str = "docv build の出力。このディレクトリは docv build のたびに作り直す。\n";
 
-/// トップの 5 ページ。サイドバーに、この順で並べる。
+/// ルートの README.md と、その HTML のページ。README.md があるときだけ、サイドバーの先頭に出す。
+const README_SOURCE: &str = "README.md";
+const README_PAGE: &str = "README.html";
+
+/// トップの 5 ページ。サイドバーに、README のページに続けて、この順で並べる。
 pub const PAGE: &str = "index.html";
 const ADR_PAGE: &str = "ADR.html";
 const DETAIL_PAGE: &str = "プロジェクト詳細.html";
@@ -53,6 +57,7 @@ const SEARCH_PAGE: &str = "検索.html";
 /// サイドバーの項目。描いているページがどれに属するかを示すのにも使う。
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Nav {
+    Readme,
     Overview,
     Adr,
     Detail,
@@ -63,6 +68,7 @@ enum Nav {
 impl Nav {
     fn label(self) -> &'static str {
         match self {
+            Nav::Readme => "README",
             Nav::Overview => "プロジェクト概要",
             Nav::Adr => "ADR",
             Nav::Detail => "プロジェクト詳細",
@@ -73,6 +79,7 @@ impl Nav {
 
     fn path(self) -> &'static str {
         match self {
+            Nav::Readme => README_PAGE,
             Nav::Overview => PAGE,
             Nav::Adr => ADR_PAGE,
             Nav::Detail => DETAIL_PAGE,
@@ -144,6 +151,13 @@ fn render(project: &Project, out: &Path) -> Result<Vec<Slot>> {
     for path in project.managed()? {
         pages.push(read_page(project, &path)?);
     }
+    // README.md は管理外のファイルなので、ignore に当てはまらなければ読む。
+    let readme = match project.classify(README_SOURCE) {
+        Some(_) if project.root.join(README_SOURCE).is_file() => {
+            Some(read_page(project, README_SOURCE)?)
+        }
+        _ => None,
+    };
     let slots = slot::load(project)?;
     let adrs = adr::load(project)?;
 
@@ -151,10 +165,14 @@ fn render(project: &Project, out: &Path) -> Result<Vec<Slot>> {
         project,
         out,
         dir: RefCell::new(out.to_path_buf()),
+        readme: readme.as_ref(),
         pages: &pages,
         slots: &slots,
         adrs: &adrs,
     };
+    if let Some(readme) = &readme {
+        write(&out.join(README_PAGE), &site.render_readme(readme))?;
+    }
     write(&out.join(PAGE), &site.render_index())?;
     if !adrs.is_empty() {
         write(&out.join(ADR_PAGE), &site.render_adr_index())?;
@@ -255,12 +273,33 @@ struct Site<'a> {
     out: &'a Path,
     /// 描いているページのディレクトリ。リンクの起点。
     dir: RefCell<PathBuf>,
+    /// ルートの README.md。ないか、ignore に当てはまれば None。
+    readme: Option<&'a Page>,
     pages: &'a [Page],
     slots: &'a [Slot],
     adrs: &'a [Adr],
 }
 
 impl Site<'_> {
+    /// README.html。ルートの README.md を Markdown のまま HTML にする。
+    fn render_readme(&self, readme: &Page) -> String {
+        *self.dir.borrow_mut() = self.out.to_path_buf();
+        let html = self.markdown_with_ids(&readme.body, Path::new(""), true, 2);
+        let body = format!(
+            "<section class=\"doc\">\n<h1>{}</h1>\n{html}</section>\n",
+            escape(&readme.title)
+        );
+        self.page(
+            &format!(
+                "{} - {}",
+                Nav::Readme.label(),
+                escape(&self.project.title())
+            ),
+            Nav::Readme,
+            &body,
+        )
+    }
+
     /// index.html（プロジェクト概要）。Slot のページへのカード。
     fn render_index(&self) -> String {
         *self.dir.borrow_mut() = self.out.to_path_buf();
@@ -459,20 +498,23 @@ impl Site<'_> {
         )
     }
 
-    /// HTML の全体。左にトップの 5 ページへのサイドバーを、右に h2 と h3 の目次を置く。印刷の表示（JPG）では、どちらも出さない。
+    /// HTML の全体。左に README とトップの 5 ページへのサイドバーを、右に h2 と h3 の目次を置く。印刷の表示（JPG）では、どちらも出さない。
     fn page(&self, title: &str, current: Nav, body: &str) -> String {
         let mut nav = format!(
             "<nav class=\"sidebar\">\n<p class=\"project\">{}</p>\n<ul>\n",
             escape(&self.project.title())
         );
         for item in [
+            Nav::Readme,
             Nav::Overview,
             Nav::Adr,
             Nav::Detail,
             Nav::Config,
             Nav::Search,
         ] {
-            if item == Nav::Adr && self.adrs.is_empty() {
+            if (item == Nav::Readme && self.readme.is_none())
+                || (item == Nav::Adr && self.adrs.is_empty())
+            {
                 continue;
             }
             let href = encode_path(&relative_path(
@@ -1341,6 +1383,9 @@ impl Site<'_> {
         {
             return Some(CONFIG_PAGE.to_string());
         }
+        if target == README_SOURCE && self.readme.is_some() {
+            return Some(README_PAGE.to_string());
+        }
         if self.pages.iter().any(|p| p.source == target) {
             return Some(doc_page(target));
         }
@@ -1359,7 +1404,7 @@ impl Site<'_> {
         }
     }
 
-    /// ルートの中のファイルへのリンク先。Free ファイル、Slot ファイル、ADR だけ、そのページに出力先の中の相対パスで向ける。
+    /// ルートの中のファイルへのリンク先。README.md、Free ファイル、Slot ファイル、ADR だけ、そのページに出力先の中の相対パスで向ける。
     /// docv.yaml は、現在の設定のページに向ける。
     /// HTML は clone したリポジトリで見るので、ほかのファイルはエディタで開けばよく、リンクにしない（None）。
     fn link(&self, target: &str, fragment: &str) -> Option<String> {
@@ -1920,9 +1965,9 @@ mod tests {
         let detail = fs::read_to_string(out.join(DETAIL_PAGE)).unwrap();
         let adr_index = fs::read_to_string(out.join(ADR_PAGE)).unwrap();
         let config = fs::read_to_string(out.join(CONFIG_PAGE)).unwrap();
-        // サイドバーで 5 ページを行き来する。描いているページの項目に印を付ける
+        // サイドバーで README と 5 ページを行き来する。描いているページの項目に印を付ける
         assert!(
-            index.contains("<li><a href=\"index.html\" aria-current=\"page\">プロジェクト概要</a></li>\n<li><a href=\"ADR.html\">ADR</a></li>\n<li><a href=\"プロジェクト詳細.html\">プロジェクト詳細</a></li>\n<li><a href=\"現在の設定.html\">現在の設定</a></li>\n<li><a href=\"検索.html\">検索</a></li>"),
+            index.contains("<li><a href=\"README.html\">README</a></li>\n<li><a href=\"index.html\" aria-current=\"page\">プロジェクト概要</a></li>\n<li><a href=\"ADR.html\">ADR</a></li>\n<li><a href=\"プロジェクト詳細.html\">プロジェクト詳細</a></li>\n<li><a href=\"現在の設定.html\">現在の設定</a></li>\n<li><a href=\"検索.html\">検索</a></li>"),
             "{index}"
         );
         // 検索.html に、Slot ファイル、ADR、Free ファイルの順で、中身を行ごとに索引にして書く。< は書き換え、</script> で閉じない
@@ -2269,11 +2314,56 @@ mod tests {
             detail.contains("href=\"プロジェクト詳細/docs/a.html\""),
             "{detail}"
         );
-        // ADR がないときは、ADR.html を作らず、サイドバーにも出さない
+        // ADR がないときは、ADR.html を作らず、サイドバーにも出さない。README.md がないときも同じ
         assert!(!out.join(ADR_PAGE).exists());
         assert!(!detail.contains("ADR.html"), "{detail}");
+        assert!(!out.join(README_PAGE).exists());
+        assert!(!detail.contains("README.html"), "{detail}");
         // 出力先に .gitignore は置かない
         assert!(!out.join(".gitignore").exists());
+    }
+
+    #[test]
+    fn builds_readme_page_at_top_of_sidebar() {
+        let (dir, project) = project(&[
+            (
+                "README.md",
+                "# Demo\n\n概要\n\n## 使い方\n\n[仕様](docv/system/system.md) [索引](docv-index.md) [コード](src/main.rs)\n",
+            ),
+            (
+                "docv/system/system.md",
+                "# システム仕様\n\n[README](../../README.md#使い方)\n",
+            ),
+        ]);
+        let out = dir.path().join("out");
+        run(&project, &out, None).unwrap();
+        let readme = fs::read_to_string(out.join(README_PAGE)).unwrap();
+        // README.md の h1 をページの h1 にし、見出しは h2 から。GitHub と同じ形のアンカーを付ける
+        assert!(
+            readme.contains(
+                "<section class=\"doc\">\n<h1>Demo</h1>\n<p>概要</p>\n<h2 id=\"使い方\">使い方</h2>"
+            ),
+            "{readme}"
+        );
+        assert!(
+            readme.contains("<li><a href=\"README.html\" aria-current=\"page\">README</a></li>\n<li><a href=\"index.html\">プロジェクト概要</a></li>"),
+            "{readme}"
+        );
+        // 本文のリンクは、ほかのページと同じく、ページのあるファイルにだけ張る
+        assert!(
+            readme.contains("<a href=\"%E3%82%B7%E3%82%B9%E3%83%86%E3%83%A0/%E3%82%B7%E3%82%B9%E3%83%86%E3%83%A0%E4%BB%95%E6%A7%98.html\">仕様</a> 索引 コード"),
+            "{readme}"
+        );
+        // ほかのページからの README.md へのリンクは、README のページに向ける
+        let system = fs::read_to_string(out.join("システム/システム仕様.html")).unwrap();
+        assert!(
+            system.contains("<a href=\"../README.html#%E4%BD%BF%E3%81%84%E6%96%B9\">README</a>"),
+            "{system}"
+        );
+        assert!(
+            system.contains("<li><a href=\"../README.html\">README</a></li>"),
+            "{system}"
+        );
     }
 
     #[test]
