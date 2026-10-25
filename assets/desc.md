@@ -61,14 +61,16 @@ mission: 利用者の使い方（CLI のコマンド、GUI の操作など）
 # 利用マニュアル
 ```
 
-### サービス仕様のページ分け
+### ページ分け
 
-サービス仕様は、ページに分けられる
+サービス仕様とシステム仕様は、ページに分けられる
 
-- 分けるときは、`docv/service/service.md` の代わりに、`docv/service/service/` の直下に 1 ページ 1 ファイルで Markdown を置く
-- どのページにも、YAML front matter に `order`（整数）と `mission` を書く。ページは `order` の順に並ぶ。`order` は重ねない。`mission` は、分けないときと同じサービス仕様のミッション
+- 分けるときは、1 つのファイルの代わりに、次のディレクトリの直下に 1 ページ 1 ファイルで Markdown を置く
+    - サービス仕様: `docv/service/service.md` の代わりに `docv/service/service/`
+    - システム仕様: `docv/system/system.md` の代わりに `docv/system/system/`
+- どのページにも、YAML front matter に `order`（整数）と `mission` を書く。ページは `order` の順に並ぶ。`order` は重ねない。`mission` は、分けないときと同じ、その Slot のミッション
 - 本文の h1 が、ページの名前になる。HTML では、ページを切り替えるタブの名前になる。h1 は重ねない
-- 分けないときは `docv/service/service.md` に書き、YAML front matter には `mission` だけを書く
+- 分けないときは 1 つのファイル（`docv/service/service.md` か `docv/system/system.md`）に書き、YAML front matter には `mission` だけを書く
 
 ```markdown
 ---

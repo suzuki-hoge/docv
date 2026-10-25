@@ -28,12 +28,9 @@ pub fn text(name: &str) -> Result<&'static str> {
     if def.format != Format::Yaml {
         // ページに分けられる Slot は、分けるときの YAML front matter の書き方を docv desc で案内する。
         let pages = if def.pages_dir().is_some() {
-            format!(
-                "。ページに分けるときの YAML front matter は、docv desc の「{}のページ分け」で確かめる",
-                def.label
-            )
+            "。ページに分けるときの YAML front matter は、docv desc の「ページ分け」で確かめる"
         } else {
-            String::new()
+            ""
         };
         bail!("{name} は md の Slot で、スキーマはない。中身の形は決めていない{pages}");
     }
@@ -123,11 +120,10 @@ mod tests {
             assert!(error.contains(message), "{name}: {error}");
         }
         // ページに分けられる Slot だけ、分けるときの YAML front matter の書き方を案内する
-        let service = text("service").unwrap_err().to_string();
-        assert!(
-            service.contains("docv desc の「サービス仕様のページ分け」"),
-            "{service}"
-        );
+        for name in ["service", "system"] {
+            let error = text(name).unwrap_err().to_string();
+            assert!(error.contains("docv desc の「ページ分け」"), "{error}");
+        }
         assert!(!text("api").unwrap_err().to_string().contains("ページ分け"));
     }
 

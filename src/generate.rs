@@ -66,8 +66,7 @@ fn md_note(def: &Def) -> Option<String> {
     if let Some(dir) = def.pages_dir() {
         let _ = writeln!(
             note,
-            "ページに分けるときは、このファイルの代わりに、dir.slot の下の {dir}/ に 1 ページ 1 つの Markdown で置く。書き方は docv desc の「{}のページ分け」",
-            def.label
+            "ページに分けるときは、このファイルの代わりに、dir.slot の下の {dir}/ に 1 ページ 1 つの Markdown で置く。書き方は docv desc の「ページ分け」"
         );
     }
     Some(note)

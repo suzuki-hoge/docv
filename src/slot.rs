@@ -1,7 +1,7 @@
 //! Slot。どのプロジェクトにも要るドキュメントを、docv が決めたミッションと形で書くファイル。docs/spec/slot.md。
 //!
 //! Slot ファイルは、dir.slot の下の、まとまりのディレクトリに `<まとまり>/<ID>.<拡張子>` の名前で置く。拡張子は Slot ごとに決まる（yaml か md）。
-//! サービス仕様だけは、`<まとまり>/<ID>/` の直下に 1 ページ 1 つの md で置いて、ページに分けられる。ページの名前は h1、並びは YAML front matter の order。
+//! サービス仕様とシステム仕様は、`<まとまり>/<ID>/` の直下に 1 ページ 1 つの md で置いて、ページに分けられる。ページの名前は h1、並びは YAML front matter の order。
 //! md の Slot（分けたページも）は、YAML front matter の mission に、docv が決めたミッションをそのまま書く。違えば check が error にする。
 //! ファイルの中のパスは、すべてルートからの相対パス。
 
@@ -224,9 +224,9 @@ impl Def {
     }
 
     /// ページに分けるときのディレクトリの、dir.slot からの相対パス。直下に 1 ページ 1 つの md を置く。
-    /// 分けられるのはサービス仕様だけで、ほかの Slot は None。
+    /// 分けられるのはサービス仕様とシステム仕様だけで、ほかの Slot は None。
     pub fn pages_dir(&self) -> Option<String> {
-        (self.id == "service").then(|| format!("{}/{}", self.group.dir(), self.id))
+        matches!(self.id, "service" | "system").then(|| format!("{}/{}", self.group.dir(), self.id))
     }
 }
 
@@ -1157,6 +1157,29 @@ mod tests {
     }
 
     #[test]
+    fn splits_the_system_spec_like_the_service_spec() {
+        let system = def("system").unwrap().mission;
+        let (_dir, project) = project(&[
+            (
+                "docv/system/system/web.md",
+                &format!("---\norder: 1\nmission: {system}\n---\n\n# web\n"),
+            ),
+            (
+                "docv/system/system/batch.md",
+                &format!("---\norder: 2\nmission: {system}\n---\n\n# batch\n"),
+            ),
+        ]);
+        let diagnostics = check(&project).unwrap();
+        assert!(diagnostics.is_empty(), "{diagnostics:#?}");
+        let slots = load(&project).unwrap();
+        let pages: Vec<(&str, Option<&str>)> = slots
+            .iter()
+            .map(|s| (s.def.id, s.page.as_ref().map(|p| p.title.as_str())))
+            .collect();
+        assert_eq!(pages, [("system", Some("web")), ("system", Some("batch"))]);
+    }
+
+    #[test]
     fn loads_pages_of_a_split_slot_in_order() {
         let (_dir, project) = project(&[
             ("docv/service/manual.md", "# マニュアル\n"),
@@ -1220,7 +1243,7 @@ mod tests {
             ),
             ("docv/service/service/e.md", "---\norder: 5\n---\n\n本文\n"),
             ("docv/service/service/sub/f.md", "# F\n"),
-            ("docv/system/system/a.md", "# A\n"),
+            ("docv/system/api/a.md", "# A\n"),
         ]);
         let diagnostics = check(&project).unwrap();
         let mut result: Vec<String> = diagnostics
@@ -1242,12 +1265,12 @@ mod tests {
                     file_names()
                 ),
                 &format!(
-                    "docv/system/system/a.md:1 slot-unknown Slot の名前ではない。Slot のディレクトリに置けるのは {}",
+                    "docv/system/api/a.md:1 slot-unknown Slot の名前ではない。Slot のディレクトリに置けるのは {}",
                     file_names()
                 ),
             ]
         );
-        // ページに分けられるのはサービス仕様だけ。置ける名前の一覧にも、そのディレクトリを出す
+        // ページに分けられるのはサービス仕様とシステム仕様だけ。置ける名前の一覧にも、そのディレクトリを出す
         assert!(
             file_names().contains("service/service.md、service/service/*.md、service/manual.md")
         );
