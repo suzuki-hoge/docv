@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>YAML の Slot に appendix_markdown を書けるようにする - ADR - docv</title>
+<title>dir の 4 つのディレクトリを互いに離し、HTML の既定を output/docv/html にする - ADR - docv</title>
 <style>
 /* docv build の HTML の見た目。中身を読めることだけを考え、飾らない。 */
 
@@ -233,7 +233,7 @@ mark { background: #fff8c5; color: inherit; }
 </ul>
 </nav>
 <main>
-<p class="source"><code>docv/adr/appendix.md</code><button type="button" class="copy" data-path="docv/adr/appendix.md" title="パスをコピーする" aria-label="パスをコピーする" hidden><svg class="ready" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></p>
+<p class="source"><code>docv/adr/dir-apart.md</code><button type="button" class="copy" data-path="docv/adr/dir-apart.md" title="パスをコピーする" aria-label="パスをコピーする" hidden><svg class="ready" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></p>
 <script>// docv build の Slot、ADR、Free ファイルのページの JS。h1 の上の元のファイルのパスを、ボタンでクリップボードにコピーする。
 // ボタンは JS が動くときだけ出す。コピーしたら、少しの間ボタンを済みの印にする。
 (function () {
@@ -283,15 +283,24 @@ mark { background: #fff8c5; color: inherit; }
 })();
 </script>
 <section class="slot">
-<h1><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"/><path d="M5 4h12l-2.5 4 2.5 4H5"/></svg>YAML の Slot に appendix_markdown を書けるようにする</h1>
+<h1><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"/><path d="M5 4h12l-2.5 4 2.5 4H5"/></svg>dir の 4 つのディレクトリを互いに離し、HTML の既定を output/docv/html にする</h1>
 <h2 id="背景">背景</h2>
-<p>YAML の Slot の <code>body</code> と <code>include</code> をなくし、項目にない文章は Free ファイルに書いてリンクすることにした。しかし、項目に収まらない短い補足のために Free ファイルを作り、Slot からリンクするのは手間が大きい。</p>
+<p><code>dir.html</code> の既定の <code>docv/build</code> は、<code>dir.slots</code> の既定の <code>docv</code> の中にあった。Slot のディレクトリを読むときに、出力の HTML と JPG を除く必要があった。<code>dir.free</code> の中に <code>dir.slots</code> を書くなど、ほかの組み合わせでも、同じファイルを 2 つの役割で読むことになる。項目の名前は、<code>dir.free</code> などが単数で、<code>dir.slots</code> だけが複数だった。</p>
 <h2 id="決めたこと">決めたこと</h2>
-<p>どの YAML の Slot にも、<code>appendix_markdown</code> を書けるようにする。HTML では、スキーマで決めた項目のあとに続けて出し、見出しは h2 から始まるように段を付け直す。ほかの Markdown の項目と同じく <code>|</code> のブロックで書き、同じ検査をかける。<code>include</code> はなくしたままにする。</p>
+<ul>
+<li><code>dir.slots</code> を <code>dir.slot</code> にする</li>
+<li><code>dir.html</code> の既定を <code>output/docv/html</code> にする。<code>dir.image</code> は今までどおり既定を持たず、書いたときだけ JPG を作る</li>
+<li><code>dir.free</code>、<code>dir.slot</code>、<code>dir.html</code>、<code>dir.image</code>（書いたとき）は、どの 2 つも同じディレクトリにできず、一方が他方を含むこともできない。<code>docv.yaml</code> を読むときに確かめ、違反していれば、check、fix、build などは何もせずに終わる</li>
+</ul>
 <h2 id="結果">結果</h2>
-<p>項目に収まらない補足を、Slot の中に書ける。ほかのファイルを埋め込む仕組みは持たない。</p>
+<p>1 つのファイルは、Free ファイル、Slot ファイル、出力のどれか 1 つにしかならない。Slot のディレクトリを読むときに、出力を除く必要がない。</p>
+<h2 id="選ばなかった案">選ばなかった案</h2>
+<div class="table-scroll"><table><thead><tr><th>案</th><th>選ばなかった理由</th></tr></thead><tbody>
+<tr><td>重なりを許し、読むときに出力を除き続ける</td><td>組み合わせごとに、どちらの役割で読むかを決め続けることになる</td></tr>
+<tr><td><code>dir.image</code> にも既定を置き、JPG を既定で作る</td><td>既定の設定のままでは、Chrome のないマシンで build できない</td></tr>
+</tbody></table></div>
 
-<nav class="adr-nav"><div class="prev"><p class="adr-nav-label">← 過去の決定</p><div class="boxes"><a class="adr-box superseded" href="YAML%20の%20Slot%20の%20body%20と%20include%20をなくす.html">YAML の Slot の body と include をなくす</a></div></div><div class="next"></div></nav>
+<nav class="adr-nav"><div class="prev"><p class="adr-nav-label">← 過去の決定</p><div class="boxes"><a class="adr-box superseded" href="docvが読み書きするディレクトリをdirにまとめる.html">docv が読み書きするディレクトリを dir にまとめる</a></div></div><div class="next"></div></nav>
 <p class="note">カーソルキーの ← と → でも移れる。</p>
 <script>document.addEventListener('keydown',function(e){if(e.altKey||e.ctrlKey||e.metaKey||e.shiftKey||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))return;var side={ArrowLeft:'prev',ArrowRight:'next'}[e.key];var a=side&&document.querySelector('.adr-nav .'+side+' a');if(a)location.href=a.href;});</script>
 </section>
@@ -302,6 +311,7 @@ mark { background: #fff8c5; color: inherit; }
 <li class="h2"><a href="#背景">背景</a></li>
 <li class="h2"><a href="#決めたこと">決めたこと</a></li>
 <li class="h2"><a href="#結果">結果</a></li>
+<li class="h2"><a href="#選ばなかった案">選ばなかった案</a></li>
 </ul>
 </nav>
 </body>

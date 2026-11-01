@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>docv のサービス仕様をページに分け、1 ページ目を docv desc と同じファイルにする - ADR - docv</title>
+<title>docv が読み書きするディレクトリを dir にまとめる - ADR - docv</title>
 <style>
 /* docv build の HTML の見た目。中身を読めることだけを考え、飾らない。 */
 
@@ -233,7 +233,7 @@ mark { background: #fff8c5; color: inherit; }
 </ul>
 </nav>
 <main>
-<p class="source"><code>docv/adr/service-spec-pages.md</code><button type="button" class="copy" data-path="docv/adr/service-spec-pages.md" title="パスをコピーする" aria-label="パスをコピーする" hidden><svg class="ready" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></p>
+<p class="source"><code>docv/adr/dir-keys.md</code><button type="button" class="copy" data-path="docv/adr/dir-keys.md" title="パスをコピーする" aria-label="パスをコピーする" hidden><svg class="ready" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></p>
 <script>// docv build の Slot、ADR、Free ファイルのページの JS。h1 の上の元のファイルのパスを、ボタンでクリップボードにコピーする。
 // ボタンは JS が動くときだけ出す。コピーしたら、少しの間ボタンを済みの印にする。
 (function () {
@@ -283,20 +283,26 @@ mark { background: #fff8c5; color: inherit; }
 })();
 </script>
 <section class="slot">
-<h1><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"/><path d="M5 4h12l-2.5 4 2.5 4H5"/></svg>docv のサービス仕様をページに分け、1 ページ目を docv desc と同じファイルにする</h1>
+<h1><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"/><path d="M5 4h12l-2.5 4 2.5 4H5"/></svg>docv が読み書きするディレクトリを dir にまとめる</h1>
+<p class="status">この決定は打ち消された。新しい決定は <a href="dirの4つのディレクトリを互いに離し、HTMLの既定をoutput-docv-htmlにする.html">dir の 4 つのディレクトリを互いに離し、HTML の既定を output/docv/html にする</a></p>
 <h2 id="背景">背景</h2>
-<p>docv のサービス仕様は、<code>assets/desc.md</code> へのシンボリックリンク 1 つで、<code>docv desc</code> と同じ内容だった。desc は AI Agent が最初に読む要点なので、詳しいことを書き足せない。そのため、規格の詳しいことを Free ファイルの <code>docs/spec/</code> に置いていた。Slot のミッションに当たる内容が Free ファイルに溢れ、Slot の作りを使えていなかった。</p>
+<p>Free ファイルの置き場所は <code>docs</code>（glob の配列）、Slot は <code>slots.dir</code>、出力は <code>output.dir</code> と、置き場所の項目が散らばっていた。<code>docs</code> が複数書けるため、リンクの表示文字の起点を推し量る必要があった。出力を git で管理するかを <code>output.commit</code> で決め、docv が出力先に <code>.gitignore</code> を置いていた。</p>
 <h2 id="決めたこと">決めたこと</h2>
-<p>サービス仕様をページに分ける。1 ページ目（概要）は <code>assets/desc.md</code> へのシンボリックリンクにし、<code>docv desc</code> と同じ内容を保つ。<code>docs/spec/</code> の規格は、2 ページ目以降に移す。<code>docs/</code> には、スキーマの写しと図だけを残す。</p>
+<ul>
+<li>置き場所は <code>dir</code> にまとめ、<code>free</code>（Free ファイル）、<code>slots</code>（Slot ファイル）、<code>html</code>（HTML）、<code>image</code>（JPG）を書く</li>
+<li><code>dir.free</code> はディレクトリ 1 つだけにする。リンクの表示文字は、このディレクトリからのパスにする</li>
+<li><code>dir.image</code> を書いたときだけ、Slot のページを JPG にする</li>
+<li>出力を git で管理するかは、プロジェクトの <code>.gitignore</code> に任せ、docv は <code>.gitignore</code> を書かない</li>
+</ul>
 <h2 id="結果">結果</h2>
-<p>規格の詳しいことも、Slot の中で読める。<code>docv desc</code> の出力は、1 ページ目の h1 をタブの名前（概要）にしたほかは変わらない。Free ファイルのタグは、スキーマだけになる。</p>
+<p>置き場所はすべて <code>dir</code> を見れば分かる。<code>dir.free</code> の外の Markdown（<code>README.md</code> など）は、管理対象にならない。</p>
 <h2 id="選ばなかった案">選ばなかった案</h2>
 <div class="table-scroll"><table><thead><tr><th>案</th><th>選ばなかった理由</th></tr></thead><tbody>
-<tr><td>サービス仕様を 1 ファイルのまま、詳しいことを <code>docs/spec/</code> に置く</td><td>Slot のミッションに当たる内容が、Free ファイルに溢れる</td></tr>
-<tr><td>desc とサービス仕様を別のファイルにする</td><td>同じことが 2 か所にあり、揃え続ける必要がある</td></tr>
+<tr><td><code>docs</code> を glob の配列のまま残す</td><td>複数書く場面がなく、起点の推し量りが要る</td></tr>
+<tr><td><code>output.image</code> を true か false で残す</td><td>JPG の置き場所を HTML と分けられない</td></tr>
 </tbody></table></div>
 
-<nav class="adr-nav"><div class="prev"><p class="adr-nav-label">← 過去の決定</p><div class="boxes"><a class="adr-box superseded" href="docv%20自身の設計は%20Slot%20に書き、spec%20には規格の詳細だけを残す.html">docv 自身の設計は Slot に書き、spec には規格の詳細だけを残す</a><a class="adr-box superseded" href="../フレームワークの範囲/docv%20desc%20はサービス仕様と同じ%20docv%20の概要を出す.html">docv desc はサービス仕様と同じ docv の概要を出す</a></div></div><div class="next"></div></nav>
+<nav class="adr-nav"><div class="prev"></div><div class="next"><p class="adr-nav-label">新しい決定 →</p><div class="boxes"><a class="adr-box" href="dirの4つのディレクトリを互いに離し、HTMLの既定をoutput-docv-htmlにする.html">dir の 4 つのディレクトリを互いに離し、HTML の既定を output/docv/html にする</a></div></div></nav>
 <p class="note">カーソルキーの ← と → でも移れる。</p>
 <script>document.addEventListener('keydown',function(e){if(e.altKey||e.ctrlKey||e.metaKey||e.shiftKey||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))return;var side={ArrowLeft:'prev',ArrowRight:'next'}[e.key];var a=side&&document.querySelector('.adr-nav .'+side+' a');if(a)location.href=a.href;});</script>
 </section>

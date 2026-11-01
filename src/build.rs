@@ -205,23 +205,31 @@ fn render(project: &Project, out: &Path, index: Option<&Path>) -> Result<Vec<Slo
     Ok(slots)
 }
 
-/// Slot のページの、出力先からの相対パス。`サービス/利用マニュアル.html`。
+/// Slot のページの、出力先からの相対パス。`サービス/利用マニュアル.html`。名前の空白は除く（`開発者向けガイド/Docガイド.html`）。
 /// 分けた Slot のページは、Slot の名前のディレクトリの下に、ページの名前で置く。`サービス/サービス仕様/管理者向け機能.html`。
 fn page_path(slot: &Slot) -> String {
     match &slot.page {
         Some(page) => format!(
             "{}/{}/{}.html",
-            slot.def.group.label(),
-            slot.def.label,
+            file_name(slot.def.group.label()),
+            file_name(slot.def.label),
             file_name(&page.title)
         ),
-        None => format!("{}/{}.html", slot.def.group.label(), slot.def.label),
+        None => format!(
+            "{}/{}.html",
+            file_name(slot.def.group.label()),
+            file_name(slot.def.label)
+        ),
     }
 }
 
-/// Slot の JPG の、dir.image からの相対パス。`サービス/用語集.jpg`。
+/// Slot の JPG の、dir.image からの相対パス。`サービス/用語集.jpg`。名前の空白は除く（`開発者向けガイド/Docガイド.jpg`）。
 pub(crate) fn jpg_path(slot: &Slot) -> String {
-    format!("{}/{}.jpg", slot.def.group.label(), slot.def.label)
+    format!(
+        "{}/{}.jpg",
+        file_name(slot.def.group.label()),
+        file_name(slot.def.label)
+    )
 }
 
 fn read_page(project: &Project, path: &str) -> Result<Page> {
@@ -239,10 +247,11 @@ fn read_page(project: &Project, path: &str) -> Result<Page> {
 }
 
 /// Free ファイルのページの、出力先からの相対パス。`プロジェクト詳細/docs/order.html`。
+/// ディレクトリとファイルの名前の空白は除く（`docs/my notes/a b.md` は `プロジェクト詳細/docs/mynotes/ab.html`）。
 fn doc_page(source: &str) -> String {
     format!(
         "{DETAIL_DIR}/{}.html",
-        source.strip_suffix(".md").unwrap_or(source)
+        no_space(source.strip_suffix(".md").unwrap_or(source))
     )
 }
 
@@ -1753,7 +1762,7 @@ impl<'a> Dir<'a> {
     }
 }
 
-/// 決定のページの、出力先からの相対パス。`ADR/<まとまり>/<題>.html`。
+/// 決定のページの、出力先からの相対パス。`ADR/<まとまり>/<題>.html`。名前の空白は除く（`ADR/言語/Goにする.html`）。
 fn adr_page(a: &Adr) -> String {
     format!(
         "{ADR_DIR}/{}/{}.html",
@@ -1762,9 +1771,14 @@ fn adr_page(a: &Adr) -> String {
     )
 }
 
-/// まとまりの名前を、ファイル名に使える形にする。
+/// 名前を、ファイル名に使える形にする。区切りの文字は - にし、空白は除く。
 fn file_name(name: &str) -> String {
-    name.replace(['/', '\\'], "-")
+    no_space(&name.replace(['/', '\\'], "-"))
+}
+
+/// 出力するファイルとディレクトリの名前から、空白（全角も含む）を除く。CLI や git で、パスを引用符で囲まずに扱えるように。
+fn no_space(name: &str) -> String {
+    name.chars().filter(|c| !c.is_whitespace()).collect()
 }
 
 /// タブに出す OS の名前。
@@ -2263,11 +2277,9 @@ mod tests {
             manual.contains("<h2 id=\"demo-run\">demo run</h2>"),
             "{manual}"
         );
-        // 名前に空白のある Slot のページは、リンクで空白を %20 にする
-        assert!(
-            index.contains("href=\"システム/DB%20仕様書.html\""),
-            "{index}"
-        );
+        // 名前に空白のある Slot のページは、ファイル名から空白を除く
+        assert!(index.contains("href=\"システム/DB仕様書.html\""), "{index}");
+        assert!(out.join("システム/DB仕様書.html").is_file());
         let cost = read("運用/費用.html");
         assert!(cost.contains("<td class=\"num\">3 ドル</td>"), "{cost}");
         assert!(
@@ -2287,15 +2299,15 @@ mod tests {
             "{adr_index}"
         );
         assert!(
-            adr_index.contains("<div class=\"lane\"><a class=\"adr-box superseded\" href=\"ADR/言語/Go%20にする.html\">Go にする</a><span class=\"arrow\">→</span><a class=\"adr-box\" href=\"ADR/言語/Rust%20にする.html\">"),
+            adr_index.contains("<div class=\"lane\"><a class=\"adr-box superseded\" href=\"ADR/言語/Goにする.html\">Go にする</a><span class=\"arrow\">→</span><a class=\"adr-box\" href=\"ADR/言語/Rustにする.html\">"),
             "{adr_index}"
         );
         // つながりのない決定は、つながりの後ろに、箱を折り返して並べる
         assert!(
-            adr_index.contains("</div>\n<div class=\"adr-grid\"><a class=\"adr-box\" href=\"ADR/言語/React%20にする.html\">React にする</a></div>"),
+            adr_index.contains("</div>\n<div class=\"adr-grid\"><a class=\"adr-box\" href=\"ADR/言語/Reactにする.html\">React にする</a></div>"),
             "{adr_index}"
         );
-        let go = read("ADR/言語/Go にする.html");
+        let go = read("ADR/言語/Goにする.html");
         assert!(go.contains("</svg>Go にする</h1>"), "{go}");
         // ADR のページにも、h1 の上に元のファイルのパスを置く
         assert!(
@@ -2304,11 +2316,11 @@ mod tests {
         );
         // 打ち消された決定は、h1 の下に、打ち消されたことと新しい決定へのリンクを出す
         assert!(
-            go.contains("</svg>Go にする</h1>\n<p class=\"status\">この決定は打ち消された。新しい決定は <a href=\"Rust%20にする.html\">Rust にする</a></p>"),
+            go.contains("</svg>Go にする</h1>\n<p class=\"status\">この決定は打ち消された。新しい決定は <a href=\"Rustにする.html\">Rust にする</a></p>"),
             "{go}"
         );
         assert!(
-            go.contains("<nav class=\"adr-nav\"><div class=\"prev\"></div><div class=\"next\"><p class=\"adr-nav-label\">新しい決定 →</p><div class=\"boxes\"><a class=\"adr-box\" href=\"Rust%20にする.html\">Rust にする</a></div></div></nav>\n<p class=\"note\">カーソルキーの ← と → でも移れる。</p>"),
+            go.contains("<nav class=\"adr-nav\"><div class=\"prev\"></div><div class=\"next\"><p class=\"adr-nav-label\">新しい決定 →</p><div class=\"boxes\"><a class=\"adr-box\" href=\"Rustにする.html\">Rust にする</a></div></div></nav>\n<p class=\"note\">カーソルキーの ← と → でも移れる。</p>"),
             "{go}"
         );
         assert!(
@@ -2316,7 +2328,7 @@ mod tests {
             "{go}"
         );
         assert_headings(&go);
-        let rust = read("ADR/言語/Rust にする.html");
+        let rust = read("ADR/言語/Rustにする.html");
         assert!(
             rust.contains("<h2 id=\"選ばなかった案\">選ばなかった案</h2>"),
             "{rust}"
@@ -2340,7 +2352,7 @@ mod tests {
         );
         assert!(!rust.contains("2026-03-01"), "{rust}");
         assert!(
-            rust.contains("<nav class=\"adr-nav\"><div class=\"prev\"><p class=\"adr-nav-label\">← 過去の決定</p><div class=\"boxes\"><a class=\"adr-box superseded\" href=\"Go%20にする.html\">Go にする</a></div></div><div class=\"next\"></div></nav>"),
+            rust.contains("<nav class=\"adr-nav\"><div class=\"prev\"><p class=\"adr-nav-label\">← 過去の決定</p><div class=\"boxes\"><a class=\"adr-box superseded\" href=\"Goにする.html\">Go にする</a></div></div><div class=\"next\"></div></nav>"),
             "{rust}"
         );
         assert_headings(&rust);
@@ -2380,8 +2392,9 @@ mod tests {
         let (dir, project) = project(&[
             (
                 "docs/a.md",
-                "---\nmission: q\n---\n# A\n\n[s](../docv/system/system.md#部品) [d](../docv/adr/go.md)\n",
+                "---\nmission: q\n---\n# A\n\n[s](../docv/system/system.md#部品) [d](../docv/adr/go.md) [n](<my notes/b c.md>)\n",
             ),
+            ("docs/my notes/b c.md", "---\nmission: n\n---\n# B\n"),
             ("docv/system/system.md", "# システム仕様\n"),
             (
                 "docv/adr/go.md",
@@ -2422,8 +2435,16 @@ mod tests {
             "{page}"
         );
         assert!(
-            page.contains("href=\"../../ADR/言語/Go にする.html\""),
+            page.contains("href=\"../../ADR/言語/Goにする.html\""),
             "{page}"
+        );
+        // Free ファイルのページは、ディレクトリとファイルの名前から空白を除いて置く
+        assert!(page.contains("href=\"mynotes/bc.html\""), "{page}");
+        assert!(out.join("プロジェクト詳細/docs/mynotes/bc.html").is_file());
+        let detail = fs::read_to_string(out.join(DETAIL_PAGE)).unwrap();
+        assert!(
+            detail.contains("<a href=\"プロジェクト詳細/docs/mynotes/bc.html\">B</a>"),
+            "{detail}"
         );
     }
 
