@@ -21,15 +21,12 @@ entries:
   - path: assets/desc.md
     desc_markdown: |
       docv desc が出す docv の概要。Slot のサービス仕様の 1 ページ目と同じファイル
-  - path: assets/style.css
+  - path: assets/docv.css
     desc_markdown: |
-      HTML の CSS
-  - path: assets/search.js
+      HTML の CSS。build が出力先の直下に書き、すべてのページが読む
+  - path: assets/docv.js
     desc_markdown: |
-      HTML の検索のページの JS
-  - path: assets/copy.js
-    desc_markdown: |
-      HTML の Slot、ADR、Free ファイルのページで、元のファイルのパスをコピーする JS
+      HTML の JS（パスのコピー、決定のページのカーソルキーでの移動、タグのトグル、検索）。build が出力先の直下に書き、すべてのページが読む
   - path: docs/
     desc_markdown: |
       このリポジトリの Free ファイル（スキーマの写し）と図。docv 自身で管理する

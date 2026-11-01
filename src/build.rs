@@ -39,9 +39,12 @@ use crate::slot::{self, Content, DEFS, Group, Slot};
 use crate::textlint;
 use crate::workspace::Project;
 
-const STYLE: &str = include_str!("../assets/style.css");
-const SEARCH: &str = include_str!("../assets/search.js");
-const COPY: &str = include_str!("../assets/copy.js");
+/// すべてのページが読む CSS と JS。出力先の直下に書き、各ページから相対パスで読む。
+/// ページに埋め込まないのは、出力先をコミットするリポジトリで、CSS と JS を変えたときの差分を 1 ファイルに収めるため。
+const CSS: &str = include_str!("../assets/docv.css");
+const JS: &str = include_str!("../assets/docv.js");
+const CSS_FILE: &str = "docv.css";
+const JS_FILE: &str = "docv.js";
 
 /// docv が作った出力先であることを示すファイル。これがない出力先は消さない。
 const MARKER: &str = ".docv";
@@ -99,15 +102,6 @@ const DETAIL_DIR: &str = "プロジェクト詳細";
 /// ADR のページを置くディレクトリ（出力先からの相対パス）。決定 1 つを 1 ページにし、`ADR/<まとまり>/<題>.html` に置く。
 const ADR_DIR: &str = "ADR";
 
-/// 決定のページで、カーソルキーの ← と → を、前後の決定のカードへのリンクにする。
-/// 入力欄にいるときと、修飾キーを押しているときは、ブラウザの動きのままにする。
-const ADR_KEYS: &str = "document.addEventListener('keydown',function(e){if(e.altKey||e.ctrlKey||e.metaKey||e.shiftKey||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))return;var side={ArrowLeft:'prev',ArrowRight:'next'}[e.key];var a=side&&document.querySelector('.adr-nav .'+side+' a');if(a)location.href=a.href;});";
-
-/// プロジェクト詳細のタグのトグル。選んだタグのどれかを持つ Free ファイルの行と、その上のディレクトリの行だけを出す。
-/// すべて選んでいるときに押したタグは、そのタグだけを選ぶ。それ以外のときは押したタグを切り替え、1 つも残らなければすべて選び直す。
-/// 絞り込んでも列の幅が変わらないように、すべての行を出した状態のファイルとタグの列の幅で固定する。
-const TAG_FILTER: &str = "(function(){var tb=document.querySelector('table.docs');var hs=tb.tHead.rows[0].cells;var w0=hs[0].offsetWidth,w2=hs[2].offsetWidth;hs[0].style.width=w0+'px';hs[2].style.width=w2+'px';tb.style.tableLayout='fixed';var bs=[].slice.call(document.querySelectorAll('.tag-filter button'));var files=[].slice.call(document.querySelectorAll('table.docs tr[data-path]'));var dirs=[].slice.call(document.querySelectorAll('table.docs tr[data-dir]'));function apply(){var on=bs.filter(function(b){return b.getAttribute('aria-pressed')==='true';}).map(function(b){return b.getAttribute('data-tag');});var all=on.length===bs.length;files.forEach(function(r){var t=JSON.parse(r.getAttribute('data-tags'));r.hidden=!all&&!t.some(function(x){return on.indexOf(x)>=0;});});dirs.forEach(function(d){var p=d.getAttribute('data-dir')+'/';d.hidden=!files.some(function(r){return !r.hidden&&r.getAttribute('data-path').indexOf(p)===0;});});}function pressed(b){return b.getAttribute('aria-pressed')==='true';}function set(b,on){b.setAttribute('aria-pressed',on?'true':'false');}bs.forEach(function(b){b.addEventListener('click',function(){if(bs.every(pressed)){bs.forEach(function(x){set(x,x===b);});}else{set(b,!pressed(b));if(!bs.some(pressed)){bs.forEach(function(x){set(x,true);});}}apply();});});})();";
-
 /// 管理対象のファイル 1 つ。HTML ではツリーの 1 行になる。
 struct Page {
     source: String,
@@ -140,6 +134,8 @@ pub fn run(project: &Project, out: &Path, image: Option<&Path>) -> Result<()> {
     }
     let out = prepare_out(out)?;
     let slots = render(project, &out, index.as_deref())?;
+    write(&out.join(CSS_FILE), CSS)?;
+    write(&out.join(JS_FILE), JS)?;
     write(&out.join(MARKER), MARKER_TEXT)?;
     if let Some(image) = image {
         let image = prepare_out(image)?;
@@ -391,7 +387,7 @@ impl Site<'_> {
         // <script> の中に置くので、</script> などで閉じないように < を書き換える。
         let index = serde_json::to_string(&entries)?.replace('<', "\\u003c");
         let body = format!(
-            "<h1>検索</h1>\n<form class=\"search\" role=\"search\" hidden><input type=\"search\" placeholder=\"入力した文字列をそのまま含む行を探す\" aria-label=\"検索\" autofocus></form>\n<noscript><p class=\"note\">検索には JavaScript が要る。</p></noscript>\n<p class=\"note\" id=\"search-count\"></p>\n<div id=\"search-results\"></div>\n<script>var DOCV_SEARCH={index};\n{SEARCH}</script>\n"
+            "<h1>検索</h1>\n<form class=\"search\" role=\"search\" hidden><input type=\"search\" placeholder=\"入力した文字列をそのまま含む行を探す\" aria-label=\"検索\" autofocus></form>\n<noscript><p class=\"note\">検索には JavaScript が要る。</p></noscript>\n<p class=\"note\" id=\"search-count\"></p>\n<div id=\"search-results\"></div>\n<script>var DOCV_SEARCH={index};</script>\n"
         );
         Ok(self.page(
             &format!(
@@ -562,7 +558,8 @@ impl Site<'_> {
         }
         nav.push_str("</ul>\n</nav>\n");
         let (body, aside) = outline(&wrap_tables(body));
-        page(title, &nav, &body, &aside)
+        let root = |name: &str| relative_path(&self.dir.borrow(), &self.out.join(name));
+        page(title, &root(CSS_FILE), &root(JS_FILE), &nav, &body, &aside)
     }
 
     /// Slot のページ。分けた Slot のページの題には、ページの名前を前に付ける。
@@ -744,7 +741,7 @@ impl Site<'_> {
         };
         let _ = writeln!(
             out,
-            "<nav class=\"adr-nav\">{}{}</nav>\n<p class=\"note\">カーソルキーの ← と → でも移れる。</p>\n<script>{ADR_KEYS}</script>",
+            "<nav class=\"adr-nav\">{}{}</nav>\n<p class=\"note\">カーソルキーの ← と → でも移れる。</p>",
             side("prev", "← 過去の決定", &prev),
             side("next", "新しい決定 →", &next)
         );
@@ -1134,10 +1131,6 @@ impl Site<'_> {
         );
         self.docs_tree(out, top, &path, 0);
         let _ = writeln!(out, "</tbody>\n</table>");
-        // トグルの動きは、表の行を読み込んだ後に付ける。
-        if !self.tag_order().is_empty() {
-            let _ = writeln!(out, "<script>{TAG_FILTER}</script>");
-        }
     }
 
     /// Free ファイルをディレクトリのツリーにして出す。ディレクトリの中は、ファイル、ディレクトリの順。
@@ -1566,8 +1559,9 @@ fn icon(id: &str) -> String {
     )
 }
 
-/// HTML の全体。CSS は中に書く。
-fn page(title: &str, nav: &str, body: &str, aside: &str) -> String {
+/// HTML の全体。CSS と JS は、出力先の直下の docv.css と docv.js を、ページからの相対パス（css、js）で読む。
+/// JS は defer で読み、ページを読み終えて CSS が効いてから動かす。file:// でも読めるように、module にはしない。
+fn page(title: &str, css: &str, js: &str, nav: &str, body: &str, aside: &str) -> String {
     format!(
         "<!DOCTYPE html>
 <html lang=\"ja\">
@@ -1575,8 +1569,8 @@ fn page(title: &str, nav: &str, body: &str, aside: &str) -> String {
 <meta charset=\"utf-8\">
 <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">
 <title>{title}</title>
-<style>
-{STYLE}</style>
+<link rel=\"stylesheet\" href=\"{css}\">
+<script src=\"{js}\" defer></script>
 </head>
 <body>
 {nav}<main>
@@ -1595,7 +1589,7 @@ fn source(path: &str) -> String {
         "<p class=\"source\"><code>{path}</code><button type=\"button\" class=\"copy\" data-path=\"{path}\" title=\"パスをコピーする\" aria-label=\"パスをコピーする\" hidden>\
 <svg class=\"ready\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"9\" y=\"9\" width=\"11\" height=\"11\" rx=\"2\"/><path d=\"M5 15V6a2 2 0 0 1 2-2h9\"/></svg>\
 <svg class=\"done\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12.5l4.5 4.5L19 7.5\"/></svg>\
-</button></p>\n<script>{COPY}</script>\n"
+</button></p>\n"
     )
 }
 
@@ -2196,7 +2190,6 @@ mod tests {
             detail.contains("<button type=\"button\" class=\"tag c0\" data-tag=\"仕様\" aria-pressed=\"true\">仕様<span class=\"count\">1</span></button>"),
             "{detail}"
         );
-        assert!(detail.contains("<script>(function(){"), "{detail}");
         // Free ファイルは 1 つずつ HTML のページにする。見出しは h1 から段を飛ばさない
         let a = fs::read_to_string(out.join("プロジェクト詳細/docs/spec/a.html")).unwrap();
         assert!(a.contains("<h1>A &lt;仕様&gt;</h1>"), "{a}");
@@ -2213,12 +2206,6 @@ mod tests {
         // h1 の上に、元のファイルのルートからのパスと、それをコピーするボタンを置く。ボタンは JS が動くときだけ出す
         assert!(
             a.contains("<main>\n<p class=\"source\"><code>docs/spec/a.md</code><button type=\"button\" class=\"copy\" data-path=\"docs/spec/a.md\" title=\"パスをコピーする\" aria-label=\"パスをコピーする\" hidden>"),
-            "{a}"
-        );
-        assert!(
-            a.contains(
-                "</button></p>\n<script>// docv build の Slot、ADR、Free ファイルのページの JS。"
-            ),
             "{a}"
         );
         // トップのページには、元のファイルのパスを出さない
@@ -2362,10 +2349,6 @@ mod tests {
         // 前後のカードは本文の後に置き、カーソルキーで移れるようにする。id と日付は出さない
         assert!(
             rust.find("<td>Zig</td>").unwrap() < rust.find("<nav class=\"adr-nav\">").unwrap(),
-            "{rust}"
-        );
-        assert!(
-            rust.contains("<script>document.addEventListener('keydown'"),
             "{rust}"
         );
         assert!(!rust.contains("2026-03-01"), "{rust}");
@@ -2672,6 +2655,54 @@ mod tests {
             search.contains("{\"path\":\"docv/service/service/admin.md\",\"href\":\"サービス/サービス仕様/管理者向け機能.html\""),
             "{search}"
         );
+    }
+
+    #[test]
+    fn links_css_and_js_files_from_every_page() {
+        let (dir, project) = project(&[
+            ("docs/spec/a.md", "---\nmission: q\n---\n# A\n"),
+            ("docv/service/install.yaml", "steps: []\n"),
+            (
+                "docv/adr/go.md",
+                "---\ngroup: 言語\ndate: 2026-01-01\n---\n\n# Go にする\n",
+            ),
+        ]);
+        let out = dir.path().join("out");
+        run(&project, &out, None).unwrap();
+        // CSS と JS は、出力先の直下に、assets と同じ中身で書く
+        assert_eq!(fs::read_to_string(out.join("docv.css")).unwrap(), CSS);
+        assert_eq!(fs::read_to_string(out.join("docv.js")).unwrap(), JS);
+        // 各ページは、ページからの相対パスで読む
+        for (page, prefix) in [
+            ("index.html", ""),
+            ("サービス/インストール.html", "../"),
+            ("ADR/言語/Goにする.html", "../../"),
+            ("プロジェクト詳細/docs/spec/a.html", "../../../"),
+        ] {
+            let html = fs::read_to_string(out.join(page)).unwrap();
+            assert!(
+                html.contains(&format!("<link rel=\"stylesheet\" href=\"{prefix}docv.css\">\n<script src=\"{prefix}docv.js\" defer></script>\n</head>")),
+                "{page}: {html}"
+            );
+        }
+        // ページの中には CSS を書かない。JS も、検索のページの索引のほかは書かない
+        let mut dirs = vec![out.clone()];
+        while let Some(d) = dirs.pop() {
+            for entry in fs::read_dir(&d).unwrap() {
+                let path = entry.unwrap().path();
+                if path.is_dir() {
+                    dirs.push(path);
+                } else if path.extension().is_some_and(|e| e == "html") {
+                    let html = fs::read_to_string(&path).unwrap();
+                    assert!(!html.contains("<style"), "{}", path.display());
+                    let inline = html.matches("<script>").count();
+                    let expected = usize::from(path.ends_with(SEARCH_PAGE));
+                    assert_eq!(inline, expected, "{}", path.display());
+                }
+            }
+        }
+        let search = fs::read_to_string(out.join(SEARCH_PAGE)).unwrap();
+        assert!(search.contains("<script>var DOCV_SEARCH=[{"), "{search}");
     }
 
     #[test]
