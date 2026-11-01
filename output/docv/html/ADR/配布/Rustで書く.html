@@ -92,8 +92,8 @@ main > h2:first-child { margin-top: 0; }
 h1, h2, h3, h4, th, td, .card, .adr-box, .outline, .sidebar, .page-tabs { word-break: auto-phrase; }
 h1, h2, h3, h4 { text-wrap: balance; }
 p, li { text-wrap: pretty; }
-/* 段落と箇条書きの 1 行の長さ。表、コード、カードは全幅のまま。手順は中にコードとタブを持つので、抑えない */
-main :is(p, ul, ol):not(.steps) { max-width: 46em; }
+/* 段落と箇条書きの 1 行の長さ。表、コード、カードは全幅のまま */
+main :is(p, ul, ol) { max-width: 46em; }
 
 /* Slot、ADR、Free ファイルのページの、h1 の上の元のファイルのパス。編集したいときに、元のファイルを見つけられるように。コピーのボタンは JS が動くときだけ出る */
 .source { display: flex; align-items: center; gap: 2px; margin: 0 0 4px; color: var(--fg-muted); font-size: 0.85em; }
@@ -156,8 +156,6 @@ table.config ul { margin: 0; padding-left: 1.2em; }
 .choice { padding: 0 8px; border: 1px solid var(--border); border-radius: 6px; color: var(--fg-muted); font-family: var(--mono); font-size: 0.9em; }
 .choice.on { border-color: var(--accent-border); background: var(--accent-bg); color: var(--accent-fg); font-weight: 600; }
 .num { text-align: right; white-space: nowrap; }
-.step-name { font-weight: 600; margin: 0 0 4px; }
-.steps > li { margin-bottom: 12px; }
 
 /* 検索のページ。結果はファイルごとに、パス、タグ、ヒットした行の前後のプレビューを並べる。プレビューの長い行は折り返さず、横にスクロールする */
 form.search input { width: 100%; box-sizing: border-box; margin: 12px 0 4px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font: inherit; }

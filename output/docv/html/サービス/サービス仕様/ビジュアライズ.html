@@ -92,8 +92,8 @@ main > h2:first-child { margin-top: 0; }
 h1, h2, h3, h4, th, td, .card, .adr-box, .outline, .sidebar, .page-tabs { word-break: auto-phrase; }
 h1, h2, h3, h4 { text-wrap: balance; }
 p, li { text-wrap: pretty; }
-/* 段落と箇条書きの 1 行の長さ。表、コード、カードは全幅のまま。手順は中にコードとタブを持つので、抑えない */
-main :is(p, ul, ol):not(.steps) { max-width: 46em; }
+/* 段落と箇条書きの 1 行の長さ。表、コード、カードは全幅のまま */
+main :is(p, ul, ol) { max-width: 46em; }
 
 /* Slot、ADR、Free ファイルのページの、h1 の上の元のファイルのパス。編集したいときに、元のファイルを見つけられるように。コピーのボタンは JS が動くときだけ出る */
 .source { display: flex; align-items: center; gap: 2px; margin: 0 0 4px; color: var(--fg-muted); font-size: 0.85em; }
@@ -156,8 +156,6 @@ table.config ul { margin: 0; padding-left: 1.2em; }
 .choice { padding: 0 8px; border: 1px solid var(--border); border-radius: 6px; color: var(--fg-muted); font-family: var(--mono); font-size: 0.9em; }
 .choice.on { border-color: var(--accent-border); background: var(--accent-bg); color: var(--accent-fg); font-weight: 600; }
 .num { text-align: right; white-space: nowrap; }
-.step-name { font-weight: 600; margin: 0 0 4px; }
-.steps > li { margin-bottom: 12px; }
 
 /* 検索のページ。結果はファイルごとに、パス、タグ、ヒットした行の前後のプレビューを並べる。プレビューの長い行は折り返さず、横にスクロールする */
 form.search input { width: 100%; box-sizing: border-box; margin: 12px 0 4px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font: inherit; }
@@ -326,11 +324,11 @@ mark { background: #fff8c5; color: inherit; }
 <li>ディレクトリは、1 つの表に 1 段だけを「名前 | 説明」で出し、入れ子は表を分けて出す。いちばん上の段の表を先に置き、下の段を持つディレクトリごとに、そのパスの h2 と、その下の 1 段の表を後ろに並べる。並びは、親の次にその子の順。下の段を持つディレクトリの名前は、その表へのページ内リンクにする。表の名前はコードの書式にし、h2 のパスはコードの書式にしない。名前の列の幅は、表どうしで揃える。入れ子を折りたたみで見せないのは、画像にしても読めるようにするため。<code>entries</code> に書いていない途中のディレクトリは、説明なしで出す</li>
 <li>見出しは、ページの先頭の h1（Slot の名前）が 1 つだけで、その下に h2 を並べる。段は飛ばさない（h1 の次に h3 や h4 を置かない）
 <ul>
-<li>Markdown（md の Slot、<code>appendix_markdown</code>、<code>details</code>、手順の中身）の見出しは、置く場所に合わせて段を付け直す。md の Slot と <code>appendix_markdown</code> は h2 から、<code>details</code> と手順の中身は h3 から</li>
+<li>Markdown（md の Slot、<code>appendix_markdown</code>、<code>details</code>、手順の中身）の見出しは、置く場所に合わせて段を付け直す。md の Slot と <code>appendix_markdown</code> は h2 から、<code>details</code> と開発コマンドの中身は h3 から、インストールと環境構築の手順の中身は h4 から</li>
 </ul>
 </li>
-<li>手順（インストール、環境構築）は、「手順」の h2 の下に番号付きで並べる</li>
-<li>開発コマンドは、順番のない項目なので番号を付けない。先頭に目次（項目へのページ内リンク）を置き、各項目を h2 で始める</li>
+<li>手順（インストール、環境構築）は、「手順」の h2 の下に、項目ごとに h3 を並べる</li>
+<li>開発コマンドは、順番のない項目なので、先頭に目次（項目へのページ内リンク）を置き、各項目を h2 で始める</li>
 <li>YAML の Slot の <code>appendix_markdown</code> は、スキーマで決めた項目のあとに続けて出す</li>
 <li>md の Slot の見出しには、Free ファイルのページと同じく、GitHub と同じ形のアンカーを付ける。<code>[docv init](#docv-init)</code> のようなページ内リンクが HTML でも GitHub でも飛べる</li>
 <li>md の Slot のページは JPG にしない。md は GitHub でそのままプレビューできるため</li>

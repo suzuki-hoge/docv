@@ -852,21 +852,24 @@ impl Site<'_> {
         let _ = writeln!(out, "</tbody>\n</table>");
     }
 
-    /// 手順。番号を付けて上から並べる。
+    /// 手順（インストール、環境構築）。「手順」の h2 の下に、項目ごとに h3 を並べる。
     fn steps(&self, out: &mut String, slot_id: &str, steps: &[slot::Step]) {
         if steps.is_empty() {
             return;
         }
-        let _ = writeln!(out, "<h2>手順</h2>\n<ol class=\"steps\">");
+        let _ = writeln!(out, "<h2>手順</h2>");
         for step in steps {
-            let _ = write!(out, "<li><p class=\"step-name\">{}</p>", escape(&step.name));
-            self.step_items(out, slot_id, step);
-            let _ = writeln!(out, "</li>");
+            let _ = writeln!(
+                out,
+                "<h3 id=\"{}\">{}</h3>",
+                slug(&step.id),
+                escape(&step.name)
+            );
+            self.step_items(out, slot_id, step, 4);
         }
-        let _ = writeln!(out, "</ol>");
     }
 
-    /// 順番のない項目（開発コマンド）。先頭に目次を置き、項目ごとに h2 にする。番号は付けない。
+    /// 順番のない項目（開発コマンド）。先頭に目次を置き、項目ごとに h2 にする。
     fn step_sections(&self, out: &mut String, slot_id: &str, steps: &[slot::Step]) {
         if steps.is_empty() {
             return;
@@ -888,14 +891,15 @@ impl Site<'_> {
                 slug(&step.id),
                 escape(&step.name)
             );
-            self.step_items(out, slot_id, step);
+            self.step_items(out, slot_id, step, 3);
         }
     }
 
     /// 手順の中身。items が複数あれば os ごとのタブにし、1 つならタブにしない。
-    fn step_items(&self, out: &mut String, slot_id: &str, step: &slot::Step) {
+    /// top は、中身の Markdown のいちばん浅い見出しの段。項目の見出しの 1 つ下にする。
+    fn step_items(&self, out: &mut String, slot_id: &str, step: &slot::Step, top: usize) {
         if let [item] = step.items.as_slice() {
-            let _ = write!(out, "{}", self.step_markdown(item));
+            let _ = write!(out, "{}", self.step_markdown(item, top));
             return;
         }
         if step.items.is_empty() {
@@ -917,16 +921,16 @@ impl Site<'_> {
                 out,
                 "<div class=\"panel\"><p class=\"panel-os\">{}</p>{}</div>",
                 escape(&os_label(item.os.as_deref().unwrap_or(""))),
-                self.step_markdown(item)
+                self.step_markdown(item, top)
             );
         }
-        let _ = write!(out, "</div>");
+        let _ = writeln!(out, "</div>");
     }
 
-    fn step_markdown(&self, item: &slot::StepItem) -> String {
+    fn step_markdown(&self, item: &slot::StepItem, top: usize) -> String {
         item.markdown
             .as_deref()
-            .map(|m| self.md(m))
+            .map(|m| self.markdown(m, Path::new(""), false, top))
             .unwrap_or_default()
     }
 
@@ -2030,6 +2034,10 @@ mod tests {
                 "steps:\n  - id: binary\n    name: 取る\n    items:\n      - os: macos\n        body_markdown: \"`curl`\"\n      - os: windows\n  - id: cargo\n    name: cargo\n    items:\n      body_markdown: \"`cargo install`\"\nappendix_markdown: |\n  # 補足\n\n  後書き\n",
             ),
             (
+                "docv/guide/setup.yaml",
+                "steps:\n  - id: clone\n    name: 取ってくる\n    items:\n      body_markdown: |\n        # 注意\n\n        `git clone`\n",
+            ),
+            (
                 "docv/service/service.md",
                 "# サービス仕様\n\n概要の本文\n\n## 部品\n\n[a](../../docs/spec/a.md)\n\n<details>\n\n細部\n\n</details>\n\n### 小見出し\n",
             ),
@@ -2163,7 +2171,6 @@ mod tests {
             ),
             "{index}"
         );
-        assert!(!index.contains("<p class=\"step-name\">"), "{index}");
         // ファイルのない Slot も、リンクにせずグレーで並べ、色だけに頼らず「未作成」と書く
         assert!(
             index.contains("<span class=\"card missing\"><svg class=\"icon\""),
@@ -2244,11 +2251,22 @@ mod tests {
             install.contains("<label for=\"tab-install-binary-1\">Windows</label>"),
             "{install}"
         );
+        // 手順は、「手順」の h2 の下に、項目ごとの h3 で出す。中身の見出しは h4 から
         assert!(
             install.contains(
-                "<li><p class=\"step-name\">cargo</p><p><code>cargo install</code></p>\n</li>"
+                "<h2 id=\"手順\">手順</h2>\n<h3 id=\"binary\">取る</h3>\n<div class=\"tabs\">"
             ),
             "{install}"
+        );
+        assert!(
+            install
+                .contains("</div>\n<h3 id=\"cargo\">cargo</h3>\n<p><code>cargo install</code></p>"),
+            "{install}"
+        );
+        let setup = read("開発者向けガイド/環境構築.html");
+        assert!(
+            setup.contains("<h2 id=\"手順\">手順</h2>\n<h3 id=\"clone\">取ってくる</h3>\n<h4>注意</h4>\n<p><code>git clone</code></p>"),
+            "{setup}"
         );
         // appendix_markdown は、項目のあとに続けて出す。見出しは h2 から
         let appendix = install

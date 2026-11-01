@@ -92,8 +92,8 @@ main > h2:first-child { margin-top: 0; }
 h1, h2, h3, h4, th, td, .card, .adr-box, .outline, .sidebar, .page-tabs { word-break: auto-phrase; }
 h1, h2, h3, h4 { text-wrap: balance; }
 p, li { text-wrap: pretty; }
-/* 段落と箇条書きの 1 行の長さ。表、コード、カードは全幅のまま。手順は中にコードとタブを持つので、抑えない */
-main :is(p, ul, ol):not(.steps) { max-width: 46em; }
+/* 段落と箇条書きの 1 行の長さ。表、コード、カードは全幅のまま */
+main :is(p, ul, ol) { max-width: 46em; }
 
 /* Slot、ADR、Free ファイルのページの、h1 の上の元のファイルのパス。編集したいときに、元のファイルを見つけられるように。コピーのボタンは JS が動くときだけ出る */
 .source { display: flex; align-items: center; gap: 2px; margin: 0 0 4px; color: var(--fg-muted); font-size: 0.85em; }
@@ -156,8 +156,6 @@ table.config ul { margin: 0; padding-left: 1.2em; }
 .choice { padding: 0 8px; border: 1px solid var(--border); border-radius: 6px; color: var(--fg-muted); font-family: var(--mono); font-size: 0.9em; }
 .choice.on { border-color: var(--accent-border); background: var(--accent-bg); color: var(--accent-fg); font-weight: 600; }
 .num { text-align: right; white-space: nowrap; }
-.step-name { font-weight: 600; margin: 0 0 4px; }
-.steps > li { margin-bottom: 12px; }
 
 /* 検索のページ。結果はファイルごとに、パス、タグ、ヒットした行の前後のプレビューを並べる。プレビューの長い行は折り返さず、横にスクロールする */
 form.search input { width: 100%; box-sizing: border-box; margin: 12px 0 4px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font: inherit; }
@@ -293,8 +291,8 @@ mark { background: #fff8c5; color: inherit; }
 </tbody>
 </table></div>
 <h2 id="手順">手順</h2>
-<ol class="steps">
-<li><p class="step-name">バイナリを取る</p><div class="tabs"><input type="radio" name="tab-install-binary" id="tab-install-binary-0" checked><label for="tab-install-binary-0">Windows</label><input type="radio" name="tab-install-binary" id="tab-install-binary-1"><label for="tab-install-binary-1">macOS</label><input type="radio" name="tab-install-binary" id="tab-install-binary-2"><label for="tab-install-binary-2">Linux</label><div class="panel"><p class="panel-os">Windows</p><p>GitHub Release から <code>docv-1.4.0-x86_64-pc-windows-msvc.zip</code> を取り、展開した docv.exe を PATH の通った場所に置く。</p>
+<h3 id="binary">バイナリを取る</h3>
+<div class="tabs"><input type="radio" name="tab-install-binary" id="tab-install-binary-0" checked><label for="tab-install-binary-0">Windows</label><input type="radio" name="tab-install-binary" id="tab-install-binary-1"><label for="tab-install-binary-1">macOS</label><input type="radio" name="tab-install-binary" id="tab-install-binary-2"><label for="tab-install-binary-2">Linux</label><div class="panel"><p class="panel-os">Windows</p><p>GitHub Release から <code>docv-1.4.0-x86_64-pc-windows-msvc.zip</code> を取り、展開した docv.exe を PATH の通った場所に置く。</p>
 </div><div class="panel"><p class="panel-os">macOS</p><p>GitHub Release からバイナリを取り、パスの通った場所に置く。arm64 の例。</p>
 <pre><code class="language-sh"><span style="color:#323232;">curl -L https://github.com/suzuki-hoge/docv/releases/download/v1.4.0/docv-1.4.0-aarch64-apple-darwin.tar.gz </span><span style="font-weight:bold;color:#a71d5d;">| </span><span style="color:#323232;">tar xz
 </span><span style="color:#323232;">mv docv /usr/local/bin/
@@ -304,16 +302,15 @@ mark { background: #fff8c5; color: inherit; }
 <pre><code class="language-sh"><span style="color:#323232;">curl -L https://github.com/suzuki-hoge/docv/releases/download/v1.4.0/docv-1.4.0-x86_64-unknown-linux-musl.tar.gz </span><span style="font-weight:bold;color:#a71d5d;">| </span><span style="color:#323232;">tar xz
 </span><span style="color:#323232;">mv docv /usr/local/bin/
 </span></code></pre>
-</div></div></li>
-<li><p class="step-name">ソースから入れる（Rust の環境があるとき）</p><pre><code class="language-sh"><span style="color:#323232;">cargo install --git https://github.com/suzuki-hoge/docv
+</div></div>
+<h3 id="cargo">ソースから入れる（Rust の環境があるとき）</h3>
+<pre><code class="language-sh"><span style="color:#323232;">cargo install --git https://github.com/suzuki-hoge/docv
 </span></code></pre>
-</li>
-<li><p class="step-name">手元のソースから入れる（Rust の環境があるとき）</p><p>クローンしたリポジトリや、手を入れている作業中のソースから入れる。リポジトリのルートで実行する。</p>
+<h3 id="local">手元のソースから入れる（Rust の環境があるとき）</h3>
+<p>クローンしたリポジトリや、手を入れている作業中のソースから入れる。リポジトリのルートで実行する。</p>
 <pre><code class="language-sh"><span style="color:#323232;">cargo install --path .
 </span></code></pre>
 <p><code>~/.cargo/bin/docv</code> に入る。ソースを変えたら、もう一度実行すると入れ直せる。</p>
-</li>
-</ol>
 </section>
 </main>
 <nav class="outline">
@@ -321,6 +318,9 @@ mark { background: #fff8c5; color: inherit; }
 <ul>
 <li class="h2"><a href="#前提とされるもの">前提とされるもの</a></li>
 <li class="h2"><a href="#手順">手順</a></li>
+<li class="h3"><a href="#binary">バイナリを取る</a></li>
+<li class="h3"><a href="#cargo">ソースから入れる（Rust の環境があるとき）</a></li>
+<li class="h3"><a href="#local">手元のソースから入れる（Rust の環境があるとき）</a></li>
 </ul>
 </nav>
 </body>
