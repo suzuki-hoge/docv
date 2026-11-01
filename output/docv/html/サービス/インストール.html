@@ -32,24 +32,12 @@
 </tbody>
 </table></div>
 <h2 id="手順">手順</h2>
-<h3 id="binary">バイナリを取る</h3>
-<div class="tabs"><input type="radio" name="tab-install-binary" id="tab-install-binary-0" checked><label for="tab-install-binary-0">Windows</label><input type="radio" name="tab-install-binary" id="tab-install-binary-1"><label for="tab-install-binary-1">macOS</label><input type="radio" name="tab-install-binary" id="tab-install-binary-2"><label for="tab-install-binary-2">Linux</label><div class="panel"><p class="panel-os">Windows</p><p>GitHub Release から <code>docv-1.4.0-x86_64-pc-windows-msvc.zip</code> を取り、展開した docv.exe を PATH の通った場所に置く。</p>
-</div><div class="panel"><p class="panel-os">macOS</p><p>GitHub Release からバイナリを取り、パスの通った場所に置く。arm64 の例。</p>
-<pre><code class="language-sh"><span style="color:#323232;">curl -L https://github.com/suzuki-hoge/docv/releases/download/v1.4.0/docv-1.4.0-aarch64-apple-darwin.tar.gz </span><span style="font-weight:bold;color:#a71d5d;">| </span><span style="color:#323232;">tar xz
-</span><span style="color:#323232;">mv docv /usr/local/bin/
-</span></code></pre>
-<p>ブラウザでダウンロードしたバイナリは、macOS の Gatekeeper に止められることがある。curl で取れば止められない。</p>
-</div><div class="panel"><p class="panel-os">Linux</p><p>GitHub Release からバイナリを取り、パスの通った場所に置く。x86_64 の例。</p>
-<pre><code class="language-sh"><span style="color:#323232;">curl -L https://github.com/suzuki-hoge/docv/releases/download/v1.4.0/docv-1.4.0-x86_64-unknown-linux-musl.tar.gz </span><span style="font-weight:bold;color:#a71d5d;">| </span><span style="color:#323232;">tar xz
-</span><span style="color:#323232;">mv docv /usr/local/bin/
-</span></code></pre>
-</div></div>
-<h3 id="cargo">ソースから入れる（Rust の環境があるとき）</h3>
+<h3 id="cargo">GitHub のソースから入れる（Rust が必要）</h3>
 <pre><code class="language-sh"><span style="color:#323232;">cargo install --git https://github.com/suzuki-hoge/docv
 </span></code></pre>
-<h3 id="local">手元のソースから入れる（Rust の環境があるとき）</h3>
+<h3 id="local">手元のソースから入れる（Rust が必要）</h3>
 <p>クローンしたリポジトリや、手を入れている作業中のソースから入れる。リポジトリのルートで実行する。</p>
-<pre><code class="language-sh"><span style="color:#323232;">cargo install --path .
+<pre><code class="language-sh"><span style="color:#323232;">make install
 </span></code></pre>
 <p><code>~/.cargo/bin/docv</code> に入る。ソースを変えたら、もう一度実行すると入れ直せる。</p>
 </section>
@@ -59,9 +47,8 @@
 <ul>
 <li class="h2"><a href="#前提とされるもの">前提とされるもの</a></li>
 <li class="h2"><a href="#手順">手順</a></li>
-<li class="h3"><a href="#binary">バイナリを取る</a></li>
-<li class="h3"><a href="#cargo">ソースから入れる（Rust の環境があるとき）</a></li>
-<li class="h3"><a href="#local">手元のソースから入れる（Rust の環境があるとき）</a></li>
+<li class="h3"><a href="#cargo">GitHub のソースから入れる（Rust が必要）</a></li>
+<li class="h3"><a href="#local">手元のソースから入れる（Rust が必要）</a></li>
 </ul>
 </nav>
 </body>

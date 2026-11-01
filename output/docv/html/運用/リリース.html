@@ -23,7 +23,7 @@
 <p class="source"><code>docv/operation/release.md</code><button type="button" class="copy" data-path="docv/operation/release.md" title="パスをコピーする" aria-label="パスをコピーする" hidden><svg class="ready" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></p>
 <section class="slot" id="release">
 <h1><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg>リリース</h1>
-<p>版は <code>Cargo.toml</code> の <code>version</code> で決め、タグの push を合図に、GitHub Actions が各プラットフォーム向けのバイナリを GitHub Release に置く。</p>
+<p>版は <code>Cargo.toml</code> の <code>version</code> で決め、版のタグを push する。バイナリは配らず、利用者は GitHub のソースから cargo で入れる（<a href="../%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9/%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB.html">インストール</a>）。</p>
 <h2 id="手順">手順</h2>
 <ol>
 <li>
@@ -35,15 +35,8 @@
 </span><span style="color:#323232;">git push origin v1.0.0
 </span></code></pre>
 </li>
-<li>
-<p>GitHub Actions が各プラットフォーム向けにビルドし、GitHub Release に置く</p>
-</li>
 </ol>
-<h2 id="置くもの">置くもの</h2>
-<ul>
-<li>アーカイブの名前は <code>docv-&lt;版&gt;-&lt;target&gt;.tar.gz</code>。Windows は .zip。チェックサムも置く</li>
-<li>対象は macOS（arm64、x86_64）、Linux（x86_64、arm64）、Windows（x86_64）</li>
-</ul>
+<p>タグは、<code>docv init</code> と <code>docv slot gen</code> がファイルの 1 行目に書くスキーマの URL の参照先になる。タグを push するまで、その版の URL は開けない。</p>
 
 </section>
 </main>
@@ -51,7 +44,6 @@
 <p class="outline-title">目次</p>
 <ul>
 <li class="h2"><a href="#手順">手順</a></li>
-<li class="h2"><a href="#置くもの">置くもの</a></li>
 </ul>
 </nav>
 </body>

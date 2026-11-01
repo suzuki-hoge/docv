@@ -26,12 +26,12 @@
 <p>docv は、利用者のリポジトリの中で動く単一の CLI で、サーバーを持たない。リポジトリのドキュメントを読み、検査と整形をし、人間が見る HTML を作る。外の道具は、使うと決めたときだけ呼ぶ。</p>
 <p><img src="../../../../docs/figure/system-overview.svg" alt="部品とつながり" /></p>
 <div class="table-scroll"><table><thead><tr><th>部品</th><th>役割</th></tr></thead><tbody>
-<tr><td>docv（CLI）</td><td>ドキュメントを検査し、整形し、HTML を作る。決まり、雛形、HTML の部品を埋め込み、1 つで配る</td></tr>
+<tr><td>docv（CLI）</td><td>ドキュメントを検査し、整形し、HTML を作る。決まり、雛形、HTML の部品を埋め込み、1 つのバイナリにする</td></tr>
 <tr><td>リポジトリのドキュメント</td><td><code>docv.yaml</code>、Slot ファイル、Free ファイル、ADR。AI Agent と人間が書き、docv が読む。fix は書き直す</td></tr>
 <tr><td>textlint</td><td>日本語の文章を検査する。<code>docv.yaml</code> で使うと決めたときだけ、check と fix が npx で呼ぶ</td></tr>
 <tr><td>Chrome</td><td>HTML のページを JPG にする。<code>docv.yaml</code> に <code>dir.image</code> を書いたときだけ、build が動かす</td></tr>
 <tr><td>HTML、JPG</td><td>build の出力。人間が全体像を掴むために見る。HTML はローカルで開き、検索したりリンクを辿れる。JPG は git で管理すれば GitHub で見られ、clone しなくても概要を把握できる。<code>dir.index</code> を書けば、GitHub で Slot ファイルと JPG を辿る入り口のインデックス（<code>docv-index.md</code>）も書く</td></tr>
-<tr><td>GitHub</td><td>スキーマを版のタグごとに公開し、バイナリを配る。YAML の Slot と <code>docv.yaml</code> の 1 行目が、スキーマを指す</td></tr>
+<tr><td>GitHub</td><td>ソースを置き、スキーマを版のタグごとに公開する。利用者は、ソースから cargo で docv を入れる。YAML の Slot と <code>docv.yaml</code> の 1 行目が、スキーマを指す</td></tr>
 </tbody></table></div>
 <p>部品ごとの振る舞いと、部品をまたいで守る決まりは、<a href="%E3%82%B7%E3%82%B9%E3%83%86%E3%83%A0%E4%BB%95%E6%A7%98.html">システム仕様</a>。使っている言語とライブラリは、<a href="%E6%8A%80%E8%A1%93%E3%82%B9%E3%82%BF%E3%83%83%E3%82%AF.html">技術スタック</a>。</p>
 

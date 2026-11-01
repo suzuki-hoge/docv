@@ -5,7 +5,7 @@ stack:
       - name: Rust
         version: 2024 edition
         purpose_markdown: |
-          CLI 本体。単一のバイナリにして配る
+          CLI 本体。単一のバイナリにする
         url: https://www.rust-lang.org/
   - group: 埋め込むもの
     items:
@@ -31,9 +31,6 @@ stack:
           JPG を作るときだけ要る
   - group: 配布
     items:
-      - name: GitHub Actions
+      - name: GitHub
         purpose_markdown: |
-          タグの push で各プラットフォーム向けにビルドする
-      - name: GitHub Release
-        purpose_markdown: |
-          アーカイブとチェックサムを置く
+          ソースと、版のタグごとのスキーマを置く。利用者は `cargo install --git` でソースから入れる

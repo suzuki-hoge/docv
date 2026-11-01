@@ -4,7 +4,7 @@ mission: 版の決め方と、利用者への届け方
 
 # リリース
 
-版は `Cargo.toml` の `version` で決め、タグの push を合図に、GitHub Actions が各プラットフォーム向けのバイナリを GitHub Release に置く。
+版は `Cargo.toml` の `version` で決め、版のタグを push する。バイナリは配らず、利用者は GitHub のソースから cargo で入れる（[インストール](../service/install.yaml)）。
 
 ## 手順
 
@@ -16,9 +16,4 @@ mission: 版の決め方と、利用者への届け方
    git push origin v1.0.0
    ```
 
-3. GitHub Actions が各プラットフォーム向けにビルドし、GitHub Release に置く
-
-## 置くもの
-
-- アーカイブの名前は `docv-<版>-<target>.tar.gz`。Windows は .zip。チェックサムも置く
-- 対象は macOS（arm64、x86_64）、Linux（x86_64、arm64）、Windows（x86_64）
+タグは、`docv init` と `docv slot gen` がファイルの 1 行目に書くスキーマの URL の参照先になる。タグを push するまで、その版の URL は開けない。
