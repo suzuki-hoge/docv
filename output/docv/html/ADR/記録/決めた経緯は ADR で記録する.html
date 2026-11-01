@@ -7,58 +7,116 @@
 <style>
 /* docv build の HTML の見た目。中身を読めることだけを考え、飾らない。 */
 
-body { margin: 0; color: #1f2328; font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif; line-height: 1.7; }
+/* 色。ほかの規則は、この変数で色を指す。タグの 8 色のように 1 か所でしか使わない色は、その規則に書く */
+:root {
+  --fg: #1f2328;
+  /* 補足、選んでいない候補、未作成のカード。白の背景で 4.5:1 以上 */
+  --fg-muted: #656d76;
+  --fg-subtle: #3d444d;
+  /* 行番号や区切りなど、読まなくてよい飾り */
+  --fg-faint: #8c959f;
+  --border: #d8dee4;
+  --bg: #fff;
+  --bg-subtle: #f6f8fa;
+  --accent: #0b6bcb;
+  --accent-fg: #0a5aa8;
+  --accent-bg: #ddf0fd;
+  --accent-border: #9fcff5;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+body { margin: 0; color: var(--fg); background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif; line-height: 1.7; }
 body { display: flex; align-items: flex-start; }
-main { flex: 1; min-width: 0; max-width: 1040px; margin: 0 auto; padding: 32px 40px 80px; }
+/* 本文と右の目次をひとまとまりにして、余った幅の真ん中に置く。広い画面でも、目次を本文の隣に置くため */
+main { flex: 1 1 auto; min-width: 0; max-width: 1040px; margin: 0 0 0 auto; padding: 32px 40px 80px; }
 /* トップの 5 ページを行き来するサイドバー。印刷の表示（JPG）では出さない */
-.sidebar { position: sticky; top: 0; flex: none; width: 200px; height: 100vh; box-sizing: border-box; padding: 32px 16px; border-right: 1px solid #d8dee4; background: #f6f8fa; }
+.sidebar { position: sticky; top: 0; flex: none; width: 200px; height: 100vh; box-sizing: border-box; padding: 32px 16px; border-right: 1px solid var(--border); background: var(--bg-subtle); }
 .sidebar .project { margin: 0 0 12px; font-weight: 600; }
 .sidebar ul { list-style: none; margin: 0; padding: 0; }
-.sidebar a { display: block; padding: 4px 10px; border-radius: 6px; color: #1f2328; }
-.sidebar a:hover { color: #0b6bcb; }
-.sidebar a[aria-current="page"] { background: #fff; color: #0b6bcb; font-weight: 600; }
-@media (max-width: 760px) {
-  body { display: block; }
-  .sidebar { position: static; width: auto; height: auto; padding: 12px 16px; border-right: none; border-bottom: 1px solid #d8dee4; }
-  .sidebar ul { display: flex; gap: 8px; }
-}
+.sidebar a { display: block; padding: 4px 10px; border-radius: 6px; color: var(--fg); }
+.sidebar a:hover { color: var(--accent); }
+.sidebar a[aria-current="page"] { background: var(--bg); color: var(--accent); font-weight: 600; }
 /* 右の目次。見出しのないページにも同じ幅の空の枠を置き、ページを移っても本文の位置を変えない。幅が足りないときと、印刷の表示では出さない */
-.outline { position: sticky; top: 0; flex: none; width: 220px; max-height: 100vh; overflow-y: auto; box-sizing: border-box; padding: 32px 16px; font-size: 0.85em; }
-.outline .outline-title { margin: 0 0 8px; font-weight: 600; color: #656d76; }
-.outline ul { list-style: none; margin: 0; padding: 0 0 0 10px; border-left: 1px solid #d8dee4; }
+.outline { position: sticky; top: 0; flex: none; width: 220px; max-height: 100vh; overflow-y: auto; box-sizing: border-box; margin-right: auto; padding: 32px 16px; font-size: 0.85em; }
+.outline .outline-title { margin: 0 0 8px; font-weight: 600; color: var(--fg-muted); }
+.outline ul { list-style: none; margin: 0; padding: 0 0 0 10px; border-left: 1px solid var(--border); }
 .outline li { margin: 4px 0; }
 .outline li.h3 { padding-left: 1em; }
-.outline a { color: #3d444d; }
-.outline a:hover { color: #0b6bcb; }
-@media (max-width: 1200px) { .outline { display: none; } }
-@media print { body { display: block; } .sidebar, .outline { display: none; } }
-a { color: #0b6bcb; text-decoration: none; }
-code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
-:not(pre) > code { background: #f6f8fa; padding: 0.1em 0.3em; border-radius: 4px; }
-pre { background: #f6f8fa; padding: 10px 12px; border-radius: 6px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
-table { border-collapse: collapse; width: 100%; margin: 8px 0 16px; font-size: 0.93em; }
-th, td { border: 1px solid #d8dee4; padding: 5px 9px; text-align: left; vertical-align: top; }
-th { background: #f6f8fa; white-space: nowrap; }
+.outline a { color: var(--fg-subtle); }
+.outline a:hover { color: var(--accent); }
+@media (max-width: 1200px) {
+  .outline { display: none; }
+  main { margin: 0 auto; }
+}
+/* 幅の狭い画面では、サイドバーを本文の上に置き、項目を折り返して並べる。項目の名前の途中では折り返さない */
+@media (max-width: 760px) {
+  body { display: block; }
+  main { padding: 20px 16px 60px; }
+  .sidebar { position: static; width: auto; height: auto; padding: 12px 16px; border-right: none; border-bottom: 1px solid var(--border); }
+  .sidebar .project { margin-bottom: 4px; }
+  .sidebar ul { display: flex; flex-wrap: wrap; gap: 2px 4px; }
+  .sidebar a { white-space: nowrap; }
+}
+a { color: var(--accent); text-decoration: none; }
+/* 本文の中のリンクは、色だけに頼らず、薄い下線でも示す。ナビ、カード、目次、タブは下線を付けない */
+main :is(p, li, td, th, dd) > a { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); }
+main :is(p, li, td, th, dd) > a:hover { text-decoration-color: currentColor; }
+main ul.toc a, .hit-file a { text-decoration: none; }
+/* キーボードで移ったとき、どこにいるかを枠で示す */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+code, pre { font-family: var(--mono); font-size: 0.9em; }
+/* pre の中の code で、文字の大きさが 2 回小さくならないように */
+pre code { font-size: 1em; }
+:not(pre) > code { background: var(--bg-subtle); padding: 0.1em 0.3em; border-radius: 4px; }
+pre { background: var(--bg-subtle); padding: 10px 12px; border-radius: 6px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+/* 表は包みの中だけで横にスクロールし、はみ出してもページを横に広げない */
+.table-scroll { overflow-x: auto; margin: 8px 0 16px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.93em; }
+th, td { border: 1px solid var(--border); padding: 5px 9px; text-align: left; vertical-align: top; }
+th { background: var(--bg-subtle); white-space: nowrap; }
 td code { white-space: nowrap; }
 img { max-width: 100%; }
+hr { height: 0; margin: 32px 0; border: 0; border-top: 1px solid var(--border); }
+/* 直後の h2 の下線と二重にならないように */
+hr:has(+ h2) { display: none; }
 
-h1 { font-size: 2em; margin: 0 0 8px; }
-h2.group { font-size: 1.5em; margin: 28px 0 0; padding-bottom: 4px; border-bottom: 2px solid #1f2328; }
-main > h2.group:first-child { margin-top: 0; }
-h3 { font-size: 1.25em; margin: 32px 0 0; padding-bottom: 2px; border-bottom: 1px solid #d8dee4; }
-h4 { font-size: 1.02em; margin: 20px 0 4px; }
-/* index.html の Slot のカード。まとまりの中で横に並べる。幅は名前の 7 文字が収まる固定で、はみ出たら横にスクロールする */
+/* 見出しは、段ごとに大きさを変え、h2 にだけ下線を付ける。章と節を見分けるため */
+h1 { font-size: 2em; line-height: 1.3; margin: 0 0 12px; }
+h2 { font-size: 1.4em; line-height: 1.4; margin: 40px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.15em; line-height: 1.5; margin: 28px 0 8px; }
+h4 { font-size: 1em; line-height: 1.5; margin: 20px 0 4px; }
+h1 + h2 { margin-top: 24px; }
+main > h2:first-child { margin-top: 0; }
+/* 和文の折り返し。見出しと短い文字は文節で折り返し、段落は行末をそろえすぎない。どちらも効かないブラウザでは、ふつうに折り返す */
+h1, h2, h3, h4, th, td, .card, .adr-box, .outline, .sidebar, .page-tabs { word-break: auto-phrase; }
+h1, h2, h3, h4 { text-wrap: balance; }
+p, li { text-wrap: pretty; }
+/* 段落と箇条書きの 1 行の長さ。表、コード、カードは全幅のまま。手順は中にコードとタブを持つので、抑えない */
+main :is(p, ul, ol):not(.steps) { max-width: 46em; }
+
+/* Slot、ADR、Free ファイルのページの、h1 の上の元のファイルのパス。編集したいときに、元のファイルを見つけられるように。コピーのボタンは JS が動くときだけ出る */
+.source { display: flex; align-items: center; gap: 2px; margin: 0 0 4px; color: var(--fg-muted); font-size: 0.85em; }
+.source code { padding: 0; background: none; font-size: 1em; overflow-wrap: anywhere; }
+.copy { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 24px; height: 24px; padding: 0; border: 1px solid transparent; border-radius: 6px; background: none; color: var(--fg-muted); cursor: pointer; }
+.copy[hidden] { display: none; }
+.copy:hover { border-color: var(--border); background: var(--bg-subtle); color: var(--accent); }
+.copy svg { width: 16px; height: 16px; }
+.copy .done, .copy.copied .ready { display: none; }
+.copy.copied .done { display: block; color: #1a7f37; }
+
+/* index.html の Slot のカード。まとまりの中で横に並べ、収まらなければ折り返す。幅は名前の 7 文字が収まる固定 */
 .cards { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 8px; }
-.card { flex: none; box-sizing: border-box; width: 170px; display: flex; align-items: center; gap: 6px; padding: 12px 8px; border: 1px solid #d8dee4; border-radius: 8px; color: #1f2328; font-weight: 600; white-space: nowrap; }
-.card .icon { width: 24px; height: 24px; flex: none; color: #0b6bcb; }
+.card { position: relative; flex: none; box-sizing: border-box; width: 170px; display: flex; align-items: center; gap: 6px; padding: 12px 8px; border: 1px solid var(--border); border-radius: 8px; color: var(--fg); font-weight: 600; white-space: nowrap; }
+.card .icon { width: 24px; height: 24px; flex: none; color: var(--accent); }
 .slot > h1 { display: flex; align-items: center; gap: 12px; }
-.slot > h1 .icon { width: 32px; height: 32px; flex: none; color: #0b6bcb; }
-a.card:hover { border-color: #0b6bcb; color: #0b6bcb; }
-/* ファイルのない Slot のカード。リンクにしない */
-.card.missing { color: #8c959f; background: #f6f8fa; cursor: default; user-select: none; }
-.card.missing .icon { color: #afb8c1; }
-.note, .from { color: #656d76; font-size: 0.85em; }
-.summary { font-size: 1.1em; }
+.slot > h1 .icon { width: 32px; height: 32px; flex: none; color: var(--accent); }
+a.card:hover { border-color: var(--accent); color: var(--accent); }
+/* ファイルのない Slot のカード。リンクにせず、破線の枠の上に「未作成」と書く。色だけに頼らないため */
+.card.missing { border-style: dashed; border-color: var(--fg-faint); color: var(--fg-muted); background: var(--bg-subtle); cursor: default; user-select: none; }
+.card.missing .icon { color: var(--fg-faint); }
+.card .state { position: absolute; top: -0.75em; right: 8px; padding: 0 4px; background: var(--bg); color: var(--fg-muted); font-size: 0.7em; line-height: 1.4; }
+.note { color: var(--fg-muted); font-size: 0.85em; }
 /* 開発コマンドの先頭の目次 */
 ul.toc { margin: 8px 0 16px; padding-left: 1.2em; }
 ul.toc li { margin: 2px 0; }
@@ -66,8 +124,7 @@ ul.toc li { margin: 2px 0; }
 table.words { table-layout: fixed; }
 table.words th:nth-child(1), table.words th:nth-child(2) { width: 9em; }
 table.words td:nth-child(1), table.words td:nth-child(2) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-h2 { font-size: 1.25em; margin: 28px 0 4px; padding-bottom: 2px; border-bottom: 1px solid #d8dee4; }
-.tag { display: inline-block; border: 1px solid #d8dee4; border-radius: 10px; padding: 0 7px; margin: 0 3px 2px 0; font-size: 0.8em; color: #3d444d; }
+.tag { display: inline-block; border: 1px solid var(--border); border-radius: 10px; padding: 0 7px; margin: 0 3px 2px 0; font-size: 0.8em; color: var(--fg-subtle); }
 /* タグの色。淡い 8 色を、出てきた順に割り当てる */
 .tag.c0 { background: #ddf4ff; border-color: #b6e3ff; }
 .tag.c1 { background: #dafbe1; border-color: #aceebb; }
@@ -77,7 +134,6 @@ h2 { font-size: 1.25em; margin: 28px 0 4px; padding-bottom: 2px; border-bottom: 
 .tag.c5 { background: #fff1e5; border-color: #ffd8b5; }
 .tag.c6 { background: #e6fbf7; border-color: #b3ece2; }
 .tag.c7 { background: #ffeff7; border-color: #ffd3eb; }
-/* Free ファイルのツリー。ディレクトリの行は薄い水色で、ファイルの行と見分ける */
 /* プロジェクト詳細のタグのトグル。選んでいないタグは薄くする */
 .tag-filter { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 4px; }
 .tag-filter button { font-family: inherit; font-size: 0.85em; line-height: 1.6; padding: 1px 10px; margin: 0; cursor: pointer; }
@@ -86,8 +142,9 @@ h2 { font-size: 1.25em; margin: 28px 0 4px; padding-bottom: 2px; border-bottom: 
 /* Free ファイルのツリーの列。ファイルとタグは中身の幅で折り返さず、ミッションは残りの幅に 1 行で収め、はみ出たら … にする */
 table.docs td:nth-child(1), table.docs td:nth-child(3) { white-space: nowrap; }
 table.docs td:nth-child(2) { width: 100%; max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Free ファイルのツリーのディレクトリの行。薄い水色で、ファイルの行と見分ける */
 table.docs tr.dir td { padding: 0; }
-table.docs tr.dir div { padding: 5px 9px; background: #eef7fc; color: #3d444d; font-weight: 600; }
+table.docs tr.dir div { padding: 5px 9px; background: #eef7fc; color: var(--fg-subtle); font-weight: 600; }
 /* ディレクトリの表。表どうしで、名前の列の幅をそろえる。収まらない名前は折り返す */
 table.tree { table-layout: fixed; }
 table.tree th:nth-child(1) { width: 14em; }
@@ -96,33 +153,34 @@ table.tree td:nth-child(1) { overflow-wrap: anywhere; }
 table.config td:nth-child(1), table.textlint td:nth-child(1) { width: 14em; white-space: nowrap; }
 table.config ul { margin: 0; padding-left: 1.2em; }
 .choices { display: flex; flex-wrap: wrap; gap: 6px; }
-.choice { padding: 0 8px; border: 1px solid #d8dee4; border-radius: 6px; color: #8c959f; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
-.choice.on { border-color: #9fcff5; background: #ddf0fd; color: #0a5aa8; font-weight: 600; }
+.choice { padding: 0 8px; border: 1px solid var(--border); border-radius: 6px; color: var(--fg-muted); font-family: var(--mono); font-size: 0.9em; }
+.choice.on { border-color: var(--accent-border); background: var(--accent-bg); color: var(--accent-fg); font-weight: 600; }
 .num { text-align: right; white-space: nowrap; }
 .step-name { font-weight: 600; margin: 0 0 4px; }
 .steps > li { margin-bottom: 12px; }
 
 /* 検索のページ。結果はファイルごとに、パス、タグ、ヒットした行の前後のプレビューを並べる。プレビューの長い行は折り返さず、横にスクロールする */
-form.search input { width: 100%; box-sizing: border-box; margin: 12px 0 4px; padding: 8px 12px; border: 1px solid #d8dee4; border-radius: 6px; font: inherit; }
-form.search input:focus { outline: none; border-color: #0b6bcb; }
+form.search input { width: 100%; box-sizing: border-box; margin: 12px 0 4px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font: inherit; }
+form.search input:focus { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: -1px; }
 .hit { margin: 20px 0 0; }
 .hit-file { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0 0 4px; }
-.hit-file a { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; }
+.hit-file a { font-family: var(--mono); font-weight: 600; }
 pre.preview { margin: 4px 0; white-space: pre; overflow-wrap: normal; overflow-x: auto; }
-pre.preview .ln { display: inline-block; width: 3em; margin-right: 12px; text-align: right; color: #8c959f; user-select: none; }
+pre.preview .ln { display: inline-block; width: 3em; margin-right: 12px; text-align: right; color: var(--fg-faint); user-select: none; }
 mark { background: #fff8c5; color: inherit; }
 
 /* 分けた Slot のページのタブ。ページへのリンクで、JS は使わない。開いているページのタブは、下の線とつなげる */
-.page-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 12px 0 20px; border-bottom: 1px solid #d8dee4; }
-.page-tabs a { margin-bottom: -1px; padding: 4px 14px; border: 1px solid transparent; border-radius: 6px 6px 0 0; color: #656d76; }
-.page-tabs a:hover { color: #0b6bcb; }
-.page-tabs a[aria-current="page"] { border-color: #d8dee4; border-bottom-color: #fff; background: #fff; color: #1f2328; font-weight: 600; }
+.page-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 12px 0 20px; border-bottom: 1px solid var(--border); }
+.page-tabs a { margin-bottom: -1px; padding: 4px 14px; border: 1px solid transparent; border-radius: 6px 6px 0 0; color: var(--fg-muted); }
+.page-tabs a:hover { color: var(--accent); }
+.page-tabs a[aria-current="page"] { border-color: var(--border); border-bottom-color: var(--bg); background: var(--bg); color: var(--fg); font-weight: 600; }
 
-/* OS ごとの手順のタブ。JS は使わない。印刷の表示（JPG）では、すべての OS を並べる */
+/* OS ごとの手順のタブ。JS は使わない。ラジオボタンは見えないので、キーボードで移ったときはラベルに枠を出す。印刷の表示（JPG）では、すべての OS を並べる */
 .tabs > input { position: absolute; opacity: 0; pointer-events: none; }
-.tabs > label { display: inline-block; padding: 2px 12px; margin-right: 4px; border: 1px solid #d8dee4; border-bottom: none; border-radius: 6px 6px 0 0; cursor: pointer; color: #656d76; }
-.tabs > input:checked + label { background: #f6f8fa; color: #1f2328; font-weight: 600; }
-.tabs > .panel { display: none; border: 1px solid #d8dee4; padding: 8px 12px; }
+.tabs > label { display: inline-block; padding: 2px 12px; margin-right: 4px; border: 1px solid var(--border); border-bottom: none; border-radius: 6px 6px 0 0; cursor: pointer; color: var(--fg-muted); }
+.tabs > input:checked + label { background: var(--bg-subtle); color: var(--fg); font-weight: 600; }
+.tabs > input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tabs > .panel { display: none; border: 1px solid var(--border); padding: 8px 12px; }
 .tabs > input:nth-of-type(1):checked ~ .panel:nth-of-type(1),
 .tabs > input:nth-of-type(2):checked ~ .panel:nth-of-type(2),
 .tabs > input:nth-of-type(3):checked ~ .panel:nth-of-type(3),
@@ -133,19 +191,33 @@ mark { background: #fff8c5; color: inherit; }
 @media print {
   .tabs > label { display: none; }
   .tabs > .panel { display: block; margin-bottom: 8px; }
-  .panel-os { display: block; margin: 0 0 4px; font-weight: 600; color: #656d76; }
+  .panel-os { display: block; margin: 0 0 4px; font-weight: 600; color: var(--fg-muted); }
 }
 
 /* ADR。まとまりごとに、決定のつながりを過去から未来へ左から右に並べる。カードの幅は固定して題を折り返し、並びきらなければ横にスクロールする */
-.lanes { display: flex; flex-direction: column; gap: 8px; margin: 12px 0 20px; }
+.lanes { display: flex; flex-direction: column; gap: 8px; margin: 12px 0 8px; }
 .lane { display: flex; align-items: stretch; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
-.adr-box { flex: none; box-sizing: border-box; width: 220px; display: flex; flex-direction: column; overflow-wrap: anywhere; padding: 8px 14px; border: 1px solid #1f2328; border-radius: 6px; color: #1f2328; font-weight: 600; }
-.adr-box.superseded { border-style: dashed; border-color: #8c959f; color: #656d76; background: #f6f8fa; }
-.arrow { flex: none; align-self: center; color: #656d76; font-size: 1.2em; }
-/* 決定のページの下の、前後の決定のカード */
-.adr-nav { display: flex; justify-content: space-between; gap: 16px; margin: 40px 0 0; padding-top: 16px; border-top: 1px solid #d8dee4; }
-.adr-nav > div { display: flex; align-items: stretch; gap: 8px; }
-.label { font-weight: 600; margin: 12px 0 2px; }
+/* つながりのない決定。1 行に 1 枚ずつ並べず、カードを折り返して並べる */
+.adr-grid { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 8px; }
+.adr-box { flex: none; box-sizing: border-box; width: 220px; display: flex; flex-direction: column; overflow-wrap: anywhere; padding: 8px 14px; border: 1px solid var(--fg); border-radius: 6px; color: var(--fg); font-weight: 600; }
+.adr-box.superseded { border-style: dashed; border-color: var(--fg-faint); color: var(--fg-muted); background: var(--bg-subtle); }
+.arrow { flex: none; align-self: center; color: var(--fg-muted); font-size: 1.2em; }
+/* 打ち消された決定のページの、h1 の下の知らせ。打ち消された箱と同じく破線にする */
+.status { margin: 0 0 16px; padding: 8px 12px; border: 1px dashed var(--fg-faint); border-radius: 6px; background: var(--bg-subtle); color: var(--fg-muted); }
+/* 決定のページの下の、前後の決定のカード。過去の決定を左に、新しい決定を右に置く */
+.adr-nav { display: flex; justify-content: space-between; gap: 16px; margin: 40px 0 0; padding-top: 16px; border-top: 1px solid var(--border); }
+.adr-nav > div { display: flex; flex-direction: column; gap: 4px; }
+.adr-nav > .next { align-items: flex-end; }
+.adr-nav .boxes { display: flex; align-items: stretch; gap: 8px; }
+.adr-nav-label { margin: 0; color: var(--fg-muted); font-size: 0.85em; }
+
+/* 印刷の表示（JPG）。サイドバー、目次、コピーのボタンを出さず、本文だけを写す。ほかの規則に上書きされないように、最後に書く */
+@media print {
+  body { display: block; }
+  main { margin: 0 auto; }
+  .sidebar, .outline, .copy { display: none; }
+  .table-scroll { overflow: visible; }
+}
 </style>
 </head>
 <body>
@@ -161,6 +233,55 @@ mark { background: #fff8c5; color: inherit; }
 </ul>
 </nav>
 <main>
+<p class="source"><code>docv/adr/adr.md</code><button type="button" class="copy" data-path="docv/adr/adr.md" title="パスをコピーする" aria-label="パスをコピーする" hidden><svg class="ready" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></p>
+<script>// docv build の Slot、ADR、Free ファイルのページの JS。h1 の上の元のファイルのパスを、ボタンでクリップボードにコピーする。
+// ボタンは JS が動くときだけ出す。コピーしたら、少しの間ボタンを済みの印にする。
+(function () {
+  var button = document.querySelector('.source .copy');
+  if (!button) return;
+  var label = button.getAttribute('aria-label');
+  button.hidden = false;
+
+  function done() {
+    button.classList.add('copied');
+    button.title = 'コピーした';
+    button.setAttribute('aria-label', 'コピーした');
+    setTimeout(function () {
+      button.classList.remove('copied');
+      button.title = label;
+      button.setAttribute('aria-label', label);
+    }, 1500);
+  }
+
+  // クリップボードの API が使えないブラウザでは、見えない入力欄に入れて選び、コピーする。
+  function fallback(text) {
+    var area = document.createElement('textarea');
+    area.value = text;
+    area.setAttribute('readonly', '');
+    area.style.position = 'fixed';
+    area.style.opacity = '0';
+    document.body.appendChild(area);
+    area.select();
+    var copied = false;
+    try {
+      copied = document.execCommand('copy');
+    } catch (e) {}
+    document.body.removeChild(area);
+    if (copied) done();
+  }
+
+  button.addEventListener('click', function () {
+    var text = button.getAttribute('data-path');
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(done, function () {
+        fallback(text);
+      });
+    } else {
+      fallback(text);
+    }
+  });
+})();
+</script>
 <section class="slot">
 <h1><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"/><path d="M5 4h12l-2.5 4 2.5 4H5"/></svg>決めた経緯は ADR で記録する</h1>
 <h2 id="背景">背景</h2>
@@ -170,13 +291,14 @@ mark { background: #fff8c5; color: inherit; }
 <h2 id="結果">結果</h2>
 <p><code>docv retire</code>、archive のディレクトリ、YAML front matter の source はなくなる。<code>docs/</code> には今の姿だけを書く。</p>
 <h2 id="選ばなかった案">選ばなかった案</h2>
-<table><thead><tr><th>案</th><th>選ばなかった理由</th></tr></thead><tbody>
+<div class="table-scroll"><table><thead><tr><th>案</th><th>選ばなかった理由</th></tr></thead><tbody>
 <tr><td>archive を続ける</td><td>外した本文がたまるだけで、決めた理由を探しにくい</td></tr>
 <tr><td>ADR に状態（採用、却下など）を持たせる</td><td>ADR に残すのは決めたことだけ。打ち消されたかは、新しい決定からのつながりでわかる</td></tr>
 <tr><td>YAML front matter に <code>id</code> を書く</td><td>ファイル名と二重になる</td></tr>
-</tbody></table>
+</tbody></table></div>
 
-<nav class="adr-nav"><div class="prev"><span class="arrow">←</span><a class="adr-box superseded" href="外した内容は理由と一緒に%20archive%20に移す.html">外した内容は理由と一緒に archive に移す</a></div><div class="next"></div></nav>
+<nav class="adr-nav"><div class="prev"><p class="adr-nav-label">← 過去の決定</p><div class="boxes"><a class="adr-box superseded" href="外した内容は理由と一緒に%20archive%20に移す.html">外した内容は理由と一緒に archive に移す</a></div></div><div class="next"></div></nav>
+<p class="note">カーソルキーの ← と → でも移れる。</p>
 <script>document.addEventListener('keydown',function(e){if(e.altKey||e.ctrlKey||e.metaKey||e.shiftKey||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))return;var side={ArrowLeft:'prev',ArrowRight:'next'}[e.key];var a=side&&document.querySelector('.adr-nav .'+side+' a');if(a)location.href=a.href;});</script>
 </section>
 </main>

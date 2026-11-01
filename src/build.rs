@@ -6,6 +6,7 @@
 //! 検索.html に Slot ファイル、ADR、Free ファイルの中身を探す入力欄を置く。
 //! Slot は 1 つずつ独立したページにし、`<まとまり>/<Slot>.html` に置く。
 //! 分けたサービス仕様とシステム仕様は、ページごとに `<まとまり>/<Slot>/<ページの h1>.html` に置き、ページへのリンクをタブにして並べる。
+//! Slot、ADR、Free ファイルのページには、h1 の上に元のファイルのパスと、それをコピーするボタンを置く。表は、横にスクロールできる包みに入れる。
 //! 画像にしても読めるように、折りたたみは使わない。OS ごとの手順のタブは、印刷の表示（JPG）ではすべて並べる。
 //! dir.index を書いていれば、Slot ファイルへのリンクを並べたインデックス（docv-index.md）も書く（index.rs）。
 
@@ -40,6 +41,7 @@ use crate::workspace::Project;
 
 const STYLE: &str = include_str!("../assets/style.css");
 const SEARCH: &str = include_str!("../assets/search.js");
+const COPY: &str = include_str!("../assets/copy.js");
 
 /// docv が作った出力先であることを示すファイル。これがない出力先は消さない。
 const MARKER: &str = ".docv";
@@ -411,7 +413,12 @@ impl Site<'_> {
     /// docv.yaml の項目の表と、docv が使う textlint のルールの表。
     /// 配列の項目は箇条書きにし、選ぶ項目は候補を横に並べて、選んでいるものに色を付ける。値のない項目は `-` を出す。
     fn config(&self, out: &mut String) {
-        let _ = writeln!(out, "<h2 class=\"group\">現在の設定</h2>");
+        // ページの名前の h1 と重ならないように、項目の表の見出しは docv.yaml にする。
+        let _ = writeln!(
+            out,
+            "<h1>{}</h1>\n<h2 class=\"group\">docv.yaml</h2>",
+            Nav::Config.label()
+        );
         let _ = writeln!(
             out,
             "<table class=\"config\">\n<thead><tr><th>項目</th><th>値</th></tr></thead>\n<tbody>"
@@ -494,7 +501,8 @@ impl Site<'_> {
             .to_path_buf();
         let html = self.markdown_with_ids(&page.body, &base, true, 2);
         let body = format!(
-            "<section class=\"doc\">\n<h1>{}</h1>\n{html}</section>\n",
+            "{}<section class=\"doc\">\n<h1>{}</h1>\n{html}</section>\n",
+            source(&page.source),
             escape(&page.title)
         );
         self.page(
@@ -544,7 +552,7 @@ impl Site<'_> {
             );
         }
         nav.push_str("</ul>\n</nav>\n");
-        let (body, aside) = outline(body);
+        let (body, aside) = outline(&wrap_tables(body));
         page(title, &nav, &body, &aside)
     }
 
@@ -553,7 +561,7 @@ impl Site<'_> {
         let path = page_path(slot);
         let dir = Path::new(&path).parent().unwrap_or(Path::new(""));
         *self.dir.borrow_mut() = self.out.join(dir);
-        let mut out = String::new();
+        let mut out = source(&slot.path);
         self.slot(&mut out, slot);
         let title = match &slot.page {
             Some(page) => format!("{} - {}", escape(&page.title), slot.def.label),
@@ -567,8 +575,9 @@ impl Site<'_> {
     }
 
     /// Slot のページへのカード。まとまりごとに、すべての Slot をカードで横に並べる。
-    /// ファイルのない Slot は、リンクにせずグレーで出す。
+    /// ファイルのない Slot は、リンクにせずグレーで出し、「未作成」と書く。
     fn index(&self, out: &mut String) {
+        let _ = writeln!(out, "<h1>{}</h1>", Nav::Overview.label());
         if self.slots.is_empty() {
             let _ = writeln!(
                 out,
@@ -586,7 +595,7 @@ impl Site<'_> {
                 let Some(slot) = self.slots.iter().find(|s| s.def.id == def.id) else {
                     let _ = writeln!(
                         out,
-                        "<span class=\"card missing\">{}{}</span>",
+                        "<span class=\"card missing\">{}{}<span class=\"state\">未作成</span></span>",
                         icon(def.id),
                         def.label
                     );
@@ -605,31 +614,43 @@ impl Site<'_> {
     }
 
     /// ADR の図。まとまりごとに h2 を置き、決定のつながりを過去から未来へ、左から右に箱と矢印で並べる。
-    /// 箱は、その決定のページへのリンク。
+    /// つながりのない決定は、1 行に 1 つずつ並べず、つながりの後ろに箱を折り返して並べる。箱は、その決定のページへのリンク。
     fn adr_lanes(&self, out: &mut String) {
-        for group in adr::groups(self.adrs) {
-            let members: Vec<&Adr> = self.adrs.iter().filter(|a| a.group() == group).collect();
+        let _ = writeln!(out, "<h1>{}</h1>", Nav::Adr.label());
+        if self.adrs.iter().any(|a| !a.superseded_by.is_empty()) {
             let _ = writeln!(
                 out,
-                "<h2 class=\"group\">{}</h2>\n<div class=\"lanes\">",
-                escape(group)
+                "<p class=\"note\">破線の箱は、新しい決定に打ち消された決定。</p>"
             );
-            for lane in adr::lanes(&members) {
-                let boxes: Vec<String> = lane.iter().map(|a| self.adr_box(a)).collect();
-                let _ = writeln!(
-                    out,
-                    "<div class=\"lane\">{}</div>",
-                    boxes.join("<span class=\"arrow\">→</span>")
-                );
+        }
+        for group in adr::groups(self.adrs) {
+            let members: Vec<&Adr> = self.adrs.iter().filter(|a| a.group() == group).collect();
+            let _ = writeln!(out, "<h2 class=\"group\">{}</h2>", escape(group));
+            let (chains, singles): (Vec<_>, Vec<_>) =
+                adr::lanes(&members).into_iter().partition(|l| l.len() > 1);
+            if !chains.is_empty() {
+                let _ = writeln!(out, "<div class=\"lanes\">");
+                for lane in chains {
+                    let boxes: Vec<String> = lane.iter().map(|a| self.adr_box(a)).collect();
+                    let _ = writeln!(
+                        out,
+                        "<div class=\"lane\">{}</div>",
+                        boxes.join("<span class=\"arrow\">→</span>")
+                    );
+                }
+                let _ = writeln!(out, "</div>");
             }
-            let _ = writeln!(out, "</div>");
+            if !singles.is_empty() {
+                let boxes: String = singles.iter().map(|l| self.adr_box(l[0])).collect();
+                let _ = writeln!(out, "<div class=\"adr-grid\">{boxes}</div>");
+            }
         }
     }
 
     /// 決定 1 つのページ。
     fn render_adr(&self, a: &Adr) -> String {
         *self.dir.borrow_mut() = self.out.join(ADR_DIR).join(file_name(a.group()));
-        let mut out = String::new();
+        let mut out = source(&a.path);
         let _ = writeln!(out, "<section class=\"slot\">");
         self.adr_detail(&mut out, a);
         let _ = writeln!(out, "</section>");
@@ -666,14 +687,34 @@ impl Site<'_> {
     fn adr_detail(&self, out: &mut String, a: &Adr) {
         let r = &a.record;
         let _ = writeln!(out, "<h1>{}{}</h1>", icon("adr"), escape(&r.title));
+        // 打ち消された決定は、題の下に、打ち消されたことと新しい決定へのリンクを出す。下のカードまで読まなくても分かるように。
+        let newer: Vec<String> = a
+            .superseded_by
+            .iter()
+            .filter_map(|id| self.adrs.iter().find(|x| &x.record.id == id))
+            .map(|x| {
+                format!(
+                    "<a href=\"{}\">{}</a>",
+                    self.adr_href(x),
+                    escape(&x.record.title)
+                )
+            })
+            .collect();
+        if !newer.is_empty() {
+            let _ = writeln!(
+                out,
+                "<p class=\"status\">この決定は打ち消された。新しい決定は {}</p>",
+                newer.join("、")
+            );
+        }
         // 本文は、h1（題）を除き、いちばん浅い見出しを h2 にして出す。
         let base = Path::new(&a.path)
             .parent()
             .unwrap_or(Path::new(""))
             .to_path_buf();
         let _ = writeln!(out, "{}", self.markdown(&r.body, &base, true, 2));
-        // ページの下に、打ち消した過去の決定を ← の左、打ち消された先の新しい決定を → の右に、カードで出す。
-        // カーソルキーの ← と → で、それぞれの先頭のカードのページへ移る。
+        // ページの下に、打ち消した過去の決定を左、打ち消された先の新しい決定を右に、見出しを付けたカードで出す。
+        // カーソルキーの ← と → で、それぞれの先頭のカードのページへ移る。移れることも書いておく。
         let boxes = |ids: &[String]| -> String {
             ids.iter()
                 .filter_map(|id| self.adrs.iter().find(|x| &x.record.id == id))
@@ -684,25 +725,19 @@ impl Site<'_> {
         if prev.is_empty() && next.is_empty() {
             return;
         }
-        let side = |class: &str, html: &str, arrow_first: bool| -> String {
+        let side = |class: &str, label: &str, html: &str| -> String {
             if html.is_empty() {
                 return format!("<div class=\"{class}\"></div>");
             }
-            let arrow = format!(
-                "<span class=\"arrow\">{}</span>",
-                if arrow_first { "←" } else { "→" }
-            );
-            if arrow_first {
-                format!("<div class=\"{class}\">{arrow}{html}</div>")
-            } else {
-                format!("<div class=\"{class}\">{html}{arrow}</div>")
-            }
+            format!(
+                "<div class=\"{class}\"><p class=\"adr-nav-label\">{label}</p><div class=\"boxes\">{html}</div></div>"
+            )
         };
         let _ = writeln!(
             out,
-            "<nav class=\"adr-nav\">{}{}</nav>\n<script>{ADR_KEYS}</script>",
-            side("prev", &prev, true),
-            side("next", &next, false)
+            "<nav class=\"adr-nav\">{}{}</nav>\n<p class=\"note\">カーソルキーの ← と → でも移れる。</p>\n<script>{ADR_KEYS}</script>",
+            side("prev", "← 過去の決定", &prev),
+            side("next", "新しい決定 →", &next)
         );
     }
 
@@ -1054,7 +1089,11 @@ impl Site<'_> {
     // ---- Free ファイルのツリー ----
 
     fn docs(&self, out: &mut String) {
-        let _ = writeln!(out, "<h2 class=\"group\">ドキュメント</h2>");
+        let _ = writeln!(
+            out,
+            "<h1>{}</h1>\n<h2 class=\"group\">ドキュメント</h2>",
+            Nav::Detail.label()
+        );
         if self.pages.is_empty() {
             let _ = writeln!(out, "<p class=\"note\">管理対象のファイルがない。</p>");
             return;
@@ -1535,6 +1574,24 @@ fn page(title: &str, nav: &str, body: &str, aside: &str) -> String {
     )
 }
 
+/// Slot、ADR、Free ファイルのページの h1 の上に置く、元のファイルのルートからのパスと、それをコピーするボタン。
+/// 編集したいときに、元のファイルを見つけられるように。ボタンは JS が動くときだけ出し、印刷の表示（JPG）には写さない。
+fn source(path: &str) -> String {
+    let path = escape(path);
+    format!(
+        "<p class=\"source\"><code>{path}</code><button type=\"button\" class=\"copy\" data-path=\"{path}\" title=\"パスをコピーする\" aria-label=\"パスをコピーする\" hidden>\
+<svg class=\"ready\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"9\" y=\"9\" width=\"11\" height=\"11\" rx=\"2\"/><path d=\"M5 15V6a2 2 0 0 1 2-2h9\"/></svg>\
+<svg class=\"done\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12.5l4.5 4.5L19 7.5\"/></svg>\
+</button></p>\n<script>{COPY}</script>\n"
+    )
+}
+
+/// 表を、横にスクロールできる包みに入れる。幅の狭い画面で表がはみ出しても、ページを横に広げないため。
+fn wrap_tables(body: &str) -> String {
+    body.replace("<table", "<div class=\"table-scroll\"><table")
+        .replace("</table>", "</table></div>")
+}
+
 /// 本文の h2 と h3 から、右のサイドバーの目次を作る。id のない見出しには、GitHub と同じ形の id を付ける。
 /// 見出しがなければ、目次の代わりに同じ幅の空の枠を置く。ページを移っても本文の位置が変わらないようにするため。
 fn outline(body: &str) -> (String, String) {
@@ -1949,6 +2006,10 @@ mod tests {
                 "docv/adr/rust.md",
                 "---\ngroup: 言語\ndate: 2026-03-01\nsupersedes: [go]\n---\n\n# Rust にする\n\n## 選ばなかった案\n\n| 案 | 理由 |\n| --- | --- |\n| Zig | 情報が少ない |\n\n### 細部\n",
             ),
+            (
+                "docv/adr/react.md",
+                "---\ngroup: 言語\ndate: 2026-02-01\n---\n\n# React にする\n\nReact で書く\n",
+            ),
             ("docs/tmp/memo.md", "# Memo\n"),
             (
                 "docv/service/install.yaml",
@@ -2024,11 +2085,11 @@ mod tests {
         );
         // docv が決めた textlint のルールを、検査項目と非検査項目に分け、プリセットごとの表に並べる
         assert!(
-            config.contains("<h3 id=\"検査項目\">検査項目</h3>\n<h4>ja-technical-writing</h4>\n<table class=\"textlint\">\n<thead><tr><th>ルール</th><th>確かめること</th></tr></thead>\n<tbody>\n<tr><td><code>sentence-length</code></td><td>一文を 100 文字以内にする</td></tr>"),
+            config.contains("<h3 id=\"検査項目\">検査項目</h3>\n<h4>ja-technical-writing</h4>\n<div class=\"table-scroll\"><table class=\"textlint\">\n<thead><tr><th>ルール</th><th>確かめること</th></tr></thead>\n<tbody>\n<tr><td><code>sentence-length</code></td><td>一文を 100 文字以内にする</td></tr>"),
             "{config}"
         );
         assert!(
-            config.contains("<h3 id=\"非検査項目\">非検査項目</h3>\n<h4>ja-technical-writing</h4>\n<table class=\"textlint\">\n<thead><tr><th>ルール</th><th>確かめないこと</th></tr></thead>\n<tbody>\n<tr><td><code>max-kanji-continuous-len</code></td><td>漢字が続く長さ</td></tr>"),
+            config.contains("<h3 id=\"非検査項目\">非検査項目</h3>\n<h4>ja-technical-writing</h4>\n<div class=\"table-scroll\"><table class=\"textlint\">\n<thead><tr><th>ルール</th><th>確かめないこと</th></tr></thead>\n<tbody>\n<tr><td><code>max-kanji-continuous-len</code></td><td>漢字が続く長さ</td></tr>"),
             "{config}"
         );
         assert!(
@@ -2043,20 +2104,36 @@ mod tests {
         );
         assert!(!index.contains("class=\"adr-box"), "{index}");
         assert!(!index.contains(">spec/</td>"), "{index}");
-        assert!(!index.contains("<h1>"), "{index}");
-        assert!(!detail.contains("<h1>"), "{detail}");
+        // トップのページにも、ページの名前の h1 を置く。現在の設定の項目の表の見出しは、h1 と重ならないように docv.yaml にする
+        assert!(
+            index.contains("<main>\n<h1>プロジェクト概要</h1>\n"),
+            "{index}"
+        );
+        assert!(
+            detail.contains("<main>\n<h1>プロジェクト詳細</h1>\n"),
+            "{detail}"
+        );
+        assert!(
+            config.contains(
+                "<main>\n<h1>現在の設定</h1>\n<h2 id=\"docvyaml\" class=\"group\">docv.yaml</h2>"
+            ),
+            "{config}"
+        );
+        for html in [&index, &detail, &config, &adr_index] {
+            assert_headings(html);
+        }
         // サービスのまとまりは、サービス概要、サービス仕様、利用マニュアル、インストール、用語集の順
-        let overview = index.find(">サービス概要</span>").unwrap();
+        let overview = index.find(">サービス概要<span class=\"state\">").unwrap();
         let service = index.find(">サービス仕様</a>").unwrap();
         let manual = index.find(">利用マニュアル</a>").unwrap();
         let install = index.find(">インストール</a>").unwrap();
-        let words = index.find(">用語集</span>").unwrap();
+        let words = index.find(">用語集<span class=\"state\">").unwrap();
         assert!(
             overview < service && service < manual && manual < install && install < words,
             "{index}"
         );
         // システムのまとまりは、システム概要、システム仕様、技術スタック、API 仕様書、DB 仕様書の順
-        let at = |label: &str| index.find(&format!(">{label}</")).unwrap();
+        let at = |label: &str| index.find(&format!(">{label}<")).unwrap();
         let system = [
             "システム概要",
             "システム仕様",
@@ -2073,12 +2150,15 @@ mod tests {
             "{index}"
         );
         assert!(!index.contains("<p class=\"step-name\">"), "{index}");
-        // ファイルのない Slot も、リンクにせずグレーで並べる
+        // ファイルのない Slot も、リンクにせずグレーで並べ、色だけに頼らず「未作成」と書く
         assert!(
             index.contains("<span class=\"card missing\"><svg class=\"icon\""),
             "{index}"
         );
-        assert!(index.contains("</svg>用語集</span>"), "{index}");
+        assert!(
+            index.contains("</svg>用語集<span class=\"state\">未作成</span></span>"),
+            "{index}"
+        );
         // プロジェクト詳細.html に、Free ファイルのページへのリンクをツリーに並べる。管理外のファイルは出さない
         let plan = detail
             .find("<tr class=\"dir\" data-dir=\"docs/plan\"><td colspan=\"3\"><div style=\"margin-left:0px\">plan/</div></td></tr>")
@@ -2109,6 +2189,20 @@ mod tests {
             a.contains("<a href=\"../../../プロジェクト詳細.html\" aria-current=\"page\">"),
             "{a}"
         );
+        // h1 の上に、元のファイルのルートからのパスと、それをコピーするボタンを置く。ボタンは JS が動くときだけ出す
+        assert!(
+            a.contains("<main>\n<p class=\"source\"><code>docs/spec/a.md</code><button type=\"button\" class=\"copy\" data-path=\"docs/spec/a.md\" title=\"パスをコピーする\" aria-label=\"パスをコピーする\" hidden>"),
+            "{a}"
+        );
+        assert!(
+            a.contains(
+                "</button></p>\n<script>// docv build の Slot、ADR、Free ファイルのページの JS。"
+            ),
+            "{a}"
+        );
+        // トップのページには、元のファイルのパスを出さない
+        assert!(!index.contains("class=\"source\""), "{index}");
+        assert!(!detail.contains("class=\"source\""), "{detail}");
         assert_headings(&a);
         assert!(plan < spec, "{detail}");
         assert!(!detail.contains("tmp/"), "{detail}");
@@ -2117,6 +2211,11 @@ mod tests {
         let read = |path: &str| fs::read_to_string(out.join(path)).unwrap();
         let install = read("サービス/インストール.html");
         assert!(install.contains("</svg>インストール</h1>"), "{install}");
+        // Slot のページにも、h1 の上に元のファイルのパスを置く
+        assert!(
+            install.contains("<main>\n<p class=\"source\"><code>docv/service/install.yaml</code><button type=\"button\" class=\"copy\" data-path=\"docv/service/install.yaml\" title=\"パスをコピーする\" aria-label=\"パスをコピーする\" hidden>"),
+            "{install}"
+        );
         // Slot のページのサイドバーは、1 つ上のトップのページを指す
         assert!(
             install
@@ -2181,20 +2280,35 @@ mod tests {
             "{cost}"
         );
 
-        // ADR は、ADR.html に、まとまりごとの h2 と決定のつながりの図を置く。
+        // ADR は、ADR.html に、まとまりごとの h2 と決定のつながりの図を置く。破線の箱が何かを、h1 の下に書く。
         // 箱をクリックすると、決定 1 つのページを開く
         assert!(
-            adr_index.contains("<main>\n<h2 id=\"言語\" class=\"group\">言語</h2>"),
+            adr_index.contains("<main>\n<h1>ADR</h1>\n<p class=\"note\">破線の箱は、新しい決定に打ち消された決定。</p>\n<h2 id=\"言語\" class=\"group\">言語</h2>\n<div class=\"lanes\">"),
             "{adr_index}"
         );
         assert!(
             adr_index.contains("<div class=\"lane\"><a class=\"adr-box superseded\" href=\"ADR/言語/Go%20にする.html\">Go にする</a><span class=\"arrow\">→</span><a class=\"adr-box\" href=\"ADR/言語/Rust%20にする.html\">"),
             "{adr_index}"
         );
+        // つながりのない決定は、つながりの後ろに、箱を折り返して並べる
+        assert!(
+            adr_index.contains("</div>\n<div class=\"adr-grid\"><a class=\"adr-box\" href=\"ADR/言語/React%20にする.html\">React にする</a></div>"),
+            "{adr_index}"
+        );
         let go = read("ADR/言語/Go にする.html");
         assert!(go.contains("</svg>Go にする</h1>"), "{go}");
+        // ADR のページにも、h1 の上に元のファイルのパスを置く
         assert!(
-            go.contains("<nav class=\"adr-nav\"><div class=\"prev\"></div><div class=\"next\"><a class=\"adr-box\" href=\"Rust%20にする.html\">Rust にする</a><span class=\"arrow\">→</span></div></nav>"),
+            go.contains("<main>\n<p class=\"source\"><code>docv/adr/go.md</code><button type=\"button\" class=\"copy\" data-path=\"docv/adr/go.md\" title=\"パスをコピーする\" aria-label=\"パスをコピーする\" hidden>"),
+            "{go}"
+        );
+        // 打ち消された決定は、h1 の下に、打ち消されたことと新しい決定へのリンクを出す
+        assert!(
+            go.contains("</svg>Go にする</h1>\n<p class=\"status\">この決定は打ち消された。新しい決定は <a href=\"Rust%20にする.html\">Rust にする</a></p>"),
+            "{go}"
+        );
+        assert!(
+            go.contains("<nav class=\"adr-nav\"><div class=\"prev\"></div><div class=\"next\"><p class=\"adr-nav-label\">新しい決定 →</p><div class=\"boxes\"><a class=\"adr-box\" href=\"Rust%20にする.html\">Rust にする</a></div></div></nav>\n<p class=\"note\">カーソルキーの ← と → でも移れる。</p>"),
             "{go}"
         );
         assert!(
@@ -2208,7 +2322,14 @@ mod tests {
             "{rust}"
         );
         assert!(rust.contains("<td>Zig</td>"), "{rust}");
-        // 前後のカードは本文の後に置き、カーソルキーで移れるようにする。状態や id、日付は出さない
+        // 表は、横にスクロールできる包みに入れる
+        assert!(
+            rust.contains("<div class=\"table-scroll\"><table>"),
+            "{rust}"
+        );
+        // 打ち消されていない決定には、打ち消されたことを出さない
+        assert!(!rust.contains("class=\"status\""), "{rust}");
+        // 前後のカードは本文の後に置き、カーソルキーで移れるようにする。id と日付は出さない
         assert!(
             rust.find("<td>Zig</td>").unwrap() < rust.find("<nav class=\"adr-nav\">").unwrap(),
             "{rust}"
@@ -2219,7 +2340,7 @@ mod tests {
         );
         assert!(!rust.contains("2026-03-01"), "{rust}");
         assert!(
-            rust.contains("<nav class=\"adr-nav\"><div class=\"prev\"><span class=\"arrow\">←</span><a class=\"adr-box superseded\" href=\"Go%20にする.html\">Go にする</a></div><div class=\"next\"></div></nav>"),
+            rust.contains("<nav class=\"adr-nav\"><div class=\"prev\"><p class=\"adr-nav-label\">← 過去の決定</p><div class=\"boxes\"><a class=\"adr-box superseded\" href=\"Go%20にする.html\">Go にする</a></div></div><div class=\"next\"></div></nav>"),
             "{rust}"
         );
         assert_headings(&rust);
@@ -2269,6 +2390,14 @@ mod tests {
         ]);
         let out = dir.path().join("out");
         run(&project, &out, None).unwrap();
+        // 打ち消された決定がなければ、破線の箱の説明を出さない。つながりのない決定だけなら、レーンを作らない
+        let adr_index = fs::read_to_string(out.join(ADR_PAGE)).unwrap();
+        assert!(!adr_index.contains("破線の箱"), "{adr_index}");
+        assert!(!adr_index.contains("class=\"lanes\""), "{adr_index}");
+        assert!(
+            adr_index.contains("<div class=\"adr-grid\"><a class=\"adr-box\""),
+            "{adr_index}"
+        );
         let page = fs::read_to_string(out.join("プロジェクト詳細/docs/a.html")).unwrap();
         // Markdown のリンクは、パーセントエンコードして出る。読めるように戻して比べる
         let bytes = page.as_bytes();
@@ -2360,6 +2489,8 @@ mod tests {
             readme.contains("<li><a href=\"README.html\" aria-current=\"page\">README</a></li>\n<li><a href=\"index.html\">プロジェクト概要</a></li>"),
             "{readme}"
         );
+        // README のページには、元のファイルのパスを出さない
+        assert!(!readme.contains("class=\"source\""), "{readme}");
         // 本文のリンクは、ほかのページと同じく、ページのあるファイルにだけ張る
         assert!(
             readme.contains("<a href=\"%E3%82%B7%E3%82%B9%E3%83%86%E3%83%A0/%E3%82%B7%E3%82%B9%E3%83%86%E3%83%A0%E4%BB%95%E6%A7%98.html\">仕様</a> 索引 コード"),
@@ -2466,6 +2597,11 @@ mod tests {
             user.contains(
                 "<a href=\"../../index.html\" aria-current=\"page\">プロジェクト概要</a>"
             ),
+            "{user}"
+        );
+        // 分けたページには、そのページの元のファイルのパスを出す
+        assert!(
+            user.contains("<p class=\"source\"><code>docv/service/service/user.md</code><button type=\"button\" class=\"copy\" data-path=\"docv/service/service/user.md\" title=\"パスをコピーする\" aria-label=\"パスをコピーする\" hidden>"),
             "{user}"
         );
         // ページの h1 は本文に出さない。目次と、ほかのページへのリンクは、ページごとに効く

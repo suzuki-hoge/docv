@@ -27,6 +27,9 @@ entries:
   - path: assets/search.js
     desc_markdown: |
       HTML の検索のページの JS
+  - path: assets/copy.js
+    desc_markdown: |
+      HTML の Slot、ADR、Free ファイルのページで、元のファイルのパスをコピーする JS
   - path: docs/
     desc_markdown: |
       このリポジトリの Free ファイル（スキーマの写し）と図。docv 自身で管理する

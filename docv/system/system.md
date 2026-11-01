@@ -27,6 +27,7 @@ Rust で書いた単一のバイナリにし、次のものを埋め込む。利
 - docv の概要（`docv desc` が出す `assets/desc.md`）。サービス仕様の 1 ページ目（`docv/service/service/desc.md`）は、このファイルへのシンボリックリンク
 - HTML の CSS（`assets/style.css`）
 - 検索のページの JS（`assets/search.js`）
+- 元のファイルのパスをコピーする JS（`assets/copy.js`）
 - Markdown の整形に使う dprint-plugin-markdown
 - コードブロックの色付けに使う syntect と、その構文の定義とテーマ
 
