@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>開発コマンドとインフラと環境も、ページに分けられるようにする - PDR - docv</title>
+<link rel="stylesheet" href="../../docv.css">
+<script src="../../docv.js" defer></script>
+</head>
+<body>
+<nav class="sidebar">
+<p class="project">docv</p>
+<ul>
+<li><a href="../../README.html">README</a></li>
+<li><a href="../../index.html">プロジェクト概要</a></li>
+<li><a href="../../ADR.html">ADR</a></li>
+<li><a href="../../PDR.html" aria-current="page">PDR</a></li>
+<li><a href="../../プロジェクト詳細.html">プロジェクト詳細</a></li>
+<li><a href="../../現在の設定.html">現在の設定</a></li>
+<li><a href="../../検索.html">検索</a></li>
+</ul>
+</nav>
+<main>
+<p class="source"><code>docv/pdr/develop-infrastructure-pages.md</code><button type="button" class="copy" data-path="docv/pdr/develop-infrastructure-pages.md" title="パスをコピーする" aria-label="パスをコピーする" hidden><svg class="ready" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></p>
+<section class="slot">
+<h1><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22V3"/><path d="M5 5h11l3 3-3 3H5z"/><path d="M19 13H8l-3 3 3 3h11z"/></svg>開発コマンドとインフラと環境も、ページに分けられるようにする</h1>
+<h2 id="背景">背景</h2>
+<p>ページに分けられるのは、サービス仕様とシステム仕様だけだった。画面、サーバ、バッチのように部品ごとに開発のコマンドや環境が違うプロジェクトでは、開発コマンドとインフラと環境も、部品ごとの記述が 1 つのページに並んで長くなる。開発コマンドは YAML の Slot で、md の Slot のように h1 をページの名前にできない。</p>
+<h2 id="決めたこと">決めたこと</h2>
+<p>開発コマンド（<code>guide/develop/</code>）とインフラと環境（<code>operation/infrastructure/</code>）も、1 つのファイルの代わりに、1 ページ 1 つのファイルで置けるようにする。ページの拡張子は、分けないときと同じにする。</p>
+<ul>
+<li>インフラと環境は md なので、サービス仕様とシステム仕様と同じく、YAML front matter に <code>order</code> と <code>mission</code> を書き、本文の h1 をページの名前にする</li>
+<li>開発コマンドは、分けないときの項目に、<code>order</code> とページの名前の <code>title</code> を足す。スキーマは分けないときと同じものを使い、<code>order</code> と <code>title</code> は一緒に書く</li>
+<li><code>order</code> とページの名前の重なりは、同じ Slot のページどうしでだけ確かめる</li>
+</ul>
+<h2 id="結果">結果</h2>
+<p>部品ごとにコマンドや環境が違うプロジェクトでも、ページを分けて読める。YAML のページは、ページごとに JPG を作り、インデックスからもページごとの JPG にリンクする。開発コマンドのスキーマが変わるので、版を上げてタグを打つまで、エディタは前の版のスキーマで確かめる。</p>
+<h2 id="見直す条件">見直す条件</h2>
+<ul>
+<li>利用マニュアルや API 仕様書など、まだ分けられない md の Slot でも、1 つのページが長くなり、分けたいという要望が出たとき</li>
+<li>用語集や環境変数など、開発コマンドのほかの YAML の Slot でも、ページに分けたいという要望が出たとき</li>
+</ul>
+<h2 id="選ばなかった案">選ばなかった案</h2>
+<div class="table-scroll"><table><thead><tr><th>案</th><th>選ばなかった理由</th></tr></thead><tbody>
+<tr><td>開発コマンドのページの名前を、ファイル名にする</td><td>ページのファイル名は自由に付ける決まりで、ほかの分けたページとも揃わない</td></tr>
+<tr><td>開発コマンドのページに、分けないときと別のスキーマを用意する</td><td>同じ項目を 2 つのスキーマで持つことになる</td></tr>
+<tr><td>どの Slot も、ページに分けられるようにする</td><td>分ける要望のない Slot まで、ページの決まりを持つことになる</td></tr>
+</tbody></table></div>
+
+<nav class="decision-nav"><div class="prev"><p class="decision-nav-label">← 過去の決定</p><div class="boxes"><a class="decision-box superseded" href="システム仕様も、サービス仕様と同じくページに分けられるようにする.html">システム仕様も、サービス仕様と同じくページに分けられるようにする</a></div></div><div class="next"></div></nav>
+<p class="note">カーソルキーの ← と → でも移れる。</p>
+</section>
+</main>
+<nav class="outline">
+<p class="outline-title">目次</p>
+<ul>
+<li class="h2"><a href="#背景">背景</a></li>
+<li class="h2"><a href="#決めたこと">決めたこと</a></li>
+<li class="h2"><a href="#結果">結果</a></li>
+<li class="h2"><a href="#見直す条件">見直す条件</a></li>
+<li class="h2"><a href="#選ばなかった案">選ばなかった案</a></li>
+</ul>
+</nav>
+</body>
+</html>
