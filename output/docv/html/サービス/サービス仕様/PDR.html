@@ -25,28 +25,29 @@
 <section class="slot" id="service">
 <h1><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M3 7l9 5 9-5"/><path d="M12 12v10"/></svg>サービス仕様</h1>
 <nav class="page-tabs"><a href="概要.html">概要</a><a href="Slot.html">Slot</a><a href="Free.html">Free</a><a href="ADR.html">ADR</a><a href="PDR.html" aria-current="page">PDR</a><a href="設定ファイル.html">設定ファイル</a><a href="コマンド.html">コマンド</a><a href="ビジュアライズ.html">ビジュアライズ</a></nav>
-<p>PDR（Product Decision Record）は、プロダクトやサービスの決定 1 つを、見直す条件や選ばなかった案と一緒に残す記録。料金、プラン、提供する機能の範囲、対象とする利用者などの決定を残す。技術の決定は <a href="ADR.html">ADR</a> に残す。</p>
+<p>PDR（Product Decision Record）は、プロダクトやサービスの仕様の変更 1 つを、その理由や見直す条件と一緒に残す記録。料金、プラン、提供する機能の範囲、対象とする利用者などを足す・変える・やめるときに書く。なぜ今の仕様になったのかを将来も分かるようにするための履歴なので、案を比べて選んだ決定に限らない。技術の決定は <a href="ADR.html">ADR</a> に残す。</p>
 <p>置き場所、YAML front matter、決めた後に書き換えないこと、HTML の作りは ADR と同じ。このページには、ADR と違うところを書く。</p>
 <hr />
 <h2 id="1-置き場所と書き方">1. 置き場所と書き方</h2>
 <ul>
-<li><code>dir.slot</code>（既定は <code>docv</code>）の下の <code>pdr/</code> に、決定 1 つを 1 つの Markdown で置く</li>
+<li><code>dir.slot</code>（既定は <code>docv</code>）の下の <code>pdr/</code> に、変更 1 つを 1 つの Markdown で置く</li>
 <li>ファイル名と id、YAML front matter の項目（<code>group</code>、<code>date</code>、<code>supersedes</code>）、状態を持たないこと、決めた後に書き換えないことは、<a href="ADR.html">ADR</a> と同じ</li>
 <li><code>supersedes</code> は、PDR だけを指す。ADR と PDR は、同じ id でも別の決定。PDR から ADR に触れるときは、本文のリンクで示す</li>
 </ul>
 <hr />
 <h2 id="2-本文の章">2. 本文の章</h2>
-<p>本文は、h1 の題の下に、次の章をこの順に h2 で書く。任意の章は、書くことがなければ置かない。ADR の章に、見直す条件を足した形。</p>
+<p>本文は、h1 の題の下に、次の章をこの順に h2 で書く。任意の章は、書くことがなければ置かない。ADR の章に見直す条件を足し、選ばなかった案を任意にした形。</p>
 <div class="table-scroll"><table><thead><tr><th>章</th><th>必須</th><th>書くこと</th></tr></thead><tbody>
 <tr><td>背景</td><td>必須</td><td>決める必要が生じた課題と、そのときの利用者、市場、事業の状況</td></tr>
 <tr><td>決めたこと</td><td>必須</td><td>決めたことと、その案を選んだ理由。決めたことが当てはまる範囲（対象の利用者、プラン、機能など）</td></tr>
 <tr><td>決めないこと</td><td>任意</td><td>この PDR では決めないことと、それをどこで決めるか</td></tr>
 <tr><td>結果</td><td>必須</td><td>利用者と事業に起きると見込むこと。引き受けること（できなくなること、後で考えること）も書く</td></tr>
 <tr><td>見直す条件</td><td>必須</td><td>どんな状況になったら、この決定を見直すか。数や時期など、起きたかどうかを確かめられる形で書く</td></tr>
-<tr><td>選ばなかった案</td><td>必須</td><td>比べた案と、それぞれを選ばなかった理由</td></tr>
+<tr><td>選ばなかった案</td><td>任意</td><td>比べた案があれば、それぞれを選ばなかった理由</td></tr>
 <tr><td>参考</td><td>任意</td><td>根拠にしたファイルや資料へのリンク。PDR だけで読めるように、本文の根拠をここにまとめる</td></tr>
 </tbody></table></div>
 <ul>
+<li>選ばなかった案を任意にするのは、PDR が仕様の変更の履歴で、案を比べずに決める変更（機能をやめるなど）も残すため</li>
 <li>見直す条件は、必ず書く。プロダクトやサービスの決定は、利用者や市場が変わると正しさが変わる。決めたときに見込んだことが外れたと、後から気づけるようにするため</li>
 <li>見直す条件に当たっても、PDR は書き換えない。見直して決定を変えるなら、新しい PDR を書き、その <code>supersedes</code> から指す</li>
 <li>章の形は check で確かめない</li>
