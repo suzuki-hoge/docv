@@ -48,7 +48,7 @@ pub fn ensure_writable(path: &Path) -> Result<()> {
 
 /// インデックスの中身。index は書く先のパスで、リンクはそのディレクトリからの相対パスにする。
 /// Slot は、HTML のプロジェクト概要と同じく、まとまりごとに DEFS の順で並べる。置いていない Slot は出さない。
-/// md の Slot は元のファイルへ、YAML の Slot は dir.image を書いていれば JPG へリンクし、書いていなければ出さない。
+/// md の Slot は元のファイルへ、YAML の Slot は dir.image を書いていれば JPG へリンクし、書いていなければ出さない。分けた Slot のページも同じ。
 /// JPG を出すかは、dir.image を書いたかで決める。--no-image で build しても、同じインデックスになる。
 /// Free ファイルと ADR は、置いているディレクトリと、HTML で見るときのページを示す。
 pub fn render(
@@ -74,6 +74,16 @@ pub fn render(
         "{MARKER}\n\n# {}\n\n本ページは、プロジェクトをローカルに取得しなくても、GitHub などのホスティングサービス上で docv のビジュアライズページとほぼ同じ内容を閲覧するためのもの。\n",
         project.title()
     );
+    // md の Slot は元のファイル、YAML の Slot は JPG。dir.image を書いていなければ、YAML の Slot はリンクしない。
+    let target = |slot: &Slot| -> Option<PathBuf> {
+        if matches!(slot.content, Content::Markdown(_)) {
+            Some(source(project, slot))
+        } else {
+            image_dir
+                .as_ref()
+                .map(|dir| dir.join(build::jpg_path(slot)))
+        }
+    };
     for group in Group::ALL {
         let mut lines = Vec::new();
         for def in DEFS.iter().filter(|d| d.group == group) {
@@ -83,18 +93,19 @@ pub fn render(
             };
             if first.page.is_some() {
                 // 分けた Slot は、Slot の名前の下に、ページを order の順に入れ子で並べる。
-                lines.push(format!("- {}", def.label));
-                for slot in &members {
-                    let title = slot.page.as_ref().map_or(def.label, |p| p.title.as_str());
-                    lines.push(format!("  - {}", link(title, &source(project, slot))));
+                let pages: Vec<String> = members
+                    .iter()
+                    .filter_map(|slot| {
+                        let title = slot.page.as_ref().map_or(def.label, |p| p.title.as_str());
+                        target(slot).map(|to| format!("  - {}", link(title, &to)))
+                    })
+                    .collect();
+                if !pages.is_empty() {
+                    lines.push(format!("- {}", def.label));
+                    lines.extend(pages);
                 }
-            } else if matches!(first.content, Content::Markdown(_)) {
-                lines.push(format!("- {}", link(def.label, &source(project, first))));
-            } else if let Some(image_dir) = &image_dir {
-                lines.push(format!(
-                    "- {}",
-                    link(def.label, &image_dir.join(build::jpg_path(first)))
-                ));
+            } else if let Some(to) = target(first) {
+                lines.push(format!("- {}", link(def.label, &to)));
             }
         }
         if !lines.is_empty() {
@@ -181,6 +192,8 @@ mod tests {
             "steps:\n  - id: cargo\n    name: cargo\n    items:\n      body_markdown: \"`cargo install`\"\n",
         ),
         ("docv/guide/doc-guide.md", "# Doc ガイド\n"),
+        ("docv/guide/develop/web.yaml", "order: 2\ntitle: Web 画面\n"),
+        ("docv/guide/develop/api.yaml", "order: 1\ntitle: API\n"),
         (
             "docv/adr/go.md",
             "---\ndate: 2026-01-01\n---\n\n# Go にする\n",
@@ -216,6 +229,9 @@ mod tests {
 
 ## 開発者向けガイド
 
+- 開発コマンド
+  - [API](<out/image/開発者向けガイド/開発コマンド/API.jpg>)
+  - [Web 画面](<out/image/開発者向けガイド/開発コマンド/Web画面.jpg>)
 - [Doc ガイド](<docv/guide/doc-guide.md>)
 
 ## Free ファイル
@@ -235,10 +251,12 @@ ADR の系譜をたどりたい場合は、リポジトリを取得し `docv ope
 
     #[test]
     fn lists_only_md_slots_without_image() {
-        let (dir, project) = project("dir:\n  index: .\n", &FILES[..5]);
+        let (dir, project) = project("dir:\n  index: .\n", &FILES[..7]);
         build::run(&project, &dir.path().join("out"), None).unwrap();
         let text = fs::read_to_string(dir.path().join(FILE_NAME)).unwrap();
         assert!(!text.contains("インストール"), "{text}");
+        // 分けた YAML の Slot も、JPG がなければ Slot の名前ごと出さない
+        assert!(!text.contains("開発コマンド"), "{text}");
         assert!(
             text.contains("- [Doc ガイド](<docv/guide/doc-guide.md>)\n"),
             "{text}"

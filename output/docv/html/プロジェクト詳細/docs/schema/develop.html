@@ -29,7 +29,23 @@
 </span><span style="color:#323232;">  </span><span style="font-weight:bold;color:#183691;">&quot;description&quot;</span><span style="color:#323232;">: &quot;テストやビルドなど、開発者が実行するコマンド&quot;,
 </span><span style="color:#323232;">  </span><span style="font-weight:bold;color:#183691;">&quot;type&quot;</span><span style="color:#323232;">: &quot;object&quot;,
 </span><span style="color:#323232;">  </span><span style="font-weight:bold;color:#183691;">&quot;additionalProperties&quot;</span><span style="color:#323232;">: </span><span style="color:#0086b3;">false</span><span style="color:#323232;">,
+</span><span style="color:#323232;">  </span><span style="font-weight:bold;color:#183691;">&quot;dependentRequired&quot;</span><span style="color:#323232;">: {
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#183691;">&quot;order&quot;</span><span style="color:#323232;">: [
+</span><span style="color:#323232;">      &quot;title&quot;
+</span><span style="color:#323232;">    ],
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#183691;">&quot;title&quot;</span><span style="color:#323232;">: [
+</span><span style="color:#323232;">      &quot;order&quot;
+</span><span style="color:#323232;">    ]
+</span><span style="color:#323232;">  },
 </span><span style="color:#323232;">  </span><span style="font-weight:bold;color:#183691;">&quot;properties&quot;</span><span style="color:#323232;">: {
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#183691;">&quot;order&quot;</span><span style="color:#323232;">: {
+</span><span style="color:#323232;">      </span><span style="font-weight:bold;color:#183691;">&quot;description&quot;</span><span style="color:#323232;">: &quot;ページに分けたときの、ページの並び。`guide/develop/` の直下のページにだけ書き、`title` と一緒に書く。ページどうしで重ねない&quot;,
+</span><span style="color:#323232;">      </span><span style="font-weight:bold;color:#183691;">&quot;type&quot;</span><span style="color:#323232;">: &quot;integer&quot;
+</span><span style="color:#323232;">    },
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#183691;">&quot;title&quot;</span><span style="color:#323232;">: {
+</span><span style="color:#323232;">      </span><span style="font-weight:bold;color:#183691;">&quot;description&quot;</span><span style="color:#323232;">: &quot;ページに分けたときの、ページの名前。HTML のタブの名前になる。`guide/develop/` の直下のページにだけ書き、`order` と一緒に書く。ページどうしで重ねない&quot;,
+</span><span style="color:#323232;">      </span><span style="font-weight:bold;color:#183691;">&quot;type&quot;</span><span style="color:#323232;">: &quot;string&quot;
+</span><span style="color:#323232;">    },
 </span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#183691;">&quot;requirements&quot;</span><span style="color:#323232;">: {
 </span><span style="color:#323232;">      </span><span style="font-weight:bold;color:#183691;">&quot;description&quot;</span><span style="color:#323232;">: &quot;前提とされるもの&quot;,
 </span><span style="color:#323232;">      </span><span style="font-weight:bold;color:#183691;">&quot;type&quot;</span><span style="color:#323232;">: &quot;array&quot;,

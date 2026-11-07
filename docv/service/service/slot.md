@@ -13,7 +13,7 @@ mission: 外から見た機能と、それぞれの振る舞いと決まり
 
 - Slot ファイルは、`docv.yaml` の `dir.slot`（既定は `docv`）に、`<まとまり>/<Slot>.<拡張子>` の名前で置く。まとまりのディレクトリは `service`（サービス）、`system`（システム）、`guide`（開発者向けガイド）、`operation`（運用）。`docs/` には Free ファイルを、`docv/` には Slot ファイルを置く
 - 拡張子は Slot ごとに決まる。YAML の Slot は決まった項目で書き、md の Slot は中身の形を決めず、そのまま HTML に出す
-- サービス仕様とシステム仕様だけは、ページに分けて `service/service/` と `system/system/` に置ける（「md の Slot」の章）
+- サービス仕様、システム仕様、開発コマンド、インフラと環境だけは、ページに分けて `<まとまり>/<Slot>/` に置ける（「ページ分け」の章）
 - `docv/adr/` は ADR の置き場所で、Slot としては読まない（[ADR](adr.md) のページ）
 - `dir.slot` の中でも、除外に当たるファイル（[設定ファイル](config.md) のページの「管理対象と管理外」の章）と、名前がドットで始まるファイルとディレクトリ（`.DS_Store` など）は読まない。それ以外で Slot の名前でないファイルは、check が slot-unknown の error にする
 - Slot を置くかどうかは任意。プロジェクトに当てはまらない Slot は作らない（例: 利用者の手元に入れるものがなければ、インストールの Slot はいらない）
@@ -85,12 +85,25 @@ groups:
 - `mission` がないか違っても、HTML には本文を出す
 - `docv slot gen` は、YAML front matter の `mission` だけを書いたファイルを作り、中身の形は自由だと表示する。Doc ガイド（`guide/doc-guide.md`）だけは、docv が勧めるガイドラインを書いた雛形を作る。雛形にも `mission` を書いてある。作った雛形はプロジェクトのもので、自由に直してよい。docv の版を上げても書き換えない
 
-サービス仕様とシステム仕様は、ページに分けられる。1 つのページが長くならないようにするため。読む人ごとに仕様が分かれるサービス（利用者向けの機能と管理者向けの機能など）や、部品の多いシステム（画面、サーバ、バッチなど）で分ける。
+---
 
-- 分けるときは、1 つのファイルの代わりに、ページのディレクトリの直下に 1 ページ 1 つの Markdown で置く。サービス仕様は `service/service/`、システム仕様は `system/system/` に置く。ファイル名は自由。両方に置くと check の error になる
-- どのページにも、YAML front matter に `order`（整数）と `mission` を書く。ページは `order` の順に並べる。`order` は重ねない。`mission` は、分けないときと同じく、その Slot のミッションと同じ文にする
-- 本文の h1 が、ページの名前になる。h1 は重ねない
-- 分けないときは、今までどおり `service/service.md` か `system/system.md` に書く
+## 5. ページ分け
+
+サービス仕様、システム仕様、開発コマンド、インフラと環境は、ページに分けられる。1 つのページが長くならないようにするため。読む人ごとに仕様が分かれるサービス（利用者向けの機能と管理者向けの機能など）、部品の多いシステム（画面、サーバ、バッチなど）、部品ごとに開発のコマンドや環境が違うプロジェクトで分ける。
+
+| Slot           | 1 つのファイル                | ページのディレクトリ        |
+| -------------- | ----------------------------- | --------------------------- |
+| サービス仕様   | `service/service.md`          | `service/service/`          |
+| システム仕様   | `system/system.md`            | `system/system/`            |
+| 開発コマンド   | `guide/develop.yaml`          | `guide/develop/`            |
+| インフラと環境 | `operation/infrastructure.md` | `operation/infrastructure/` |
+
+- 分けるときは、1 つのファイルの代わりに、ページのディレクトリの直下に 1 ページ 1 つのファイルで置く。拡張子は、分けないときと同じ。ファイル名は自由。両方に置くと check の error になる
+- どのページにも、並びの `order`（整数）とページの名前を書く。ページは `order` の順に並べる。`order` もページの名前も、同じ Slot のページどうしで重ねない。ほかの Slot のページとは比べない
+- 分けないときは、今までどおり 1 つのファイルに書く
+- `docv slot gen` は、1 つのファイルを作り、分けるときの置き場所も表示する。ページがあるときは、1 つのファイルを作らずに error で終わる。ページは手で置く
+
+md のページ（サービス仕様、システム仕様、インフラと環境）は、YAML front matter に `order` と `mission` を書く。`mission` は、分けないときと同じく、その Slot のミッションと同じ文にする。本文の h1 が、ページの名前になる。
 
 ```markdown
 ---
@@ -101,21 +114,35 @@ mission: 外から見た機能と、それぞれの振る舞いと決まり
 # 管理者向け機能
 ```
 
+YAML のページ（開発コマンド）は、分けないときの項目に、`order` と、ページの名前の `title` を足す。スキーマは分けないときと同じで、`order` と `title` は、どちらも書くか、どちらも書かない。分けないときのファイルには、どちらも書かない。
+
+```yaml
+order: 1
+title: Web 画面
+steps:
+  - id: test
+    name: テストを実行する
+    items:
+      body_markdown: |
+        npm test
+```
+
 ---
 
-## 5. check
+## 6. check
 
-| ID                  | 内容                                                                                                                              |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| slot-unknown        | Slot のディレクトリに、Slot の名前でないファイルがある                                                                            |
-| slot-invalid        | YAML の Slot の形に合わない。知らない項目、手順の `id` や `os` の重なり、`os` のない `item`、`ja` も `en` もない用語も含む        |
-|                     | 分けたサービス仕様とシステム仕様のページの形に合わない。YAML front matter の `order` がない、知らない項目、`order` や h1 の重なり |
-|                     | md の Slot の YAML front matter に、知らない項目がある。閉じる `---` がない                                                       |
-|                     | 同じ Slot が、1 つのファイル（`service/service.md` など）と、ページのディレクトリ（`service/service/` など）の両方にある          |
-| slot-mission        | md の Slot の YAML front matter に `mission` がないか、`docv slot list` のミッションと違う                                        |
-| slot-path-missing   | パスの先がない                                                                                                                    |
-| slot-markdown-style | `_markdown` で終わる項目を、`\|` のブロックで書いていない                                                                         |
-| slot-text-multiline | `_markdown` で終わらない文字列の項目が、複数行になっている                                                                        |
+| ID                  | 内容                                                                                                                       |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| slot-unknown        | Slot のディレクトリに、Slot の名前でないファイルがある                                                                     |
+| slot-invalid        | YAML の Slot の形に合わない。知らない項目、手順の `id` や `os` の重なり、`os` のない `item`、`ja` も `en` もない用語も含む |
+|                     | 分けたページの形に合わない。`order` やページの名前（h1 か `title`）がない、知らない項目、同じ Slot のページどうしの重なり  |
+|                     | md の Slot の YAML front matter に、知らない項目がある。閉じる `---` がない                                                |
+|                     | 同じ Slot が、1 つのファイル（`service/service.md` など）と、ページのディレクトリ（`service/service/` など）の両方にある   |
+|                     | 分けないときの開発コマンド（`guide/develop.yaml`）に、`order` か `title` がある                                            |
+| slot-mission        | md の Slot の YAML front matter に `mission` がないか、`docv slot list` のミッションと違う                                 |
+| slot-path-missing   | パスの先がない                                                                                                             |
+| slot-markdown-style | `_markdown` で終わる項目を、`\|` のブロックで書いていない                                                                  |
+| slot-text-multiline | `_markdown` で終わらない文字列の項目が、複数行になっている                                                                 |
 
 - md の Slot には、YAML front matter のほかは、Free ファイルと同じ検査（[Free](free.md) のページの「check のルール」の章）をかける
 - YAML の Slot の Markdown の項目には、リンク、書式の規則、整形、textlint の検査をかける。見出しの検査はかけない。項目の中に h1 はなく、HTML では見出しの段を付け直すため。指摘の行番号は、YAML の行番号で出す

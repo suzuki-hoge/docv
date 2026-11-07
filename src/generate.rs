@@ -54,22 +54,28 @@ fn text(def: &Def) -> String {
     }
 }
 
-/// 雛形のない md の Slot で、中身の形は自由だと伝える文。ページに分けられる Slot は、分けるときの置き場所も伝える。
-fn md_note(def: &Def) -> Option<String> {
-    if def.format != Format::Markdown || slot::md_template(def.id).is_some() {
-        return None;
-    }
-    let mut note = format!(
-        "{}は md の Slot で、中身の形は決めていない。ミッション「{}」に沿って、Markdown を自由に書く\n",
-        def.label, def.mission
-    );
-    if let Some(dir) = def.pages_dir() {
+/// 作ったあとに伝える文。雛形のない md の Slot は、中身の形は自由だと伝える。
+/// ページに分けられる Slot は、分けるときの置き場所を伝える。どちらでもなければ None。
+fn note(def: &Def) -> Option<String> {
+    let mut note = String::new();
+    if def.format == Format::Markdown && slot::md_template(def.id).is_none() {
         let _ = writeln!(
             note,
-            "ページに分けるときは、このファイルの代わりに、dir.slot の下の {dir}/ に 1 ページ 1 つの Markdown で置く。書き方は docv desc の「ページ分け」"
+            "{}は md の Slot で、中身の形は決めていない。ミッション「{}」に沿って、Markdown を自由に書く",
+            def.label, def.mission
         );
     }
-    Some(note)
+    if let Some(dir) = def.pages_dir() {
+        let kind = match def.format {
+            Format::Markdown => "Markdown",
+            Format::Yaml => "YAML",
+        };
+        let _ = writeln!(
+            note,
+            "ページに分けるときは、このファイルの代わりに、dir.slot の下の {dir}/ に 1 ページ 1 つの {kind} で置く。書き方は docv desc の「ページ分け」"
+        );
+    }
+    (!note.is_empty()).then_some(note)
 }
 
 /// docv slot gen --print の出力。Slot ファイルを作らずに、書く中身だけを出す。
@@ -82,7 +88,7 @@ pub fn print(slot: &str) -> Result<String> {
 pub struct Generated {
     /// ルートからの相対パス。
     pub path: String,
-    /// 雛形のない md の Slot で、中身の形は自由だと伝える文。
+    /// 作ったあとに伝える文。中身の形が自由なことや、ページに分けるときの置き場所。
     pub note: Option<String>,
 }
 
@@ -115,7 +121,7 @@ pub fn run(project: &Project, slot: &str, force: bool) -> Result<Generated> {
     fs::write(&path, text(def)).with_context(|| format!("{rel} を書けない"))?;
     Ok(Generated {
         path: rel,
-        note: md_note(def),
+        note: note(def),
     })
 }
 
@@ -214,6 +220,24 @@ mod tests {
                 .note
                 .unwrap()
                 .contains("dir.slot の下の service/service/ に 1 ページ 1 つの Markdown で置く")
+        );
+        // YAML の Slot も、分けられるなら置き場所を伝える
+        let develop = run(&whole, "develop", false).unwrap();
+        assert_eq!(
+            develop.note.as_deref(),
+            Some(
+                "ページに分けるときは、このファイルの代わりに、dir.slot の下の guide/develop/ に 1 ページ 1 つの YAML で置く。書き方は docv desc の「ページ分け」\n"
+            )
+        );
+        write(
+            dir.path(),
+            "docv/guide/develop/web.yaml",
+            "order: 1\ntitle: Web\n",
+        );
+        let error = run(&paged, "develop", true).unwrap_err().to_string();
+        assert!(
+            error.contains("docv/guide/develop/ にページがある"),
+            "{error}"
         );
     }
 

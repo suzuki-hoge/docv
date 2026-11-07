@@ -64,14 +64,17 @@ mission: 利用者の使い方（CLI のコマンド、GUI の操作など）
 
 ### ページ分け
 
-サービス仕様とシステム仕様は、ページに分けられる
+サービス仕様、システム仕様、開発コマンド、インフラと環境は、ページに分けられる
 
-- 分けるときは、1 つのファイルの代わりに、次のディレクトリの直下に 1 ページ 1 ファイルで Markdown を置く
+- 分けるときは、1 つのファイルの代わりに、次のディレクトリの直下に 1 ページ 1 ファイルで置く。拡張子は、分けないときと同じ
     - サービス仕様: `docv/service/service.md` の代わりに `docv/service/service/`
     - システム仕様: `docv/system/system.md` の代わりに `docv/system/system/`
-- どのページにも、YAML front matter に `order`（整数）と `mission` を書く。ページは `order` の順に並ぶ。`order` は重ねない。`mission` は、分けないときと同じ、その Slot のミッション
-- 本文の h1 が、ページの名前になる。HTML では、ページを切り替えるタブの名前になる。h1 は重ねない
-- 分けないときは 1 つのファイル（`docv/service/service.md` か `docv/system/system.md`）に書き、YAML front matter には `mission` だけを書く
+    - 開発コマンド: `docv/guide/develop.yaml` の代わりに `docv/guide/develop/`
+    - インフラと環境: `docv/operation/infrastructure.md` の代わりに `docv/operation/infrastructure/`
+- ページは `order`（整数）の順に並ぶ。ページの名前は、HTML でページを切り替えるタブの名前になる。`order` もページの名前も、同じ Slot のページどうしで重ねない
+- 分けないときは 1 つのファイルに書く
+
+md のページは、YAML front matter に `order` と `mission` を書き、本文の h1 をページの名前にする。`mission` は、分けないときと同じ、その Slot のミッション
 
 ```markdown
 ---
@@ -80,6 +83,19 @@ mission: 外から見た機能と、それぞれの振る舞いと決まり
 ---
 
 # 利用者向け機能
+```
+
+YAML のページ（開発コマンド）は、分けないときの項目に、`order` と、ページの名前の `title` を足す
+
+```yaml
+order: 1
+title: Web 画面
+steps:
+  - id: test
+    name: テストを実行する
+    items:
+      body_markdown: |
+        npm test
 ```
 
 ## 3. YAML front matter

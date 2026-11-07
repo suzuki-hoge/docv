@@ -1,7 +1,8 @@
 //! Slot。どのプロジェクトにも要るドキュメントを、docv が決めたミッションと形で書くファイル。docv/service/service/slot.md。
 //!
 //! Slot ファイルは、dir.slot の下の、まとまりのディレクトリに `<まとまり>/<ID>.<拡張子>` の名前で置く。拡張子は Slot ごとに決まる（yaml か md）。
-//! サービス仕様とシステム仕様は、`<まとまり>/<ID>/` の直下に 1 ページ 1 つの md で置いて、ページに分けられる。ページの名前は h1、並びは YAML front matter の order。
+//! サービス仕様、システム仕様、開発コマンド、インフラと環境は、`<まとまり>/<ID>/` の直下に 1 ページ 1 つのファイルで置いて、ページに分けられる。
+//! md のページの名前は h1、並びは YAML front matter の order。YAML のページ（開発コマンド）は、項目の title と order。
 //! md の Slot（分けたページも）は、YAML front matter の mission に、docv が決めたミッションをそのまま書く。違えば check が error にする。
 //! ファイルの中のパスは、すべてルートからの相対パス。
 
@@ -223,10 +224,11 @@ impl Def {
         format!("{}/{}.{}", self.group.dir(), self.id, self.extension())
     }
 
-    /// ページに分けるときのディレクトリの、dir.slot からの相対パス。直下に 1 ページ 1 つの md を置く。
-    /// 分けられるのはサービス仕様とシステム仕様だけで、ほかの Slot は None。
+    /// ページに分けるときのディレクトリの、dir.slot からの相対パス。直下に 1 ページ 1 つの、Slot と同じ拡張子のファイルを置く。
+    /// 分けられるのはサービス仕様、システム仕様、開発コマンド、インフラと環境だけで、ほかの Slot は None。
     pub fn pages_dir(&self) -> Option<String> {
-        matches!(self.id, "service" | "system").then(|| format!("{}/{}", self.group.dir(), self.id))
+        matches!(self.id, "service" | "system" | "develop" | "infrastructure")
+            .then(|| format!("{}/{}", self.group.dir(), self.id))
     }
 }
 
@@ -235,21 +237,24 @@ pub fn def_of_file(rel: &str) -> Option<&'static Def> {
     DEFS.iter().find(|d| d.file_name() == rel)
 }
 
-/// dir.slot からの相対パスが、分けた Slot のページ（`service/service/admin.md`）なら、その Slot を引く。
+/// dir.slot からの相対パスが、分けた Slot のページ（`service/service/admin.md`、`guide/develop/web.yaml`）なら、その Slot を引く。
+/// ページの拡張子は、分けないときの Slot と同じ。
 pub fn def_of_page(rel: &str) -> Option<&'static Def> {
     let (dir, name) = rel.rsplit_once('/')?;
-    if !name.ends_with(".md") {
-        return None;
-    }
-    DEFS.iter()
-        .find(|d| d.pages_dir().is_some_and(|pages| pages == dir))
+    DEFS.iter().find(|d| {
+        d.pages_dir().is_some_and(|pages| pages == dir)
+            && name.ends_with(&format!(".{}", d.extension()))
+    })
 }
 
 /// Slot ファイルとして置ける名前の一覧。メッセージに使う。
 pub fn file_names() -> String {
     DEFS.iter()
         .flat_map(|d| {
-            std::iter::once(d.file_name()).chain(d.pages_dir().map(|dir| format!("{dir}/*.md")))
+            std::iter::once(d.file_name()).chain(
+                d.pages_dir()
+                    .map(|dir| format!("{dir}/*.{}", d.extension())),
+            )
         })
         .collect::<Vec<_>>()
         .join("、")
@@ -285,6 +290,20 @@ pub struct Procedure {
     /// 項目のあとに続けて出す Markdown。
     #[serde(rename = "appendix_markdown")]
     pub appendix: Option<String>,
+}
+
+/// 分けた開発コマンドのページ。分けないときの項目に、ページの名前（title）と並び（order）を足す。
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ProcedurePage {
+    order: i64,
+    title: String,
+    #[serde(default)]
+    requirements: Vec<Tool>,
+    #[serde(default)]
+    steps: Vec<Step>,
+    #[serde(rename = "appendix_markdown")]
+    appendix: Option<String>,
 }
 
 /// 手順の 1 つ。items が複数あるときは、HTML で os ごとのタブにする。
@@ -483,6 +502,32 @@ impl Content {
             "env" => Content::Env(serde_yaml_ng::from_str(text)?),
             "cost" => Content::Cost(serde_yaml_ng::from_str(text)?),
             _ => unreachable!("YAML の Slot の ID は DEFS で確かめてある"),
+        })
+    }
+
+    /// 分けた YAML の Slot のページを読む。分けないときの項目に、ページの order と title を足した形。
+    /// ページに分けられる YAML の Slot は、開発コマンドだけ。
+    fn parse_page(def: &Def, text: &str) -> serde_yaml_ng::Result<(Content, Page)> {
+        // 空のファイルも、order と title がないことを指摘する。
+        let text = if text.trim().is_empty() { "{}" } else { text };
+        Ok(match def.id {
+            "develop" => {
+                let p: ProcedurePage = serde_yaml_ng::from_str(text)?;
+                (
+                    Content::Procedure(Procedure {
+                        requirements: p.requirements,
+                        steps: p.steps,
+                        appendix: p.appendix,
+                    }),
+                    Page {
+                        title: p.title,
+                        order: p.order,
+                    },
+                )
+            }
+            _ => {
+                unreachable!("ページに分けられる YAML の Slot は DEFS と pages_dir で確かめてある")
+            }
         })
     }
 
@@ -696,8 +741,8 @@ fn md_front_problem(def: &Def, text: &str) -> Option<(usize, &'static str, Strin
         .map(|(line, message)| (line, "slot-mission", message))
 }
 
-/// 分けた Slot のページを読む。読めないときは、その理由（行、メッセージ）。
-fn parse_page(def: &Def, text: &str) -> Result<ParsedPage, (usize, String)> {
+/// 分けた md の Slot のページを読む。読めないときは、その理由（行、メッセージ）。
+fn parse_md_page(def: &Def, text: &str) -> Result<ParsedPage, (usize, String)> {
     let document = markdown::split(text);
     let Some(fm) = &document.frontmatter else {
         return Err((
@@ -796,10 +841,14 @@ pub fn load(project: &Project) -> Result<Vec<Slot>> {
         }
         let text = fs::read_to_string(project.root.join(&file.path))
             .with_context(|| format!("{} を読めない", file.path))?;
-        let parsed = if file.page {
-            parse_page(def, &text)
+        let parsed = if file.page && def.format == Format::Markdown {
+            parse_md_page(def, &text)
                 .ok()
                 .map(|p| (Content::Markdown(p.body), Some(p.page)))
+        } else if file.page {
+            Content::parse_page(def, &text)
+                .ok()
+                .map(|(c, page)| (c, Some(page)))
         } else {
             Content::parse(def, &text).ok().map(|c| (c, None))
         };
@@ -834,7 +883,7 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
         });
     };
     let files = slot_files(project)?;
-    // 分けた Slot のページ。(Slot, パス, ページ, order の行, h1 の行)
+    // 分けた Slot のページ。(Slot, パス, ページ, order の行, ページの名前（h1 か title）の行)
     let mut pages: Vec<(&Def, &str, Page, usize, usize)> = Vec::new();
     for file in &files {
         let Some(def) = file.def else {
@@ -855,8 +904,8 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
                 .position(|l| l.contains(needle))
                 .map_or(1, |i| i + 1)
         };
-        if file.page {
-            match parse_page(def, &text) {
+        if file.page && def.format == Format::Markdown {
+            match parse_md_page(def, &text) {
                 Ok(p) => {
                     if let Some((line, message)) =
                         mission_problem(def, p.mission.as_deref(), p.mission_line)
@@ -869,12 +918,14 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
             }
             continue;
         }
-        if def.format == Format::Markdown
+        if !file.page
+            && def.format == Format::Markdown
             && let Some((line, rule, message)) = md_front_problem(def, &text)
         {
             push(&file.path, line, rule, message);
         }
-        if let Some(dir) = def.pages_dir()
+        if !file.page
+            && let Some(dir) = def.pages_dir()
             && files
                 .iter()
                 .any(|f| f.page && f.def.is_some_and(|d| d.id == def.id))
@@ -892,16 +943,34 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
                 ),
             );
         }
-        let content = match Content::parse(def, &text) {
+        // YAML のページは、分けないときと同じ項目に、ページの order と title を足して読む。
+        let parsed = if file.page {
+            Content::parse_page(def, &text).map(|(content, page)| {
+                pages.push((
+                    def,
+                    &file.path,
+                    page,
+                    key_line(&text, "order"),
+                    key_line(&text, "title"),
+                ));
+                content
+            })
+        } else {
+            Content::parse(def, &text)
+        };
+        let content = match parsed {
             Ok(content) => content,
             Err(e) => {
                 let line = e.location().map_or(1, |l| l.line());
-                push(
-                    &file.path,
-                    line,
-                    "slot-invalid",
-                    format!("{}の Slot の形に合わない: {e}", def.label),
-                );
+                let message = if file.page {
+                    format!(
+                        "{}のページの形に合わない。どのページにも order と title を書く: {e}",
+                        def.label
+                    )
+                } else {
+                    format!("{}の Slot の形に合わない: {e}", def.label)
+                };
+                push(&file.path, line, "slot-invalid", message);
                 continue;
             }
         };
@@ -936,18 +1005,31 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
             );
         }
         if let Some((other, _)) = earlier.iter().find(|(_, p)| p.title == page.title) {
+            // md のページの名前は h1、YAML のページの名前は title。
+            let key = match def.format {
+                Format::Markdown => "h1",
+                Format::Yaml => "title",
+            };
             push(
                 path,
                 *title_line,
                 "slot-invalid",
                 format!(
-                    "h1「{}」が {other} と重なっている。h1 はページの名前で、重ねない",
+                    "{key}「{}」が {other} と重なっている。{key} はページの名前で、重ねない",
                     page.title
                 ),
             );
         }
     }
     Ok(diagnostics)
+}
+
+/// YAML のトップレベルの項目 key の行。なければ 1。
+fn key_line(text: &str, key: &str) -> usize {
+    let prefix = format!("{key}:");
+    text.lines()
+        .position(|l| l.starts_with(&prefix))
+        .map_or(1, |i| i + 1)
 }
 
 /// yaml の Slot のテンプレ。docv slot gen で書く、項目のサンプル。
@@ -1185,6 +1267,102 @@ mod tests {
     }
 
     #[test]
+    fn splits_the_infrastructure_like_the_service_spec() {
+        let infra = def("infrastructure").unwrap().mission;
+        let (_dir, project) = project(&[
+            (
+                "docv/operation/infrastructure/aws.md",
+                &format!("---\norder: 1\nmission: {infra}\n---\n\n# AWS\n"),
+            ),
+            (
+                "docv/operation/infrastructure/local.md",
+                &format!("---\norder: 2\nmission: {infra}\n---\n\n# ローカル\n"),
+            ),
+        ]);
+        let diagnostics = check(&project).unwrap();
+        assert!(diagnostics.is_empty(), "{diagnostics:#?}");
+        let slots = load(&project).unwrap();
+        let pages: Vec<(&str, Option<&str>)> = slots
+            .iter()
+            .map(|s| (s.def.id, s.page.as_ref().map(|p| p.title.as_str())))
+            .collect();
+        assert_eq!(
+            pages,
+            [
+                ("infrastructure", Some("AWS")),
+                ("infrastructure", Some("ローカル"))
+            ]
+        );
+    }
+
+    #[test]
+    fn splits_the_develop_commands_into_yaml_pages() {
+        let (_dir, project) = project(&[
+            (
+                "docv/guide/develop/web.yaml",
+                "order: 2\ntitle: Web\nsteps:\n  - id: test\n    name: テスト\n    items:\n      body_markdown: |\n        npm test\n",
+            ),
+            (
+                "docv/guide/develop/api.yaml",
+                "order: 1\ntitle: API\nrequirements:\n  - name: Go\n",
+            ),
+            // 分けたページの拡張子は、分けないときの Slot と同じ
+            ("docv/guide/develop/memo.md", "# メモ\n"),
+        ]);
+        let diagnostics: Vec<String> = check(&project)
+            .unwrap()
+            .iter()
+            .map(|d| format!("{}:{} {}", d.path, d.line, d.rule))
+            .collect();
+        assert_eq!(diagnostics, ["docv/guide/develop/memo.md:1 slot-unknown"]);
+        let slots = load(&project).unwrap();
+        let pages: Vec<(&str, Option<&str>)> = slots
+            .iter()
+            .map(|s| (s.def.id, s.page.as_ref().map(|p| p.title.as_str())))
+            .collect();
+        assert_eq!(pages, [("develop", Some("API")), ("develop", Some("Web"))]);
+        assert!(matches!(&slots[1].content, Content::Procedure(p) if p.steps[0].id == "test"));
+        // YAML のページも、YAML の Slot として Markdown の項目を検査する
+        assert_eq!(
+            yaml_paths(&project).unwrap(),
+            ["docv/guide/develop/api.yaml", "docv/guide/develop/web.yaml"]
+        );
+    }
+
+    #[test]
+    fn reports_problems_of_yaml_pages() {
+        let (_dir, project) = project(&[
+            ("docv/guide/develop.yaml", "steps: []\n"),
+            ("docv/guide/develop/a.yaml", "order: 1\ntitle: A\n"),
+            ("docv/guide/develop/b.yaml", "title: A\norder: 1\n"),
+            ("docv/guide/develop/c.yaml", "steps: []\n"),
+            (
+                "docv/guide/develop/d.yaml",
+                "order: 4\ntitle: D\nsteps:\n  - id: x\n    name: X\n  - id: x\n    name: Y\n",
+            ),
+            // 分けないときは、order と title を書かない
+            ("docv/guide/setup.yaml", "order: 1\n"),
+        ]);
+        let mut result: Vec<String> = check(&project)
+            .unwrap()
+            .iter()
+            .map(|d| format!("{}:{} {} {}", d.path, d.line, d.rule, d.message))
+            .collect();
+        result.sort();
+        assert_eq!(
+            result,
+            [
+                "docv/guide/develop.yaml:1 slot-invalid 開発コマンドが docv/guide/develop.yaml と docv/guide/develop/ の両方にある。ページに分けるなら docv/guide/develop.yaml を消す",
+                "docv/guide/develop/b.yaml:1 slot-invalid title「A」が docv/guide/develop/a.yaml と重なっている。title はページの名前で、重ねない",
+                "docv/guide/develop/b.yaml:2 slot-invalid order 1 が docv/guide/develop/a.yaml と重なっている",
+                "docv/guide/develop/c.yaml:1 slot-invalid 開発コマンドのページの形に合わない。どのページにも order と title を書く: missing field `order`",
+                "docv/guide/develop/d.yaml:4 slot-invalid 手順の id x が重なっている",
+                "docv/guide/setup.yaml:1 slot-invalid 環境構築の Slot の形に合わない: unknown field `order`, expected one of `requirements`, `steps`, `appendix_markdown`",
+            ]
+        );
+    }
+
+    #[test]
     fn compares_order_and_h1_only_within_the_same_slot() {
         let system = def("system").unwrap().mission;
         let (_dir, project) = project(&[
@@ -1289,10 +1467,12 @@ mod tests {
                 ),
             ]
         );
-        // ページに分けられるのはサービス仕様とシステム仕様だけ。置ける名前の一覧にも、そのディレクトリを出す
-        assert!(
-            file_names().contains("service/service.md、service/service/*.md、service/manual.md")
-        );
+        // ページに分けられる Slot だけ、置ける名前の一覧にそのディレクトリを出す。拡張子は Slot と同じ
+        let names = file_names();
+        assert!(names.contains("service/service.md、service/service/*.md、service/manual.md"));
+        assert!(names.contains("guide/develop.yaml、guide/develop/*.yaml、guide/doc-guide.md"));
+        assert!(names.contains("operation/infrastructure.md、operation/infrastructure/*.md"));
+        assert!(!names.contains("api/*"));
     }
 
     #[test]

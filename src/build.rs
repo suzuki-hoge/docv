@@ -5,7 +5,7 @@
 //! プロジェクト詳細.html に Free ファイルのツリー、現在の設定.html に docv.yaml のすべての項目と今の値、
 //! 検索.html に Slot ファイル、ADR、Free ファイルの中身を探す入力欄を置く。
 //! Slot は 1 つずつ独立したページにし、`<まとまり>/<Slot>.html` に置く。
-//! 分けたサービス仕様とシステム仕様は、ページごとに `<まとまり>/<Slot>/<ページの h1>.html` に置き、ページへのリンクをタブにして並べる。
+//! ページに分けた Slot は、ページごとに `<まとまり>/<Slot>/<ページの名前>.html` に置き、ページへのリンクをタブにして並べる。
 //! Slot、ADR、Free ファイルのページには、h1 の上に元のファイルのパスと、それをコピーするボタンを置く。表は、横にスクロールできる包みに入れる。
 //! 画像にしても読めるように、折りたたみは使わない。OS ごとの手順のタブは、印刷の表示（JPG）ではすべて並べる。
 //! dir.index を書いていれば、Slot ファイルへのリンクを並べたインデックス（docv-index.md）も書く（index.rs）。
@@ -124,7 +124,7 @@ struct SearchEntry {
 }
 
 /// docv build。out（dir.html）の中を作り直す。image（dir.image）を書いていれば、Slot のページを JPG にしてそこに置く。
-/// JPG は Slot のページごとに 1 枚。見つけやすいように、まとまりと Slot の表示名をパスにする。
+/// JPG は Slot のページごとに 1 枚（ページに分けた YAML の Slot は、ページごとに 1 枚）。見つけやすいように、まとまりと Slot の表示名をパスにする。
 /// Markdown から作るページ（md の Slot、ADR、Free ファイル）は、GitHub で md をそのまま見られるので JPG にしない。
 /// dir.index を書いていれば、インデックスも書く。書けないインデックスがあれば、何も書かずに error で終わる。
 pub fn run(project: &Project, out: &Path, image: Option<&Path>) -> Result<()> {
@@ -220,12 +220,21 @@ fn page_path(slot: &Slot) -> String {
 }
 
 /// Slot の JPG の、dir.image からの相対パス。`サービス/用語集.jpg`。名前の空白は除く（`開発者向けガイド/Docガイド.jpg`）。
+/// 分けた Slot のページは、HTML と同じく、Slot の名前のディレクトリの下に、ページの名前で置く。`開発者向けガイド/開発コマンド/Web.jpg`。
 pub(crate) fn jpg_path(slot: &Slot) -> String {
-    format!(
-        "{}/{}.jpg",
-        file_name(slot.def.group.label()),
-        file_name(slot.def.label)
-    )
+    match &slot.page {
+        Some(page) => format!(
+            "{}/{}/{}.jpg",
+            file_name(slot.def.group.label()),
+            file_name(slot.def.label),
+            file_name(&page.title)
+        ),
+        None => format!(
+            "{}/{}.jpg",
+            file_name(slot.def.group.label()),
+            file_name(slot.def.label)
+        ),
+    }
 }
 
 fn read_page(project: &Project, path: &str) -> Result<Page> {
@@ -2729,6 +2738,57 @@ mod tests {
             page: None,
         };
         assert_eq!(jpg_path(&slot), "サービス/用語集.jpg");
+        // 分けた Slot のページは、Slot の名前のディレクトリの下に、ページの名前で置く
+        let page = Slot {
+            def: slot::def("develop").unwrap(),
+            path: "docv/guide/develop/web.yaml".to_string(),
+            content: Content::Markdown(String::new()),
+            page: Some(slot::Page {
+                title: "Web 画面".to_string(),
+                order: 1,
+            }),
+        };
+        assert_eq!(jpg_path(&page), "開発者向けガイド/開発コマンド/Web画面.jpg");
+    }
+
+    #[test]
+    fn builds_each_yaml_page_of_a_split_slot_with_tabs() {
+        let (dir, project) = project(&[
+            (
+                "docv/guide/develop/web.yaml",
+                "order: 2\ntitle: Web\nsteps:\n  - id: test\n    name: テストを実行する\n    items:\n      body_markdown: |\n        npm test\n",
+            ),
+            ("docv/guide/develop/api.yaml", "order: 1\ntitle: API\n"),
+        ]);
+        let out = dir.path().join("out");
+        run(&project, &out, None).unwrap();
+        let read = |path: &str| fs::read_to_string(out.join(path)).unwrap();
+
+        // カードは先頭のページを開く
+        let index = read(PAGE);
+        assert!(
+            index.contains("<a class=\"card\" href=\"開発者向けガイド/開発コマンド/API.html\">"),
+            "{index}"
+        );
+        // YAML のページも、title をページの名前にして、タブを order の順に並べる
+        let web = read("開発者向けガイド/開発コマンド/Web.html");
+        assert!(
+            web.contains("<title>Web - 開発コマンド - demo</title>"),
+            "{web}"
+        );
+        assert!(
+            web.contains("</svg>開発コマンド</h1>\n<nav class=\"page-tabs\"><a href=\"API.html\">API</a><a href=\"Web.html\" aria-current=\"page\">Web</a></nav>"),
+            "{web}"
+        );
+        // 中身は、分けないときの開発コマンドと同じ形で出す
+        assert!(
+            web.contains("<h2 id=\"test\">テストを実行する</h2>"),
+            "{web}"
+        );
+        assert!(
+            web.contains("<p class=\"source\"><code>docv/guide/develop/web.yaml</code>"),
+            "{web}"
+        );
     }
 
     #[test]

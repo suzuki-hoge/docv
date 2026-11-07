@@ -83,24 +83,36 @@
 </span><span style="font-weight:bold;color:#a71d5d;"># </span><span style="font-weight:bold;color:#323232;">利用マニュアル
 </span></code></pre>
 <h3 id="ページ分け">ページ分け</h3>
-<p>サービス仕様とシステム仕様は、ページに分けられる</p>
+<p>サービス仕様、システム仕様、開発コマンド、インフラと環境は、ページに分けられる</p>
 <ul>
-<li>分けるときは、1 つのファイルの代わりに、次のディレクトリの直下に 1 ページ 1 ファイルで Markdown を置く
+<li>分けるときは、1 つのファイルの代わりに、次のディレクトリの直下に 1 ページ 1 ファイルで置く。拡張子は、分けないときと同じ
 <ul>
 <li>サービス仕様: <code>docv/service/service.md</code> の代わりに <code>docv/service/service/</code></li>
 <li>システム仕様: <code>docv/system/system.md</code> の代わりに <code>docv/system/system/</code></li>
+<li>開発コマンド: <code>docv/guide/develop.yaml</code> の代わりに <code>docv/guide/develop/</code></li>
+<li>インフラと環境: <code>docv/operation/infrastructure.md</code> の代わりに <code>docv/operation/infrastructure/</code></li>
 </ul>
 </li>
-<li>どのページにも、YAML front matter に <code>order</code>（整数）と <code>mission</code> を書く。ページは <code>order</code> の順に並ぶ。<code>order</code> は重ねない。<code>mission</code> は、分けないときと同じ、その Slot のミッション</li>
-<li>本文の h1 が、ページの名前になる。HTML では、ページを切り替えるタブの名前になる。h1 は重ねない</li>
-<li>分けないときは 1 つのファイル（<code>docv/service/service.md</code> か <code>docv/system/system.md</code>）に書き、YAML front matter には <code>mission</code> だけを書く</li>
+<li>ページは <code>order</code>（整数）の順に並ぶ。ページの名前は、HTML でページを切り替えるタブの名前になる。<code>order</code> もページの名前も、同じ Slot のページどうしで重ねない</li>
+<li>分けないときは 1 つのファイルに書く</li>
 </ul>
+<p>md のページは、YAML front matter に <code>order</code> と <code>mission</code> を書き、本文の h1 をページの名前にする。<code>mission</code> は、分けないときと同じ、その Slot のミッション</p>
 <pre><code class="language-markdown"><span style="color:#a71d5d;">---
 </span><span style="color:#323232;">order: 1
 </span><span style="color:#323232;">mission: 外から見た機能と、それぞれの振る舞いと決まり
 </span><span style="font-weight:bold;color:#a71d5d;">---
 </span><span style="color:#323232;">
 </span><span style="font-weight:bold;color:#a71d5d;"># </span><span style="font-weight:bold;color:#323232;">利用者向け機能
+</span></code></pre>
+<p>YAML のページ（開発コマンド）は、分けないときの項目に、<code>order</code> と、ページの名前の <code>title</code> を足す</p>
+<pre><code class="language-yaml"><span style="color:#63a35c;">order</span><span style="color:#323232;">: </span><span style="color:#0086b3;">1
+</span><span style="color:#63a35c;">title</span><span style="color:#323232;">: </span><span style="color:#183691;">Web 画面
+</span><span style="color:#63a35c;">steps</span><span style="color:#323232;">:
+</span><span style="color:#323232;">  - </span><span style="color:#63a35c;">id</span><span style="color:#323232;">: </span><span style="color:#183691;">test
+</span><span style="color:#323232;">    </span><span style="color:#63a35c;">name</span><span style="color:#323232;">: </span><span style="color:#183691;">テストを実行する
+</span><span style="color:#323232;">    </span><span style="color:#63a35c;">items</span><span style="color:#323232;">:
+</span><span style="color:#323232;">      </span><span style="color:#63a35c;">body_markdown</span><span style="color:#323232;">: </span><span style="font-weight:bold;color:#a71d5d;">|
+</span><span style="color:#183691;">        npm test
 </span></code></pre>
 <h2 id="3-yaml-front-matter">3. YAML front matter</h2>
 <p><code>docs/</code> の Markdown ファイルを管理するための YAML front matter</p>

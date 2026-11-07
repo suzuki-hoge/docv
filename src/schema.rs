@@ -107,6 +107,12 @@ mod tests {
             "steps:\n  - id: a\n    name: A\n    items:\n      body_markdown: x\n"
         ));
         assert!(!is_valid(install, "steps:\n  - id: a\n"));
+        // 分けた開発コマンドのページは、order と title を一緒に書く。ほかの手順の Slot には書けない
+        let develop = text("develop").unwrap();
+        assert!(is_valid(develop, "order: 1\ntitle: Web\nsteps: []\n"));
+        assert!(!is_valid(develop, "order: 1\nsteps: []\n"));
+        assert!(!is_valid(develop, "title: Web\n"));
+        assert!(!is_valid(install, "order: 1\ntitle: Web\n"));
     }
 
     #[test]
@@ -120,7 +126,7 @@ mod tests {
             assert!(error.contains(message), "{name}: {error}");
         }
         // ページに分けられる Slot だけ、分けるときの YAML front matter の書き方を案内する
-        for name in ["service", "system"] {
+        for name in ["service", "system", "infrastructure"] {
             let error = text(name).unwrap_err().to_string();
             assert!(error.contains("docv desc の「ページ分け」"), "{error}");
         }
