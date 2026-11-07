@@ -2,6 +2,15 @@
 # 版を上げるときに、その版の変更点を足す。対応のない版も書く
 # change は何が変わったか、action はそれへの対応。対応は、要る（〜する）、選ぶ（〜なら〜できる）、要らない（対応は要らない）のどれかで書く
 
+- version: 1.8.0
+  changes:
+    - change: docv update-guide を追加
+      action: docv を更新したら、docv check の案内に従い、docv update-guide で変更点と対応を確かめる
+    - change: docv.yaml に docv_version を追加し、docv の版と違えば docv check の error にするように変更
+      action: 下の案内に従って、docv_version を書く
+    - change: docv.yaml と YAML の Slot の 1 行目にあるスキーマの URL の版を、docv check で確かめるように変更
+      action: 下の案内に従って、URL の版を上げる
+
 - version: 1.7.0
   changes:
     - change: PDR の選ばなかった案を任意に変更
