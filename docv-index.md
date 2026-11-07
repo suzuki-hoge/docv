@@ -50,3 +50,9 @@
 - [docv/adr](<docv/adr>) ディレクトリを参照
 
 ADR の系譜をたどりたい場合は、リポジトリを取得し `docv open` するもしくは直接 `output/docv/html/ADR.html` を開いてください。
+
+## PDR
+
+- [docv/pdr](<docv/pdr>) ディレクトリを参照
+
+PDR の系譜をたどりたい場合は、リポジトリを取得し `docv open` するもしくは直接 `output/docv/html/PDR.html` を開いてください。

@@ -1,6 +1,7 @@
 ---
-group: 配布
+group: 技術選定
 date: 2026-10-11
+supersedes: [typescript]
 ---
 
 # Rust で書く

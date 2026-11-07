@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>システム仕様も、サービス仕様と同じくページに分けられるようにする - PDR - docv</title>
+<link rel="stylesheet" href="../../docv.css">
+<script src="../../docv.js" defer></script>
+</head>
+<body>
+<nav class="sidebar">
+<p class="project">docv</p>
+<ul>
+<li><a href="../../README.html">README</a></li>
+<li><a href="../../index.html">プロジェクト概要</a></li>
+<li><a href="../../ADR.html">ADR</a></li>
+<li><a href="../../PDR.html" aria-current="page">PDR</a></li>
+<li><a href="../../プロジェクト詳細.html">プロジェクト詳細</a></li>
+<li><a href="../../現在の設定.html">現在の設定</a></li>
+<li><a href="../../検索.html">検索</a></li>
+</ul>
+</nav>
+<main>
+<p class="source"><code>docv/pdr/system-pages.md</code><button type="button" class="copy" data-path="docv/pdr/system-pages.md" title="パスをコピーする" aria-label="パスをコピーする" hidden><svg class="ready" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></p>
+<section class="slot">
+<h1><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22V3"/><path d="M5 5h11l3 3-3 3H5z"/><path d="M19 13H8l-3 3 3 3h11z"/></svg>システム仕様も、サービス仕様と同じくページに分けられるようにする</h1>
+<h2 id="背景">背景</h2>
+<p>ページに分けられるのは、サービス仕様だけだった。システム仕様も、画面、サーバ、バッチのように部品が多いシステムでは、部品ごとの振る舞いが 1 つのページに並んで長くなる。部品を 1 つだけ知りたい開発者が、長いページの中から探すことになる。</p>
+<h2 id="決めたこと">決めたこと</h2>
+<p>サービス仕様とシステム仕様は、1 つのファイルの代わりに、1 ページ 1 つの Markdown で置けるようにする。置き場所は、<code>service/service.md</code> の代わりに <code>service/service/</code> の直下、<code>system/system.md</code> の代わりに <code>system/system/</code> の直下とする。どのページにも、YAML front matter に <code>order</code> と、その Slot の <code>mission</code> を書く。ページの並びは <code>order</code> で決め、本文の h1 をページの名前にする。HTML では、ページを 1 つずつ <code>&lt;まとまり&gt;/&lt;Slot&gt;/&lt;h1&gt;.html</code> にし、Slot の名前の下に、ページへのリンクをタブにして並べる。</p>
+<p>分けないときは、今までどおり 1 つのファイルに書く。分けられるのは、サービス仕様とシステム仕様だけにする。</p>
+<p>どこで分けるかは docv では決めない。Doc ガイドの雛形に、分ける目安を書く。読み手、読むタイミング、部品や機能の違う情報が、1 つのページに混ざったら分ける。</p>
+<h2 id="結果">結果</h2>
+<p>システム仕様も、部品ごとにページを分けて読める。分け方、検査、HTML の作りは、サービス仕様と同じになる。<code>docv desc</code> の案内は、「ページ分け」の章にまとめる。AI Agent は、<code>docv desc</code> で分けられることを、Doc ガイドで分ける目安を知る。</p>
+<h2 id="選ばなかった案">選ばなかった案</h2>
+<div class="table-scroll"><table><thead><tr><th>案</th><th>選ばなかった理由</th></tr></thead><tbody>
+<tr><td>どの md の Slot も、ページに分けられる</td><td>利用マニュアルや API 仕様書を分けるかは、まだ要るかが分からない</td></tr>
+<tr><td>システム仕様だけ、部品ごとの決まった形で分ける</td><td>md の Slot の中身の形は決めない。分け方はプロジェクトごとに違う</td></tr>
+</tbody></table></div>
+
+<nav class="decision-nav"><div class="prev"><p class="decision-nav-label">← 過去の決定</p><div class="boxes"><a class="decision-box superseded" href="サービス仕様をページに分けられるようにする.html">サービス仕様をページに分けられるようにする</a></div></div><div class="next"></div></nav>
+<p class="note">カーソルキーの ← と → でも移れる。</p>
+</section>
+</main>
+<nav class="outline">
+<p class="outline-title">目次</p>
+<ul>
+<li class="h2"><a href="#背景">背景</a></li>
+<li class="h2"><a href="#決めたこと">決めたこと</a></li>
+<li class="h2"><a href="#結果">結果</a></li>
+<li class="h2"><a href="#選ばなかった案">選ばなかった案</a></li>
+</ul>
+</nav>
+</body>
+</html>

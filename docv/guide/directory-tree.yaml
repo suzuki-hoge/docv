@@ -35,7 +35,10 @@ entries:
       このリポジトリの Slot ファイル
   - path: docv/adr/
     desc_markdown: |
-      決めた経緯（ADR）
+      技術の決定の経緯（ADR）
+  - path: docv/pdr/
+    desc_markdown: |
+      docv の機能と決まりの変更の経緯（PDR）
   - path: docs/schema/
     desc_markdown: |
       `docv.yaml` と YAML の Slot のスキーマの写し。HTML で公開する

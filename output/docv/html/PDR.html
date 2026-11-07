@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDR - docv</title>
+<link rel="stylesheet" href="docv.css">
+<script src="docv.js" defer></script>
+</head>
+<body>
+<nav class="sidebar">
+<p class="project">docv</p>
+<ul>
+<li><a href="README.html">README</a></li>
+<li><a href="index.html">プロジェクト概要</a></li>
+<li><a href="ADR.html">ADR</a></li>
+<li><a href="PDR.html" aria-current="page">PDR</a></li>
+<li><a href="プロジェクト詳細.html">プロジェクト詳細</a></li>
+<li><a href="現在の設定.html">現在の設定</a></li>
+<li><a href="検索.html">検索</a></li>
+</ul>
+</nav>
+<main>
+<h1>PDR</h1>
+<p class="note">破線の箱は、新しい決定に打ち消された決定。</p>
+<h2 id="フレームワークの範囲" class="group">フレームワークの範囲</h2>
+<div class="decision-grid"><a class="decision-box" href="PDR/フレームワークの範囲/checkとHTMLの生成はローカルで完結させる.html">check と HTML の生成はローカルで完結させる</a><a class="decision-box" href="PDR/フレームワークの範囲/AIAgentにはルールファイルを渡すところまでにする.html">AI Agent にはルールファイルを渡すところまでにする</a></div>
+<h2 id="構造化" class="group">構造化</h2>
+<div class="lanes">
+<div class="lane"><a class="decision-box superseded" href="PDR/構造化/サービス概要のSlotを足し、サービス仕様と分ける.html">サービス概要の Slot を足し、サービス仕様と分ける</a><span class="arrow">→</span><a class="decision-box superseded" href="PDR/構造化/サービス仕様とシステム仕様を、実装を差し替えても変わらないかで分ける.html">サービス仕様とシステム仕様を、実装を差し替えても変わらないかで分ける</a><span class="arrow">→</span><a class="decision-box" href="PDR/構造化/システム概要のSlotを足し、システム仕様と分ける.html">システム概要の Slot を足し、システム仕様と分ける</a></div>
+<div class="lane"><a class="decision-box superseded" href="PDR/構造化/サービス仕様をページに分けられるようにする.html">サービス仕様をページに分けられるようにする</a><span class="arrow">→</span><a class="decision-box" href="PDR/構造化/システム仕様も、サービス仕様と同じくページに分けられるようにする.html">システム仕様も、サービス仕様と同じくページに分けられるようにする</a></div>
+</div>
+<div class="decision-grid"><a class="decision-box" href="PDR/構造化/構造化はYAMLfrontmatterとdocv.yamlに限る.html">構造化は YAML front matter と docv.yaml に限る</a></div>
+<h2 id="出力" class="group">出力</h2>
+<div class="decision-grid"><a class="decision-box" href="PDR/出力/JPGを違うマシンで揃えず、build--no-imageで作らずに済ませる.html">JPG を違うマシンで揃えず、build --no-image で作らずに済ませる</a></div>
+</main>
+<nav class="outline">
+<p class="outline-title">目次</p>
+<ul>
+<li class="h2"><a href="#フレームワークの範囲">フレームワークの範囲</a></li>
+<li class="h2"><a href="#構造化">構造化</a></li>
+<li class="h2"><a href="#出力">出力</a></li>
+</ul>
+</nav>
+</body>
+</html>

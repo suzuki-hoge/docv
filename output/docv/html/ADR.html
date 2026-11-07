@@ -14,6 +14,7 @@
 <li><a href="README.html">README</a></li>
 <li><a href="index.html">プロジェクト概要</a></li>
 <li><a href="ADR.html" aria-current="page">ADR</a></li>
+<li><a href="PDR.html">PDR</a></li>
 <li><a href="プロジェクト詳細.html">プロジェクト詳細</a></li>
 <li><a href="現在の設定.html">現在の設定</a></li>
 <li><a href="検索.html">検索</a></li>
@@ -22,45 +23,18 @@
 <main>
 <h1>ADR</h1>
 <p class="note">破線の箱は、新しい決定に打ち消された決定。</p>
-<h2 id="記録" class="group">記録</h2>
+<h2 id="技術選定" class="group">技術選定</h2>
 <div class="lanes">
-<div class="lane"><a class="decision-box superseded" href="ADR/記録/外した内容は理由と一緒にarchiveに移す.html">外した内容は理由と一緒に archive に移す</a><span class="arrow">→</span><a class="decision-box" href="ADR/記録/決めた経緯はADRで記録する.html">決めた経緯は ADR で記録する</a></div>
-<div class="lane"><a class="decision-box superseded" href="ADR/記録/docv自身の設計はSlotに書き、specには規格の詳細だけを残す.html">docv 自身の設計は Slot に書き、spec には規格の詳細だけを残す</a><span class="arrow">→</span><a class="decision-box" href="ADR/記録/docvのサービス仕様をページに分け、1ページ目をdocvdescと同じファイルにする.html">docv のサービス仕様をページに分け、1 ページ目を docv desc と同じファイルにする</a></div>
+<div class="lane"><a class="decision-box superseded" href="ADR/技術選定/TypeScriptで書く.html">TypeScript で書く</a><span class="arrow">→</span><a class="decision-box" href="ADR/技術選定/Rustで書く.html">Rust で書く</a></div>
 </div>
-<div class="decision-grid"><a class="decision-box" href="ADR/記録/docvで版を管理しない.html">docv で版を管理しない</a></div>
-<h2 id="コマンド" class="group">コマンド</h2>
-<div class="lanes">
-<div class="lane"><a class="decision-box superseded" href="ADR/コマンド/整形はdocvfmtで行う.html">整形は docv fmt で行う</a><span class="arrow">→</span><a class="decision-box" href="ADR/コマンド/整形とtextlintの自動修正をdocvfixにまとめる.html">整形と textlint の自動修正を docv fix にまとめる</a></div>
-</div>
-<div class="decision-grid"><a class="decision-box" href="ADR/コマンド/Slotのファイルは、パスではなくSlotの名前で作る.html">Slot のファイルは、パスではなく Slot の名前で作る</a><a class="decision-box" href="ADR/コマンド/AIAgent向けの一覧を出すコマンドを持たない.html">AI Agent 向けの一覧を出すコマンドを持たない</a><a class="decision-box" href="ADR/コマンド/後から入れるときのガイドを出すコマンドを持たない.html">後から入れるときのガイドを出すコマンドを持たない</a><a class="decision-box" href="ADR/コマンド/YAMLのSlotのスキーマをdocvschemaで出す.html">YAML の Slot のスキーマを docv schema で出す</a><a class="decision-box" href="ADR/コマンド/SlotのディレクトリのMarkdownも整形する.html">Slot のディレクトリの Markdown も整形する</a><a class="decision-box" href="ADR/コマンド/Slotのディレクトリでも除外のルールを守る.html">Slot のディレクトリでも除外のルールを守る</a><a class="decision-box" href="ADR/コマンド/コマンドをinit、desc、check、fix、build、slotに組み直す.html">コマンドを init、desc、check、fix、build、slot に組み直す</a><a class="decision-box" href="ADR/コマンド/checkにパスを渡しても、かける検査を変えない.html">check にパスを渡しても、かける検査を変えない</a><a class="decision-box" href="ADR/コマンド/mdのSlotとADRにも、Freeファイルと同じ検査をかける.html">md の Slot と ADR にも、Free ファイルと同じ検査をかける</a><a class="decision-box" href="ADR/コマンド/docvfixでYAMLのファイルの末尾の改行を整える.html">docv fix で YAML のファイルの末尾の改行を整える</a><a class="decision-box" href="ADR/コマンド/リンクのアンカーをcheckで確かめる.html">リンクのアンカーを check で確かめる</a><a class="decision-box" href="ADR/コマンド/checkの指摘の強さをなくし、すべてerrorにする.html">check の指摘の強さをなくし、すべて error にする</a><a class="decision-box" href="ADR/コマンド/リンクの表示文字の規則をやめる.html">リンクの表示文字の規則をやめる</a></div>
-<h2 id="構造化" class="group">構造化</h2>
-<div class="lanes">
-<div class="lane"><a class="decision-box superseded" href="ADR/構造化/ドキュメントを組み込みの種類と時間で分ける.html">ドキュメントを組み込みの種類と時間で分ける</a><span class="arrow">→</span><a class="decision-box superseded" href="ADR/構造化/種類をやめ、任意の数を付けられるタグで分ける.html">種類をやめ、任意の数を付けられるタグで分ける</a><span class="arrow">→</span><a class="decision-box" href="ADR/構造化/使うタグを、色と一緒にdocv.yamlに書く.html">使うタグを、色と一緒に docv.yaml に書く</a></div>
-<div class="lane"><a class="decision-box superseded" href="ADR/構造化/docvが読み書きするディレクトリをdirにまとめる.html">docv が読み書きするディレクトリを dir にまとめる</a><span class="arrow">→</span><a class="decision-box" href="ADR/構造化/dirの4つのディレクトリを互いに離し、HTMLの既定をoutput-docv-htmlにする.html">dir の 4 つのディレクトリを互いに離し、HTML の既定を output/docv/html にする</a></div>
-<div class="lane"><a class="decision-box superseded" href="ADR/構造化/YAMLのSlotのbodyとincludeをなくす.html">YAML の Slot の body と include をなくす</a><span class="arrow">→</span><a class="decision-box" href="ADR/構造化/YAMLのSlotにappendix_markdownを書けるようにする.html">YAML の Slot に appendix_markdown を書けるようにする</a></div>
-<div class="lane"><a class="decision-box superseded" href="ADR/構造化/サービス概要のSlotを足し、サービス仕様と分ける.html">サービス概要の Slot を足し、サービス仕様と分ける</a><span class="arrow">→</span><a class="decision-box superseded" href="ADR/構造化/サービス仕様とシステム仕様を、実装を差し替えても変わらないかで分ける.html">サービス仕様とシステム仕様を、実装を差し替えても変わらないかで分ける</a><span class="arrow">→</span><a class="decision-box" href="ADR/構造化/システム概要のSlotを足し、システム仕様と分ける.html">システム概要の Slot を足し、システム仕様と分ける</a></div>
-<div class="lane"><a class="decision-box superseded" href="ADR/構造化/サービス仕様をページに分けられるようにする.html">サービス仕様をページに分けられるようにする</a><span class="arrow">→</span><a class="decision-box" href="ADR/構造化/システム仕様も、サービス仕様と同じくページに分けられるようにする.html">システム仕様も、サービス仕様と同じくページに分けられるようにする</a></div>
-</div>
-<div class="decision-grid"><a class="decision-box" href="ADR/構造化/構造化はYAMLfrontmatterとdocv.yamlに限る.html">構造化は YAML front matter と docv.yaml に限る</a><a class="decision-box" href="ADR/構造化/規格のファイルをSlotと呼ぶ.html">規格のファイルを Slot と呼ぶ</a><a class="decision-box" href="ADR/構造化/デプロイとリリースを別のmdのSlotにする.html">デプロイとリリースを別の md の Slot にする</a><a class="decision-box" href="ADR/構造化/利用マニュアルをmdのSlotにする.html">利用マニュアルを md の Slot にする</a><a class="decision-box" href="ADR/構造化/原本をFreeファイルと呼び変える.html">原本を Free ファイルと呼び変える</a><a class="decision-box" href="ADR/構造化/API仕様書とDB仕様書をmdだけにする.html">API 仕様書と DB 仕様書を md だけにする</a><a class="decision-box" href="ADR/構造化/ファイルが扱うことをミッションと呼び、読むと何が分かるかで書く.html">ファイルが扱うことをミッションと呼び、読むと何が分かるかで書く</a><a class="decision-box" href="ADR/構造化/まだ決まっていないことをdocs-planに置く.html">まだ決まっていないことを docs/plan に置く</a><a class="decision-box" href="ADR/構造化/YAMLのSlotのMarkdownは、_markdownで終わる項目に|で書き、検査する.html">YAML の Slot の Markdown は、_markdown で終わる項目に | で書き、検査する</a><a class="decision-box" href="ADR/構造化/Slotのまとまりの名前を、サービスとシステムにする.html">Slot のまとまりの名前を、サービスとシステムにする</a><a class="decision-box" href="ADR/構造化/mdのSlotのYAMLfrontmatterに、ミッションを必ず書く.html">md の Slot の YAML front matter に、ミッションを必ず書く</a></div>
-<h2 id="フレームワークの範囲" class="group">フレームワークの範囲</h2>
-<div class="decision-grid"><a class="decision-box" href="ADR/フレームワークの範囲/checkとHTMLの生成はローカルで完結させる.html">check と HTML の生成はローカルで完結させる</a><a class="decision-box" href="ADR/フレームワークの範囲/実装とドキュメントのずれを検出しない.html">実装とドキュメントのずれを検出しない</a><a class="decision-box" href="ADR/フレームワークの範囲/AIAgentにはルールファイルを渡すところまでにする.html">AI Agent にはルールファイルを渡すところまでにする</a><a class="decision-box superseded" href="ADR/フレームワークの範囲/docvdescはサービス仕様と同じdocvの概要を出す.html">docv desc はサービス仕様と同じ docv の概要を出す</a><a class="decision-box" href="ADR/フレームワークの範囲/ガイドラインをDocガイドのSlotの雛形にする.html">ガイドラインを Doc ガイドの Slot の雛形にする</a><a class="decision-box" href="ADR/フレームワークの範囲/checkの設定を太字、斜体、$、textlintの4つにする.html">check の設定を太字、斜体、$、textlint の 4 つにする</a><a class="decision-box" href="ADR/フレームワークの範囲/サービス仕様の図をdocvが描かない.html">サービス仕様の図を docv が描かない</a><a class="decision-box" href="ADR/フレームワークの範囲/textlintのルールと値をdocvが決める.html">textlint のルールと値を docv が決める</a></div>
 <h2 id="配布" class="group">配布</h2>
-<div class="decision-grid"><a class="decision-box" href="ADR/配布/GitHubActionsで各プラットフォーム向けにビルドする.html">GitHub Actions で各プラットフォーム向けにビルドする</a><a class="decision-box" href="ADR/配布/Rustで書く.html">Rust で書く</a><a class="decision-box" href="ADR/配布/実装から参照して出力するものをassets-にまとめる.html">実装から参照して出力するものを assets/ にまとめる</a><a class="decision-box" href="ADR/配布/Docガイドの雛形は、開発の手順でdocvfixとdocvcheckにかける.html">Doc ガイドの雛形は、開発の手順で docv fix と docv check にかける</a><a class="decision-box" href="ADR/配布/名前をdocvにする.html">名前を docv にする</a><a class="decision-box" href="ADR/配布/スキーマをJSONに揃え、YAMLのSlotの1行目から参照する.html">スキーマを JSON に揃え、YAML の Slot の 1 行目から参照する</a></div>
-<h2 id="出力" class="group">出力</h2>
-<div class="lanes">
-<div class="lane"><a class="decision-box superseded" href="ADR/出力/すべてのページの右に目次を置く.html">すべてのページの右に目次を置く</a><span class="arrow">→</span><a class="decision-box" href="ADR/出力/目次のないページにも、目次の幅を空けておく.html">目次のないページにも、目次の幅を空けておく</a></div>
-</div>
-<div class="decision-grid"><a class="decision-box" href="ADR/出力/原本もHTMLのページにする.html">原本も HTML のページにする</a><a class="decision-box" href="ADR/出力/HTMLのコードブロックにbuildのときに色を付ける.html">HTML のコードブロックに build のときに色を付ける</a><a class="decision-box" href="ADR/出力/ディレクトリのページを1段ずつの表に分ける.html">ディレクトリのページを 1 段ずつの表に分ける</a><a class="decision-box" href="ADR/出力/HTMLのリンクはページにだけ張る.html">HTML のリンクはページにだけ張る</a><a class="decision-box" href="ADR/出力/Slotのカードを折り返して並べる.html">Slot のカードを折り返して並べる</a><a class="decision-box" href="ADR/出力/docv.yamlへのリンクを、現在の設定のページに向ける.html">docv.yaml へのリンクを、現在の設定のページに向ける</a><a class="decision-box" href="ADR/出力/現在の設定をHTMLのページで見せる.html">現在の設定を HTML のページで見せる</a><a class="decision-box" href="ADR/出力/JPGを違うマシンで揃えず、build--no-imageで作らずに済ませる.html">JPG を違うマシンで揃えず、build --no-image で作らずに済ませる</a><a class="decision-box" href="ADR/出力/HTMLに、入力した文字列をそのまま探す検索のページを置く.html">HTML に、入力した文字列をそのまま探す検索のページを置く</a><a class="decision-box" href="ADR/出力/本文にそのまま書いたURLも、HTMLでリンクにする.html">本文にそのまま書いた URL も、HTML でリンクにする</a></div>
+<div class="decision-grid"><a class="decision-box" href="ADR/配布/実装から参照して出力するものをassets-にまとめる.html">実装から参照して出力するものを assets/ にまとめる</a></div>
 </main>
 <nav class="outline">
 <p class="outline-title">目次</p>
 <ul>
-<li class="h2"><a href="#記録">記録</a></li>
-<li class="h2"><a href="#コマンド">コマンド</a></li>
-<li class="h2"><a href="#構造化">構造化</a></li>
-<li class="h2"><a href="#フレームワークの範囲">フレームワークの範囲</a></li>
+<li class="h2"><a href="#技術選定">技術選定</a></li>
 <li class="h2"><a href="#配布">配布</a></li>
-<li class="h2"><a href="#出力">出力</a></li>
 </ul>
 </nav>
 </body>
