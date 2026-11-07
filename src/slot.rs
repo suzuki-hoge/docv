@@ -834,8 +834,8 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
         });
     };
     let files = slot_files(project)?;
-    // 分けた Slot のページ。(パス, ページ, order の行, h1 の行)
-    let mut pages: Vec<(&str, Page, usize, usize)> = Vec::new();
+    // 分けた Slot のページ。(Slot, パス, ページ, order の行, h1 の行)
+    let mut pages: Vec<(&Def, &str, Page, usize, usize)> = Vec::new();
     for file in &files {
         let Some(def) = file.def else {
             let message = match suggest(&project.slot_dir(), &file.path) {
@@ -863,7 +863,7 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
                     {
                         push(&file.path, line, "slot-mission", message);
                     }
-                    pages.push((&file.path, p.page, line_of("order:"), p.title_line));
+                    pages.push((def, &file.path, p.page, line_of("order:"), p.title_line));
                 }
                 Err((line, message)) => push(&file.path, line, "slot-invalid", message),
             }
@@ -919,10 +919,15 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
             }
         }
     }
-    // ページどうしで、order と h1 を重ねない。後のパスのページに出す。
-    for (i, (path, page, order_line, title_line)) in pages.iter().enumerate() {
-        let earlier = &pages[..i];
-        if let Some((other, ..)) = earlier.iter().find(|(_, p, ..)| p.order == page.order) {
+    // 同じ Slot のページどうしで、order と h1 を重ねない。後のパスのページに出す。
+    // ほかの Slot のページとは比べない。並びも名前も、Slot ごとに決まるため。
+    for (i, (def, path, page, order_line, title_line)) in pages.iter().enumerate() {
+        let earlier: Vec<_> = pages[..i]
+            .iter()
+            .filter(|(d, ..)| d.id == def.id)
+            .map(|(_, other, p, ..)| (other, p))
+            .collect();
+        if let Some((other, _)) = earlier.iter().find(|(_, p)| p.order == page.order) {
             push(
                 path,
                 *order_line,
@@ -930,7 +935,7 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
                 format!("order {} が {other} と重なっている", page.order),
             );
         }
-        if let Some((other, ..)) = earlier.iter().find(|(_, p, ..)| p.title == page.title) {
+        if let Some((other, _)) = earlier.iter().find(|(_, p)| p.title == page.title) {
             push(
                 path,
                 *title_line,
@@ -1177,6 +1182,20 @@ mod tests {
             .map(|s| (s.def.id, s.page.as_ref().map(|p| p.title.as_str())))
             .collect();
         assert_eq!(pages, [("system", Some("web")), ("system", Some("batch"))]);
+    }
+
+    #[test]
+    fn compares_order_and_h1_only_within_the_same_slot() {
+        let system = def("system").unwrap().mission;
+        let (_dir, project) = project(&[
+            ("docv/service/service/a.md", &page(1, "# 概要\n")),
+            (
+                "docv/system/system/a.md",
+                &format!("---\norder: 1\nmission: {system}\n---\n\n# 概要\n"),
+            ),
+        ]);
+        let diagnostics = check(&project).unwrap();
+        assert!(diagnostics.is_empty(), "{diagnostics:#?}");
     }
 
     #[test]
