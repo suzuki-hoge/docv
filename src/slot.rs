@@ -804,12 +804,15 @@ impl SlotFile {
 fn slot_files(project: &Project) -> Result<Vec<SlotFile>> {
     let dir = project.slot_dir();
     let prefix = format!("{dir}/");
-    // adr/ は ADR のディレクトリ。Slot としては読まない（docv/service/service/adr.md）。
-    let adr_dir = format!("{prefix}{}/", crate::adr::DIR);
+    // adr/ と pdr/ は決定の記録のディレクトリ。Slot としては読まない（docv/service/service/adr.md、pdr.md）。
+    let decision_dirs: Vec<String> = crate::decision::Kind::ALL
+        .iter()
+        .map(|kind| format!("{prefix}{}/", kind.dir()))
+        .collect();
     Ok(project
         .slot_dir_files()?
         .into_iter()
-        .filter(|path| !path.starts_with(&adr_dir))
+        .filter(|path| !decision_dirs.iter().any(|d| path.starts_with(d)))
         .map(|path| {
             let rel = path.strip_prefix(&prefix).unwrap_or(&path);
             let (def, page) = match (def_of_file(rel), def_of_page(rel)) {

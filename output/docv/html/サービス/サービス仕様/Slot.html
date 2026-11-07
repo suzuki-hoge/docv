@@ -23,7 +23,7 @@
 <p class="source"><code>docv/service/service/slot.md</code><button type="button" class="copy" data-path="docv/service/service/slot.md" title="パスをコピーする" aria-label="パスをコピーする" hidden><svg class="ready" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></p>
 <section class="slot" id="service">
 <h1><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M3 7l9 5 9-5"/><path d="M12 12v10"/></svg>サービス仕様</h1>
-<nav class="page-tabs"><a href="概要.html">概要</a><a href="Slot.html" aria-current="page">Slot</a><a href="Free.html">Free</a><a href="ADR.html">ADR</a><a href="設定ファイル.html">設定ファイル</a><a href="コマンド.html">コマンド</a><a href="ビジュアライズ.html">ビジュアライズ</a></nav>
+<nav class="page-tabs"><a href="概要.html">概要</a><a href="Slot.html" aria-current="page">Slot</a><a href="Free.html">Free</a><a href="ADR.html">ADR</a><a href="PDR.html">PDR</a><a href="設定ファイル.html">設定ファイル</a><a href="コマンド.html">コマンド</a><a href="ビジュアライズ.html">ビジュアライズ</a></nav>
 <p>どのプロジェクトにも要るドキュメントを、docv が決めたミッションと形で書くファイルの規格。Slot を置く理由は <a href="%E6%A6%82%E8%A6%81.html">概要</a> のページに、HTML の全体は <a href="%E3%83%93%E3%82%B8%E3%83%A5%E3%82%A2%E3%83%A9%E3%82%A4%E3%82%BA.html">ビジュアライズ</a> のページに書く。</p>
 <hr />
 <h2 id="1-置き場所と書き方">1. 置き場所と書き方</h2>
@@ -31,7 +31,7 @@
 <li>Slot ファイルは、<code>docv.yaml</code> の <code>dir.slot</code>（既定は <code>docv</code>）に、<code>&lt;まとまり&gt;/&lt;Slot&gt;.&lt;拡張子&gt;</code> の名前で置く。まとまりのディレクトリは <code>service</code>（サービス）、<code>system</code>（システム）、<code>guide</code>（開発者向けガイド）、<code>operation</code>（運用）。<code>docs/</code> には Free ファイルを、<code>docv/</code> には Slot ファイルを置く</li>
 <li>拡張子は Slot ごとに決まる。YAML の Slot は決まった項目で書き、md の Slot は中身の形を決めず、そのまま HTML に出す</li>
 <li>サービス仕様、システム仕様、開発コマンド、インフラと環境だけは、ページに分けて <code>&lt;まとまり&gt;/&lt;Slot&gt;/</code> に置ける（「ページ分け」の章）</li>
-<li><code>docv/adr/</code> は ADR の置き場所で、Slot としては読まない（<a href="ADR.html">ADR</a> のページ）</li>
+<li><code>docv/adr/</code> は ADR の、<code>docv/pdr/</code> は PDR の置き場所で、Slot としては読まない（<a href="ADR.html">ADR</a> と <a href="PDR.html">PDR</a> のページ）</li>
 <li><code>dir.slot</code> の中でも、除外に当たるファイル（<a href="%E8%A8%AD%E5%AE%9A%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB.html">設定ファイル</a> のページの「管理対象と管理外」の章）と、名前がドットで始まるファイルとディレクトリ（<code>.DS_Store</code> など）は読まない。それ以外で Slot の名前でないファイルは、check が slot-unknown の error にする</li>
 <li>Slot を置くかどうかは任意。プロジェクトに当てはまらない Slot は作らない（例: 利用者の手元に入れるものがなければ、インストールの Slot はいらない）</li>
 <li>Slot のミッションに当たる詳しいことも、Slot の中に書く。Free ファイルへのリンクで済ませない</li>

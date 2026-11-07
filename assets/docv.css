@@ -82,13 +82,13 @@ h4 { font-size: 1em; line-height: 1.5; margin: 20px 0 4px; }
 h1 + h2 { margin-top: 24px; }
 main > h2:first-child { margin-top: 0; }
 /* 和文の折り返し。見出しと短い文字は文節で折り返し、段落は行末をそろえすぎない。どちらも効かないブラウザでは、ふつうに折り返す */
-h1, h2, h3, h4, th, td, .card, .adr-box, .outline, .sidebar, .page-tabs { word-break: auto-phrase; }
+h1, h2, h3, h4, th, td, .card, .decision-box, .outline, .sidebar, .page-tabs { word-break: auto-phrase; }
 h1, h2, h3, h4 { text-wrap: balance; }
 p, li { text-wrap: pretty; }
 /* 段落と箇条書きの 1 行の長さ。表、コード、カードは全幅のまま */
 main :is(p, ul, ol) { max-width: 46em; }
 
-/* Slot、ADR、Free ファイルのページの、h1 の上の元のファイルのパス。編集したいときに、元のファイルを見つけられるように。コピーのボタンは JS が動くときだけ出る */
+/* Slot、ADR、PDR、Free ファイルのページの、h1 の上の元のファイルのパス。編集したいときに、元のファイルを見つけられるように。コピーのボタンは JS が動くときだけ出る */
 .source { display: flex; align-items: center; gap: 2px; margin: 0 0 4px; color: var(--fg-muted); font-size: 0.85em; }
 .source code { padding: 0; background: none; font-size: 1em; overflow-wrap: anywhere; }
 .copy { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 24px; height: 24px; padding: 0; border: 1px solid transparent; border-radius: 6px; background: none; color: var(--fg-muted); cursor: pointer; }
@@ -185,22 +185,22 @@ mark { background: #fff8c5; color: inherit; }
   .panel-os { display: block; margin: 0 0 4px; font-weight: 600; color: var(--fg-muted); }
 }
 
-/* ADR。まとまりごとに、決定のつながりを過去から未来へ左から右に並べる。カードの幅は固定して題を折り返し、並びきらなければ横にスクロールする */
+/* ADR と PDR。まとまりごとに、決定のつながりを過去から未来へ左から右に並べる。カードの幅は固定して題を折り返し、並びきらなければ横にスクロールする */
 .lanes { display: flex; flex-direction: column; gap: 8px; margin: 12px 0 8px; }
 .lane { display: flex; align-items: stretch; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
 /* つながりのない決定。1 行に 1 枚ずつ並べず、カードを折り返して並べる */
-.adr-grid { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 8px; }
-.adr-box { flex: none; box-sizing: border-box; width: 220px; display: flex; flex-direction: column; overflow-wrap: anywhere; padding: 8px 14px; border: 1px solid var(--fg); border-radius: 6px; color: var(--fg); font-weight: 600; }
-.adr-box.superseded { border-style: dashed; border-color: var(--fg-faint); color: var(--fg-muted); background: var(--bg-subtle); }
+.decision-grid { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 8px; }
+.decision-box { flex: none; box-sizing: border-box; width: 220px; display: flex; flex-direction: column; overflow-wrap: anywhere; padding: 8px 14px; border: 1px solid var(--fg); border-radius: 6px; color: var(--fg); font-weight: 600; }
+.decision-box.superseded { border-style: dashed; border-color: var(--fg-faint); color: var(--fg-muted); background: var(--bg-subtle); }
 .arrow { flex: none; align-self: center; color: var(--fg-muted); font-size: 1.2em; }
 /* 打ち消された決定のページの、h1 の下の知らせ。打ち消された箱と同じく破線にする */
 .status { margin: 0 0 16px; padding: 8px 12px; border: 1px dashed var(--fg-faint); border-radius: 6px; background: var(--bg-subtle); color: var(--fg-muted); }
 /* 決定のページの下の、前後の決定のカード。過去の決定を左に、新しい決定を右に置く */
-.adr-nav { display: flex; justify-content: space-between; gap: 16px; margin: 40px 0 0; padding-top: 16px; border-top: 1px solid var(--border); }
-.adr-nav > div { display: flex; flex-direction: column; gap: 4px; }
-.adr-nav > .next { align-items: flex-end; }
-.adr-nav .boxes { display: flex; align-items: stretch; gap: 8px; }
-.adr-nav-label { margin: 0; color: var(--fg-muted); font-size: 0.85em; }
+.decision-nav { display: flex; justify-content: space-between; gap: 16px; margin: 40px 0 0; padding-top: 16px; border-top: 1px solid var(--border); }
+.decision-nav > div { display: flex; flex-direction: column; gap: 4px; }
+.decision-nav > .next { align-items: flex-end; }
+.decision-nav .boxes { display: flex; align-items: stretch; gap: 8px; }
+.decision-nav-label { margin: 0; color: var(--fg-muted); font-size: 0.85em; }
 
 /* 印刷の表示（JPG）。サイドバー、目次、コピーのボタンを出さず、本文だけを写す。ほかの規則に上書きされないように、最後に書く */
 @media print {

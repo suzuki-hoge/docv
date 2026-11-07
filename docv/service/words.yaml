@@ -10,7 +10,10 @@ groups:
           プロジェクトがミッションと形を決める Markdown のファイル（Free ファイル）。AI Agent が読み書きし、詳細を記録する。`docv.yaml` の `dir.free` のディレクトリ（既定は `docs/`）に置く
       - en: ADR
         desc_markdown: |
-          決めたこと 1 つを、背景、選ばなかった案と一緒に残す記録。`docv/adr/` に 1 つの Markdown で置き、決めた後は書き換えない
+          Architecture Decision Record。技術の決定 1 つを、背景、選ばなかった案と一緒に残す記録。`docv/adr/` に 1 つの Markdown で置き、決めた後は書き換えない
+      - en: PDR
+        desc_markdown: |
+          Product Decision Record。プロダクトやサービスの決定 1 つを、見直す条件、選ばなかった案と一緒に残す記録。`docv/pdr/` に 1 つの Markdown で置き、決めた後は書き換えない
   - name: 決まりの種類
     items:
       - ja: ルール

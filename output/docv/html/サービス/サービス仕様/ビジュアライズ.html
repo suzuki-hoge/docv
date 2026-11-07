@@ -23,20 +23,20 @@
 <p class="source"><code>docv/service/service/html.md</code><button type="button" class="copy" data-path="docv/service/service/html.md" title="パスをコピーする" aria-label="パスをコピーする" hidden><svg class="ready" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></p>
 <section class="slot" id="service">
 <h1><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M3 7l9 5 9-5"/><path d="M12 12v10"/></svg>サービス仕様</h1>
-<nav class="page-tabs"><a href="概要.html">概要</a><a href="Slot.html">Slot</a><a href="Free.html">Free</a><a href="ADR.html">ADR</a><a href="設定ファイル.html">設定ファイル</a><a href="コマンド.html">コマンド</a><a href="ビジュアライズ.html" aria-current="page">ビジュアライズ</a></nav>
+<nav class="page-tabs"><a href="概要.html">概要</a><a href="Slot.html">Slot</a><a href="Free.html">Free</a><a href="ADR.html">ADR</a><a href="PDR.html">PDR</a><a href="設定ファイル.html">設定ファイル</a><a href="コマンド.html">コマンド</a><a href="ビジュアライズ.html" aria-current="page">ビジュアライズ</a></nav>
 <p><code>docv build</code> が作る HTML、JPG、インデックスの作り。</p>
 <hr />
 <h2 id="1-html-の作り">1. HTML の作り</h2>
 <ul>
 <li>CSS と JS は、出力先の直下の <code>docv.css</code> と <code>docv.js</code> に書き、各ページから相対パスで読む。ページの中には書かない。出力先をコミットするリポジトリで、CSS や JS を変えたときの差分を 1 ファイルに収めるため。外部の CDN は使わない。file:// で開いても、ホスティングしても見られる。画像は元のファイルを読むので、ホスティングするときは、画像を置いたディレクトリも含めて公開する</li>
 <li>JS は、決定のページのカーソルキーでの移動、プロジェクト詳細のタグのトグル、検索のページ、元のファイルのパスのコピーにだけ使う。JS が動かなくても、すべての中身は読め、リンクから辿れる。コピーのボタンは JS が動くときだけ出し、JPG には写さない。OS ごとの手順のタブは、JS を使わず CSS で切り替える。ページに分けた Slot のタブは、ページへのリンクにする</li>
-<li>出力するファイルとディレクトリの名前からは、空白を除く。Slot、ページに分けた Slot、ADR、Free ファイルのページと JPG のどれも同じ。たとえば、Doc ガイドのページは <code>開発者向けガイド/Docガイド.html</code>、題が「Go にする」の決定は <code>ADR/&lt;group&gt;/Goにする.html</code> になる。CLI や git で、引用符なしでパスを扱えるようにするため。Free ファイルのページは、元のパスのディレクトリの名前からも空白を除く</li>
-<li>すべてのページの左に、README とトップの 5 ページ（プロジェクト概要、ADR、プロジェクト詳細、現在の設定、検索）へのサイドバーを、右に、そのページの h2 と h3 の目次を置く。README は、そのページがあるときだけ先頭に出す。見出しのないページでは、目次の代わりに同じ幅の空きを置き、ページを移っても本文の位置を変えない。幅の狭い画面では、左のサイドバーを本文の上に置き、項目を折り返して並べる。印刷の表示（JPG）では、どちらのサイドバーも出さない</li>
-<li>プロジェクト概要、ADR、プロジェクト詳細、現在の設定、検索のページは、ページの名前を h1 にする</li>
-<li>Slot、ADR、Free ファイルのページの h1 の上に、元のファイルのルートからのパスを小さく出し、横にパスをクリップボードにコピーするボタンを置く。ページを見て編集したくなったときに、元のファイルを見つけられるように。JPG にもパスは写す</li>
-<li>検索のページは、Slot ファイル、ADR、Free ファイルの中身を行ごとに並べた索引を、<code>docv.js</code> ではなく検索のページの中に書く。入力した文字列をそのまま含む行を探し、入力欄の下に、ファイルごとにパス、タグ、ヒットした行の前後 2 行を並べる。プレビューの長い行は、折り返さずに横へスクロールする。入力欄は、JS が動くときだけ出す</li>
+<li>出力するファイルとディレクトリの名前からは、空白を除く。Slot、ページに分けた Slot、ADR、PDR、Free ファイルのページと JPG のどれも同じ。たとえば、Doc ガイドのページは <code>開発者向けガイド/Docガイド.html</code>、題が「Go にする」の決定は <code>ADR/&lt;group&gt;/Goにする.html</code> になる。CLI や git で、引用符なしでパスを扱えるようにするため。Free ファイルのページは、元のパスのディレクトリの名前からも空白を除く</li>
+<li>すべてのページの左に、README とトップの 6 ページ（プロジェクト概要、ADR、PDR、プロジェクト詳細、現在の設定、検索）へのサイドバーを、右に、そのページの h2 と h3 の目次を置く。README は、そのページがあるときだけ先頭に出す。ADR と PDR は、決定があるときだけ出す。見出しのないページでは、目次の代わりに同じ幅の空きを置き、ページを移っても本文の位置を変えない。幅の狭い画面では、左のサイドバーを本文の上に置き、項目を折り返して並べる。印刷の表示（JPG）では、どちらのサイドバーも出さない</li>
+<li>プロジェクト概要、ADR、PDR、プロジェクト詳細、現在の設定、検索のページは、ページの名前を h1 にする</li>
+<li>Slot、ADR、PDR、Free ファイルのページの h1 の上に、元のファイルのルートからのパスを小さく出し、横にパスをクリップボードにコピーするボタンを置く。ページを見て編集したくなったときに、元のファイルを見つけられるように。JPG にもパスは写す</li>
+<li>検索のページは、Slot ファイル、ADR、PDR、Free ファイルの中身を行ごとに並べた索引を、<code>docv.js</code> ではなく検索のページの中に書く。入力した文字列をそのまま含む行を探し、入力欄の下に、ファイルごとにパス、タグ、ヒットした行の前後 2 行を並べる。プレビューの長い行は、折り返さずに横へスクロールする。入力欄は、JS が動くときだけ出す</li>
 <li>フェンスのコードブロックは、フェンスに書いた言語（<code>yaml</code> など）に合わせて、build のときに色を付ける。色は HTML の中に埋め込み、JS は使わない。言語がないか、docv が知らない言語なら、色を付けずに出す</li>
-<li>リンクは、README、Free ファイル、Slot ファイル、ADR のページにだけ、出力先の中の相対パスで張る（ツリー、Slot ファイルや Free ファイルの本文の中のリンク）。file:// で開けば file:// のまま、ホスティングすればその中で辿れる。<code>docv.yaml</code> へのリンクは、現在の設定のページに向ける。HTML は clone したリポジトリで見るので、ほかのファイル（コード、管理外のファイルなど）はエディタで開けばよく、リンクにせず文字だけを出す</li>
+<li>リンクは、README、Free ファイル、Slot ファイル、ADR、PDR のページにだけ、出力先の中の相対パスで張る（ツリー、Slot ファイルや Free ファイルの本文の中のリンク）。file:// で開けば file:// のまま、ホスティングすればその中で辿れる。<code>docv.yaml</code> へのリンクは、現在の設定のページに向ける。HTML は clone したリポジトリで見るので、ほかのファイル（コード、管理外のファイルなど）はエディタで開けばよく、リンクにせず文字だけを出す</li>
 <li>本文の中の http:// と https:// で始まる URL は、<code>[文字](URL)</code> の形で書いていなくてもリンクにする。URL は、空白、<code>&lt;</code>、<code>&gt;</code>、ASCII でない文字の前で終わり、末尾の句読点と、対になっていない <code>)</code> は含めない。日本語の文と続けて書いても、後ろの文を URL に含めないため。リンク、画像、コードの中の URL は変えない</li>
 <li>画像は、元のファイルを出力先から辿れる相対パスで読み、出力先にはコピーしない。出力先をコミットするリポジトリで、同じ画像を 2 か所に持たないため</li>
 <li>表のセルの中のインラインコードは、折り返さない。コマンドやパスが途中で切れないようにするため</li>
@@ -75,15 +75,16 @@
 <li>md の Slot のページは JPG にしない。md は GitHub でそのままプレビューできるため</li>
 </ul>
 <hr />
-<h2 id="4-adr-のページ">4. ADR のページ</h2>
+<h2 id="4-adr-と-pdr-のページ">4. ADR と PDR のページ</h2>
+<p>ADR と PDR は、同じ作りのページにする。違うのは、一覧のページ（<code>ADR.html</code> と <code>PDR.html</code>）、決定のページの置き場所（<code>ADR/</code> と <code>PDR/</code>）、題に付けるアイコンだけ。</p>
 <ul>
-<li><code>ADR.html</code> に、<code>group</code> ごとに h2 を置き、決定のつながりを、過去から未来へ左から右に箱と矢印で並べる。打ち消された決定の箱は、破線で薄く出す。打ち消された決定があるときは、h1 の下に、破線の箱が何かを書く</li>
+<li><code>ADR.html</code> と <code>PDR.html</code> に、<code>group</code> ごとに h2 を置き、決定のつながりを、過去から未来へ左から右に箱と矢印で並べる。打ち消された決定の箱は、破線で薄く出す。打ち消された決定があるときは、h1 の下に、破線の箱が何かを書く</li>
 <li>箱の幅はそろえ、題は箱の中で折り返す。つながりは 1 列に並べ、並びきらないときは、その列を横にスクロールする</li>
 <li>つながりのない決定は、1 列に 1 つずつ並べず、まとまりのつながりの後ろに、箱を折り返して並べる。決定が増えても、ページが縦に伸びすぎないため</li>
-<li>箱は決定のカードで、クリックすると決定 1 つのページ（<code>ADR/&lt;group&gt;/&lt;title&gt;.html</code>）を開く。決定 1 つを 1 ページにする</li>
+<li>箱は決定のカードで、クリックすると決定 1 つのページ（<code>ADR/&lt;group&gt;/&lt;title&gt;.html</code> か <code>PDR/&lt;group&gt;/&lt;title&gt;.html</code>）を開く。決定 1 つを 1 ページにする</li>
 <li>決定のページには、題を h1 にし、本文を出す。本文の見出しは h2 から始まるように段を付け直す。id と日付は出さない</li>
 <li>打ち消された決定のページには、h1 の下に、打ち消されたことと、打ち消した新しい決定へのリンクを出す。下のカードまで読まなくても分かるように</li>
-<li>ADR のページは JPG にしない。ADR は Markdown なので、GitHub でそのまま見られる</li>
+<li>ADR と PDR のページは JPG にしない。どちらも Markdown なので、GitHub でそのまま見られる</li>
 <li>決定のページの下に、前後の決定をカードで出す。打ち消した過去の決定は「← 過去の決定」の見出しを付けて左に、この決定を打ち消した新しい決定は「新しい決定 →」の見出しを付けて右に置く。新しい決定へのつながりは、生成するときに <code>supersedes</code> を逆にたどって組み立てる</li>
 <li>カーソルキーの ← と → で、前後の決定のページに移れる。前後に決定が複数あるときは、先頭のカードのページに移る。移れることは、カードの下に書く</li>
 </ul>
@@ -111,8 +112,8 @@
 <h2 id="6-毎回同じ出力にする決まり">6. 毎回同じ出力にする決まり</h2>
 <ul>
 <li>生成日時、実行したマシンのパス、乱数を出力に入れない</li>
-<li>並び順を固定する。Slot は規格の順（ページに分けた Slot のページは <code>order</code> とパスの順）、Free ファイルはディレクトリのツリーの順、Slot の中の項目は書いた順、ADR は日付と id の順。検索の索引は、Slot ファイル、ADR、Free ファイルの順</li>
-<li>入力（管理対象のファイル、<code>README.md</code>、Slot、ADR、<code>docv.yaml</code>、docv の版）が同じなら、HTML、<code>docv.css</code>、<code>docv.js</code>、インデックスはバイト単位で同じになる</li>
+<li>並び順を固定する。Slot は規格の順（ページに分けた Slot のページは <code>order</code> とパスの順）、Free ファイルはディレクトリのツリーの順、Slot の中の項目は書いた順にする。ADR と PDR は日付と id の順。検索の索引は、Slot ファイル、ADR、PDR、Free ファイルの順</li>
+<li>入力（管理対象のファイル、<code>README.md</code>、Slot、ADR、PDR、<code>docv.yaml</code>、docv の版）が同じなら、HTML、<code>docv.css</code>、<code>docv.js</code>、インデックスはバイト単位で同じになる</li>
 <li>JPG は、同じマシン・同じ Chrome・同じフォントなら同じになる。違うマシンで同じにすることはしない。チームで JPG を共有するなら、GitHub Actions などの決まった環境で作る</li>
 </ul>
 <hr />
@@ -130,7 +131,7 @@
 <li>Slot を、HTML のプロジェクト概要と同じく、まとまりごとに規格の順で、リンクの箇条書きにして並べる。ページに分けた Slot は、Slot の名前の下に、ページを <code>order</code> の順に入れ子で並べる。置いていない Slot は出さない</li>
 <li>md の Slot は、元のファイルへリンクする。GitHub で Markdown のまま読めるため。ファイルがシンボリックリンクなら、ルートの中にある先のファイルへリンクする。GitHub は、シンボリックリンクを開いても先の中身を出さないため</li>
 <li>YAML の Slot は、<code>dir.image</code> を書いていれば JPG へリンクし、書いていなければ出さない。分けたページも同じで、ページごとの JPG へリンクする。JPG へリンクするかは <code>dir.image</code> を書いたかで決め、<code>--no-image</code> を付けても同じインデックスにする</li>
-<li>Free ファイルと ADR は、それぞれの章に、置いているディレクトリへのリンクだけを出す。どちらも詳細やプロジェクト固有の情報で、知りたくなった人は clone すると考えるため。検索とタグでの絞り込みはプロジェクト詳細のページで、ADR のつながりの図は ADR のページで見られると、<code>docv open</code> と、そのページの <code>dir.html</code> の中のパスで案内する</li>
+<li>Free ファイル、ADR、PDR は、それぞれの章に、置いているディレクトリへのリンクだけを出す。どれも詳細やプロジェクト固有の情報で、知りたくなった人は clone すると考えるため。検索とタグでの絞り込みはプロジェクト詳細のページで、ADR と PDR のつながりの図はそれぞれのページで見られると、<code>docv open</code> と、そのページの <code>dir.html</code> の中のパスで案内する</li>
 <li>リンクは、<code>docv-index.md</code> の場所からの相対パスで、<code>[名前](&lt;パス&gt;)</code> の形で書く。パスに空白や日本語が入っても、GitHub で辿れるようにするため</li>
 <li>1 行目に、docv が作ったことを示すコメントを書く。build は、このコメントで始まらない <code>docv-index.md</code> を書き換えない（<a href="%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89.html">コマンド</a> のページの「ファイルを書くコマンド」の章）</li>
 <li>インデックスが古いままかは、check で確かめない。Slot を変えたら build で作り直す</li>
@@ -145,7 +146,7 @@
 <li class="h2"><a href="#1-html-の作り">1. HTML の作り</a></li>
 <li class="h2"><a href="#2-readme-のページ">2. README のページ</a></li>
 <li class="h2"><a href="#3-slot-のページ">3. Slot のページ</a></li>
-<li class="h2"><a href="#4-adr-のページ">4. ADR のページ</a></li>
+<li class="h2"><a href="#4-adr-と-pdr-のページ">4. ADR と PDR のページ</a></li>
 <li class="h2"><a href="#5-現在の設定のページ">5. 現在の設定のページ</a></li>
 <li class="h2"><a href="#6-毎回同じ出力にする決まり">6. 毎回同じ出力にする決まり</a></li>
 <li class="h2"><a href="#7-jpg">7. JPG</a></li>

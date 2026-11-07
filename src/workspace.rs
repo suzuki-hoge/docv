@@ -86,7 +86,7 @@ impl Project {
         Ok(files)
     }
 
-    /// Slot のディレクトリの中の .md のファイル（md の Slot と ADR）を、パスの辞書順で返す。
+    /// Slot のディレクトリの中の .md のファイル（md の Slot、ADR、PDR）を、パスの辞書順で返す。
     /// Free ファイルのルールはかけず、整形と textlint だけをかける。シンボリックリンクは書き換えないので除く。
     pub fn slot_markdown(&self) -> Result<Vec<String>> {
         Ok(self
@@ -97,7 +97,7 @@ impl Project {
             .collect())
     }
 
-    /// Slot のディレクトリの中のファイル（Slot と ADR の候補）を、パスの辞書順で返す。シンボリックリンクも含む。
+    /// Slot のディレクトリの中のファイル（Slot、ADR、PDR の候補）を、パスの辞書順で返す。シンボリックリンクも含む。
     /// 除外するもの（.gitignore に書かれている、ignore に当てはまる）と、
     /// 名前がドットで始まるファイルとディレクトリ（.DS_Store など）は除く。
     pub fn slot_dir_files(&self) -> Result<Vec<String>> {

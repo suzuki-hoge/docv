@@ -12,6 +12,7 @@
   - [Slot](<docv/service/service/slot.md>)
   - [Free](<docv/service/service/free.md>)
   - [ADR](<docv/service/service/adr.md>)
+  - [PDR](<docv/service/service/pdr.md>)
   - [設定ファイル](<docv/service/service/config.md>)
   - [コマンド](<docv/service/service/cli.md>)
   - [ビジュアライズ](<docv/service/service/html.md>)

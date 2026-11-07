@@ -27,7 +27,7 @@
 <p><img src="../../../../docs/figure/system-overview.svg" alt="部品とつながり" /></p>
 <div class="table-scroll"><table><thead><tr><th>部品</th><th>役割</th></tr></thead><tbody>
 <tr><td>docv（CLI）</td><td>ドキュメントを検査し、整形し、HTML を作る。決まり、雛形、HTML の部品を埋め込み、1 つのバイナリにする</td></tr>
-<tr><td>リポジトリのドキュメント</td><td><code>docv.yaml</code>、Slot ファイル、Free ファイル、ADR。AI Agent と人間が書き、docv が読む。fix は書き直す</td></tr>
+<tr><td>リポジトリのドキュメント</td><td><code>docv.yaml</code>、Slot ファイル、Free ファイル、ADR、PDR。AI Agent と人間が書き、docv が読む。fix は書き直す</td></tr>
 <tr><td>textlint</td><td>日本語の文章を検査する。<code>docv.yaml</code> で使うと決めたときだけ、check と fix が npx で呼ぶ</td></tr>
 <tr><td>Chrome</td><td>HTML のページを JPG にする。<code>docv.yaml</code> に <code>dir.image</code> を書いたときだけ、build が動かす</td></tr>
 <tr><td>HTML、JPG</td><td>build の出力。人間が全体像を掴むために見る。HTML はローカルで開き、検索したりリンクを辿れる。JPG は git で管理すれば GitHub で見られ、clone しなくても概要を把握できる。<code>dir.index</code> を書けば、GitHub で Slot ファイルと JPG を辿る入り口のインデックス（<code>docv-index.md</code>）も書く</td></tr>

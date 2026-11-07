@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Result, bail};
 
 use crate::build;
+use crate::decision::Kind;
 use crate::markdown::relative_path;
 use crate::slot::{Content, DEFS, Group, Slot};
 use crate::workspace::Project;
@@ -50,13 +51,14 @@ pub fn ensure_writable(path: &Path) -> Result<()> {
 /// Slot は、HTML のプロジェクト概要と同じく、まとまりごとに DEFS の順で並べる。置いていない Slot は出さない。
 /// md の Slot は元のファイルへ、YAML の Slot は dir.image を書いていれば JPG へリンクし、書いていなければ出さない。分けた Slot のページも同じ。
 /// JPG を出すかは、dir.image を書いたかで決める。--no-image で build しても、同じインデックスになる。
-/// Free ファイルと ADR は、置いているディレクトリと、HTML で見るときのページを示す。
+/// Free ファイル、ADR、PDR は、置いているディレクトリと、HTML で見るときのページを示す。
+/// kinds は、決定がある記録の種類（ADR、PDR）。
 pub fn render(
     project: &Project,
     index: &Path,
     slots: &[Slot],
     has_free: bool,
-    has_adr: bool,
+    kinds: &[Kind],
 ) -> String {
     let from = index.parent().unwrap_or(&project.root);
     let image_dir = project.image_dir();
@@ -112,7 +114,7 @@ pub fn render(
             let _ = write!(out, "\n## {}\n\n{}\n", group.label(), lines.join("\n"));
         }
     }
-    // Free ファイルと ADR は、ディレクトリへのリンクと、HTML で見るときのページを案内する。
+    // Free ファイル、ADR、PDR は、ディレクトリへのリンクと、HTML で見るときのページを案内する。
     let html = |page: &str| relative_path(from, &project.out_dir().join(page));
     if has_free {
         let dir = project.config.free_dir();
@@ -123,13 +125,14 @@ pub fn render(
             html(build::DETAIL_PAGE)
         );
     }
-    if has_adr {
-        let dir = format!("{}/{}", project.slot_dir(), crate::adr::DIR);
+    for kind in kinds {
+        let dir = crate::decision::dir(project, *kind);
         let _ = write!(
             out,
-            "\n## ADR\n\n- {} ディレクトリを参照\n\nADR の系譜をたどりたい場合は、リポジトリを取得し `docv open` するもしくは直接 `{}` を開いてください。\n",
+            "\n## {label}\n\n- {} ディレクトリを参照\n\n{label} の系譜をたどりたい場合は、リポジトリを取得し `docv open` するもしくは直接 `{}` を開いてください。\n",
             link(&dir, &project.root.join(&dir)),
-            html(build::ADR_PAGE)
+            html(build::decision_index_page(*kind)),
+            label = kind.label(),
         );
     }
     out
@@ -198,6 +201,10 @@ mod tests {
             "docv/adr/go.md",
             "---\ndate: 2026-01-01\n---\n\n# Go にする\n",
         ),
+        (
+            "docv/pdr/free.md",
+            "---\ndate: 2026-01-01\n---\n\n# 無料で始める\n",
+        ),
         ("docs/a.md", "---\nmission: q\n---\n# A\n"),
     ];
 
@@ -245,6 +252,12 @@ mod tests {
 - [docv/adr](<docv/adr>) ディレクトリを参照
 
 ADR の系譜をたどりたい場合は、リポジトリを取得し `docv open` するもしくは直接 `out/html/ADR.html` を開いてください。
+
+## PDR
+
+- [docv/pdr](<docv/pdr>) ディレクトリを参照
+
+PDR の系譜をたどりたい場合は、リポジトリを取得し `docv open` するもしくは直接 `out/html/PDR.html` を開いてください。
 "
         );
     }
@@ -261,9 +274,10 @@ ADR の系譜をたどりたい場合は、リポジトリを取得し `docv ope
             text.contains("- [Doc ガイド](<docv/guide/doc-guide.md>)\n"),
             "{text}"
         );
-        // Free ファイルも ADR もなければ、その章を出さない
+        // Free ファイルも ADR も PDR もなければ、その章を出さない
         assert!(!text.contains("## Free ファイル"), "{text}");
         assert!(!text.contains("## ADR"), "{text}");
+        assert!(!text.contains("## PDR"), "{text}");
     }
 
     #[cfg(unix)]

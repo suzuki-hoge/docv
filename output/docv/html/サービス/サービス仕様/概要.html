@@ -23,7 +23,7 @@
 <p class="source"><code>docv/service/service/desc.md</code><button type="button" class="copy" data-path="docv/service/service/desc.md" title="パスをコピーする" aria-label="パスをコピーする" hidden><svg class="ready" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></p>
 <section class="slot" id="service">
 <h1><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M3 7l9 5 9-5"/><path d="M12 12v10"/></svg>サービス仕様</h1>
-<nav class="page-tabs"><a href="概要.html" aria-current="page">概要</a><a href="Slot.html">Slot</a><a href="Free.html">Free</a><a href="ADR.html">ADR</a><a href="設定ファイル.html">設定ファイル</a><a href="コマンド.html">コマンド</a><a href="ビジュアライズ.html">ビジュアライズ</a></nav>
+<nav class="page-tabs"><a href="概要.html" aria-current="page">概要</a><a href="Slot.html">Slot</a><a href="Free.html">Free</a><a href="ADR.html">ADR</a><a href="PDR.html">PDR</a><a href="設定ファイル.html">設定ファイル</a><a href="コマンド.html">コマンド</a><a href="ビジュアライズ.html">ビジュアライズ</a></nav>
 <p>docv の解決したいこと</p>
 <ul>
 <li>AI Agent の開発速度に人間の理解がついていけるように、ドキュメントの構造化ルールを提供し人間用のビジュアライズを行う</li>
@@ -129,7 +129,8 @@
 <p>任意 / リスト形式</p>
 <p>HTML にインデックスするときに組み込まれる</p>
 <h2 id="4-adr">4. ADR</h2>
-<p>決めたこと 1 つを、背景や選ばなかった案と一緒に残す記録</p>
+<p>ADR（Architecture Decision Record）は、技術の決定 1 つを、背景や選ばなかった案と一緒に残す記録</p>
+<p>プロダクトやサービスの決定は、ADR ではなく PDR に残す</p>
 <ul>
 <li><code>docv/adr/&lt;id&gt;.md</code> に、決定 1 つを 1 ファイルで置く ( ファイル名から <code>.md</code> を除いたものが id )</li>
 <li>ファイルは手で作る</li>
@@ -196,15 +197,65 @@
 <h3 id="supersedes"><code>supersedes</code></h3>
 <p>任意 / リスト形式</p>
 <p>打ち消す過去の決定の id</p>
-<h2 id="5-コマンド">5. コマンド</h2>
+<h2 id="5-pdr">5. PDR</h2>
+<p>PDR（Product Decision Record）は、プロダクトやサービスの決定 1 つを、見直す条件や選ばなかった案と一緒に残す記録。料金、プラン、提供する機能の範囲、対象とする利用者などの決定を残す</p>
+<ul>
+<li><code>docv/pdr/&lt;id&gt;.md</code> に、決定 1 つを 1 ファイルで置く</li>
+<li>ファイルの作り方、YAML front matter の項目、書き換えないこと、HTML の図は ADR と同じ</li>
+<li><code>supersedes</code> は PDR だけを指す。ADR と PDR は、同じ id でも別の決定</li>
+<li>本文の章は、ADR の章の <code>## 結果</code> と <code>## 選ばなかった案</code> の間に、<code>## 見直す条件</code> を足したもの
+<ul>
+<li><code>## 背景</code>: 決める必要が生じた課題と、そのときの利用者、市場、事業の状況</li>
+<li><code>## 決めたこと</code>: 決めたことと、その案を選んだ理由。決めたことが当てはまる範囲（対象の利用者、プラン、機能など）</li>
+<li><code>## 決めないこと</code>（任意）: この PDR では決めないことと、それをどこで決めるか</li>
+<li><code>## 結果</code>: 利用者と事業に起きると見込むこと。引き受けること（できなくなること、後で考えること）も書く</li>
+<li><code>## 見直す条件</code>: どんな状況になったら、この決定を見直すか。数や時期など、起きたかどうかを確かめられる形で書く</li>
+<li><code>## 選ばなかった案</code>: 比べた案と、それぞれを選ばなかった理由</li>
+<li><code>## 参考</code>（任意）: 根拠にしたファイルや資料へのリンク</li>
+</ul>
+</li>
+<li>見直す条件に当たっても書き換えない。決定を変えるなら、新しい PDR を書き、その <code>supersedes</code> で過去の決定の id を指す</li>
+</ul>
+<pre><code class="language-markdown"><span style="color:#a71d5d;">---
+</span><span style="color:#323232;">group: 料金
+</span><span style="color:#323232;">date: 2026-04-01
+</span><span style="color:#323232;">supersedes: [ free-only ]
+</span><span style="font-weight:bold;color:#a71d5d;">---
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;"># </span><span style="font-weight:bold;color:#323232;">注文の多い店舗に有料のプランを求める
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">## </span><span style="font-weight:bold;color:#323232;">背景
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">無料のプランだけで提供してきた。月の注文が 1 万件を超える店舗が増え、サーバの費用が売上を上回った
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">## </span><span style="font-weight:bold;color:#323232;">決めたこと
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">月の注文が 1,000 件を超える店舗には、有料のプランを求める。1,000 件までは、今までどおり無料にする
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">## </span><span style="font-weight:bold;color:#323232;">結果
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">注文の多い店舗の一部は、解約すると見込む
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">## </span><span style="font-weight:bold;color:#323232;">見直す条件
+</span><span style="color:#323232;">
+</span><span style="color:#a71d5d;">- </span><span style="color:#ed6a43;">有料のプランに移った店舗が、対象の店舗の半分を下回ったとき
+</span><span style="color:#a71d5d;">-</span><span style="color:#ed6a43;"> 2027 年 3 月の時点で、サーバの費用が売上を上回ったままのとき
+</span><span style="color:#ed6a43;">
+</span><span style="font-weight:bold;color:#a71d5d;">## </span><span style="font-weight:bold;color:#323232;">選ばなかった案
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">| 案                       | 選ばなかった理由                 |
+</span><span style="color:#323232;">| ------------------------ | -------------------------------- |
+</span><span style="color:#323232;">| すべての店舗を有料にする | 小さな店舗が使い始められなくなる |
+</span></code></pre>
+<h2 id="6-コマンド">6. コマンド</h2>
 <p>すべてのコマンドは <code>docv --help</code> と <code>docv &lt;sub-command&gt; --help</code> で確認する</p>
 <p>新たに導入する場合は <code>docv init</code> し、<code>docv slot gen doc-guide</code> でガイドラインを作り、<code>docv slot gen</code> と <code>docv check</code> で作成・調整を進める</p>
-<h2 id="6-スキーマ--設定ファイル-">6. スキーマ ( 設定ファイル )</h2>
+<h2 id="7-スキーマ--設定ファイル-">7. スキーマ ( 設定ファイル )</h2>
 <p>設定ファイル ( <code>docv.yaml</code> ) の項目は <code>docv init --print</code> で確認する</p>
 <p>すべての項目が、既定の値でコメントとして載っている</p>
-<h2 id="7-スキーマ--docv-ファイル-">7. スキーマ ( docv ファイル )</h2>
+<h2 id="8-スキーマ--docv-ファイル-">8. スキーマ ( docv ファイル )</h2>
 <p>YAML の Slot は <code>docv slot list</code> で確認し、そのスキーマは <code>docv slot schema &lt;slot&gt;</code> で確認する</p>
-<h2 id="8-ルールガイドライン設定">8. ルール、ガイドライン、設定</h2>
+<h2 id="9-ルールガイドライン設定">9. ルール、ガイドライン、設定</h2>
 <p>docv の決まりは、次の 3 つに分かれる</p>
 <ul>
 <li>ルール: docv の仕組みが決める決まり。Slot と <code>docv.yaml</code> のスキーマ、YAML front matter の key、check が確かめることなど。利用側は変えられない。この概要と <code>docv slot schema &lt;slot&gt;</code> で確認する</li>
@@ -229,10 +280,11 @@
 <li class="h3"><a href="#group">group</a></li>
 <li class="h3"><a href="#date">date</a></li>
 <li class="h3"><a href="#supersedes">supersedes</a></li>
-<li class="h2"><a href="#5-コマンド">5. コマンド</a></li>
-<li class="h2"><a href="#6-スキーマ--設定ファイル-">6. スキーマ ( 設定ファイル )</a></li>
-<li class="h2"><a href="#7-スキーマ--docv-ファイル-">7. スキーマ ( docv ファイル )</a></li>
-<li class="h2"><a href="#8-ルールガイドライン設定">8. ルール、ガイドライン、設定</a></li>
+<li class="h2"><a href="#5-pdr">5. PDR</a></li>
+<li class="h2"><a href="#6-コマンド">6. コマンド</a></li>
+<li class="h2"><a href="#7-スキーマ--設定ファイル-">7. スキーマ ( 設定ファイル )</a></li>
+<li class="h2"><a href="#8-スキーマ--docv-ファイル-">8. スキーマ ( docv ファイル )</a></li>
+<li class="h2"><a href="#9-ルールガイドライン設定">9. ルール、ガイドライン、設定</a></li>
 </ul>
 </nav>
 </body>

@@ -5,7 +5,7 @@ mission: 外から見た機能と、それぞれの振る舞いと決まり
 
 # Free
 
-docv が管理する Free ファイル（`docv.yaml` の `dir.free` のディレクトリの下の Markdown）のルール。何をどう書くかはガイドライン（Slot の Doc ガイド、`guide/doc-guide.md`）で、プロジェクトが決める。Slot のルールは [Slot](slot.md)、ADR のルールは [ADR](adr.md)、`docv.yaml` は [設定ファイル](config.md) のページに書く。
+docv が管理する Free ファイル（`docv.yaml` の `dir.free` のディレクトリの下の Markdown）のルール。何をどう書くかはガイドライン（Slot の Doc ガイド、`guide/doc-guide.md`）で、プロジェクトが決める。Slot のルールは [Slot](slot.md)、ADR と PDR のルールは [ADR](adr.md) と [PDR](pdr.md)、`docv.yaml` は [設定ファイル](config.md) のページに書く。
 
 ---
 

@@ -11,7 +11,7 @@ use crate::markdown::{self, Document, Outline};
 use crate::style::{self, Style};
 use crate::textlint::Textlint;
 use crate::workspace::Project;
-use crate::{adr, format, slot, slot_markdown};
+use crate::{decision, format, slot, slot_markdown};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Options {
@@ -19,7 +19,7 @@ pub struct Options {
     pub textlint: bool,
 }
 
-/// 管理対象のファイル、Slot、ADR を確かめる。targets が空ならすべて、そうでなければそのパス（ルートからの相対パス）だけ。
+/// 管理対象のファイル、Slot、ADR と PDR を確かめる。targets が空ならすべて、そうでなければそのパス（ルートからの相対パス）だけ。
 /// targets で絞るのは確かめるファイルだけで、ファイルにかける検査は、targets があってもなくても同じ。
 pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Vec<Diagnostic>> {
     let style = Style::new(&project.config);
@@ -35,8 +35,8 @@ pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Ve
         diagnostics.extend(check_markdown(project, &style, &path, &text, true));
         textlint_files.push(path);
     }
-    // Slot のディレクトリの中の .md のファイル（md の Slot と ADR）には、YAML front matter のほかは、Free ファイルと同じ検査をかける。
-    // ADR の YAML front matter は adr::check で確かめる。
+    // Slot のディレクトリの中の .md のファイル（md の Slot、ADR、PDR）には、YAML front matter のほかは、Free ファイルと同じ検査をかける。
+    // ADR と PDR の YAML front matter は decision::check で確かめる。
     for path in project.slot_markdown()?.into_iter().filter(|p| wanted(p)) {
         let text = read(&path)?;
         diagnostics.extend(check_markdown(project, &style, &path, &text, false));
@@ -76,13 +76,17 @@ pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Ve
             }
         }
     }
-    // Slot と ADR は、ファイルどうしのつながり（ADR の supersedes など）も見るので、すべて読んでから絞る。
+    // Slot、ADR、PDR は、ファイルどうしのつながり（supersedes など）も見るので、すべて読んでから絞る。
     diagnostics.extend(
         slot::check(project)?
             .into_iter()
             .filter(|d| wanted(&d.path)),
     );
-    diagnostics.extend(adr::check(project)?.into_iter().filter(|d| wanted(&d.path)));
+    diagnostics.extend(
+        decision::check(project)?
+            .into_iter()
+            .filter(|d| wanted(&d.path)),
+    );
     if options.textlint
         && let Some(textlint) = Textlint::new(project)
     {
@@ -178,7 +182,7 @@ fn check_block(
     cx.diagnostics
 }
 
-/// 整形できないファイルは、Free ファイルなら frontmatter-invalid、ADR なら adr-invalid が出ているので、ここでは出さない。
+/// 整形できないファイルは、Free ファイルなら frontmatter-invalid、ADR と PDR なら adr-invalid と pdr-invalid が出ているので、ここでは出さない。
 fn check_format(cx: &mut Checker, text: &str) {
     if cx.project.config.format.enabled
         && let Ok(formatted) = format::format(text)
@@ -462,7 +466,7 @@ lint:
     }
 
     #[test]
-    fn reports_broken_links_and_slot_and_adr_problems() {
+    fn reports_broken_links_and_slot_adr_and_pdr_problems() {
         let result = check(&[
             (
                 "docs/spec/a.md",
@@ -475,8 +479,13 @@ lint:
             ("README.md", "# R\n"),
             ("docv/service/words.yaml", "groups: 1\n"),
             ("docv/adr/a.md", "# A\n"),
+            // PDR も ADR と同じく決定として読み、Slot の名前でないファイルとはしない。Markdown には Free ファイルと同じ検査をかける
+            (
+                "docv/pdr/b.md",
+                "---\ndate: 2026-01-01\n---\n\n# B\n\n[x](missing.md)\n",
+            ),
         ]);
-        assert_eq!(result.len(), 3, "{result:#?}");
+        assert_eq!(result.len(), 4, "{result:#?}");
         assert_eq!(
             result[0],
             "docs/spec/a.md:6: link-broken リンク先 missing.md がない"
@@ -487,6 +496,10 @@ lint:
         );
         assert_eq!(
             result[2],
+            "docv/pdr/b.md:7: link-broken リンク先 missing.md がない"
+        );
+        assert_eq!(
+            result[3],
             "docv/service/words.yaml:1: slot-invalid 用語集の Slot の形に合わない: groups: invalid type: integer `1`, expected a sequence at line 1 column 9"
         );
     }

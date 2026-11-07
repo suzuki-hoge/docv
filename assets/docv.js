@@ -52,11 +52,11 @@
 // 決定のページ。カーソルキーの ← と → を、前後の決定のカードへのリンクにする。
 // 入力欄にいるときと、修飾キーを押しているときは、ブラウザの動きのままにする。
 (function () {
-  if (!document.querySelector('.adr-nav')) return;
+  if (!document.querySelector('.decision-nav')) return;
   document.addEventListener('keydown', function (e) {
     if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
     var side = { ArrowLeft: 'prev', ArrowRight: 'next' }[e.key];
-    var a = side && document.querySelector('.adr-nav .' + side + ' a');
+    var a = side && document.querySelector('.decision-nav .' + side + ' a');
     if (a) location.href = a.href;
   });
 })();

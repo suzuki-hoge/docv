@@ -9,7 +9,7 @@ mission: 部品ごとの振る舞いと、部品の間の流れと、部品を�
 ## 処理の流れ
 
 1. `docv.yaml` を読み、スキーマで確かめる。init、desc、slot list、slot schema と、`--print` を付けた slot gen は、`docv.yaml` を読まない
-2. ルート以下のファイルを分類し、Slot、ADR、Free ファイルを読む
+2. ルート以下のファイルを分類し、Slot、ADR、PDR、Free ファイルを読む
 3. コマンドに応じて、次の部品を使う
 
 | コマンド | 使う部品                                                                                                                                |

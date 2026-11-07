@@ -1,12 +1,12 @@
 //! docv build。人間向けの HTML と、設定で有効なら Slot のページの JPG を生成する。docv/service/service/html.md。
 //!
-//! トップは 5 ページに分け、サイドバーで行き来する。ルートに README.md があれば、README のページをサイドバーの先頭に足す。
-//! index.html（プロジェクト概要）に Slot ファイルのページへのカード、ADR.html に決定のつながりの図、
+//! トップは 6 ページに分け、サイドバーで行き来する。ルートに README.md があれば、README のページをサイドバーの先頭に足す。
+//! index.html（プロジェクト概要）に Slot ファイルのページへのカード、ADR.html と PDR.html に決定のつながりの図、
 //! プロジェクト詳細.html に Free ファイルのツリー、現在の設定.html に docv.yaml のすべての項目と今の値、
-//! 検索.html に Slot ファイル、ADR、Free ファイルの中身を探す入力欄を置く。
+//! 検索.html に Slot ファイル、ADR、PDR、Free ファイルの中身を探す入力欄を置く。ADR と PDR のページは、決定があるときだけ作る。
 //! Slot は 1 つずつ独立したページにし、`<まとまり>/<Slot>.html` に置く。
 //! ページに分けた Slot は、ページごとに `<まとまり>/<Slot>/<ページの名前>.html` に置き、ページへのリンクをタブにして並べる。
-//! Slot、ADR、Free ファイルのページには、h1 の上に元のファイルのパスと、それをコピーするボタンを置く。表は、横にスクロールできる包みに入れる。
+//! Slot、ADR、PDR、Free ファイルのページには、h1 の上に元のファイルのパスと、それをコピーするボタンを置く。表は、横にスクロールできる包みに入れる。
 //! 画像にしても読めるように、折りたたみは使わない。OS ごとの手順のタブは、印刷の表示（JPG）ではすべて並べる。
 //! dir.index を書いていれば、Slot ファイルへのリンクを並べたインデックス（docv-index.md）も書く（index.rs）。
 
@@ -29,8 +29,8 @@ use syntect::html::{IncludeBackground, styled_line_to_highlighted_html};
 use syntect::parsing::SyntaxSet;
 use syntect::util::LinesWithEndings;
 
-use crate::adr::{self, Adr};
 use crate::config_view::{self, Cell};
+use crate::decision::{self, Decision, Kind};
 use crate::index;
 use crate::jpg;
 use crate::markdown::{self, relative_path, slug};
@@ -54,9 +54,10 @@ const MARKER_TEXT: &str = "docv build の出力。このディレクトリは do
 const README_SOURCE: &str = "README.md";
 const README_PAGE: &str = "README.html";
 
-/// トップの 5 ページ。サイドバーに、README のページに続けて、この順で並べる。
+/// トップの 6 ページ。サイドバーに、README のページに続けて、この順で並べる。
 pub const PAGE: &str = "index.html";
-pub(crate) const ADR_PAGE: &str = "ADR.html";
+const ADR_PAGE: &str = "ADR.html";
+const PDR_PAGE: &str = "PDR.html";
 pub(crate) const DETAIL_PAGE: &str = "プロジェクト詳細.html";
 const CONFIG_PAGE: &str = "現在の設定.html";
 const SEARCH_PAGE: &str = "検索.html";
@@ -67,6 +68,7 @@ enum Nav {
     Readme,
     Overview,
     Adr,
+    Pdr,
     Detail,
     Config,
     Search,
@@ -78,9 +80,18 @@ impl Nav {
             Nav::Readme => "README",
             Nav::Overview => "プロジェクト概要",
             Nav::Adr => "ADR",
+            Nav::Pdr => "PDR",
             Nav::Detail => "プロジェクト詳細",
             Nav::Config => "現在の設定",
             Nav::Search => "検索",
+        }
+    }
+
+    /// 決定の記録の種類の、一覧のページ。
+    fn of(kind: Kind) -> Nav {
+        match kind {
+            Kind::Adr => Nav::Adr,
+            Kind::Pdr => Nav::Pdr,
         }
     }
 
@@ -89,6 +100,7 @@ impl Nav {
             Nav::Readme => README_PAGE,
             Nav::Overview => PAGE,
             Nav::Adr => ADR_PAGE,
+            Nav::Pdr => PDR_PAGE,
             Nav::Detail => DETAIL_PAGE,
             Nav::Config => CONFIG_PAGE,
             Nav::Search => SEARCH_PAGE,
@@ -96,11 +108,13 @@ impl Nav {
     }
 }
 
+/// ADR か PDR の一覧のページの、出力先からの相対パス。`ADR.html`、`PDR.html`。
+pub(crate) fn decision_index_page(kind: Kind) -> &'static str {
+    Nav::of(kind).path()
+}
+
 /// Free ファイルのページを置くディレクトリ（出力先からの相対パス）。Free ファイルのパスの .md を .html にして、この下に置く。
 const DETAIL_DIR: &str = "プロジェクト詳細";
-
-/// ADR のページを置くディレクトリ（出力先からの相対パス）。決定 1 つを 1 ページにし、`ADR/<まとまり>/<題>.html` に置く。
-const ADR_DIR: &str = "ADR";
 
 /// 管理対象のファイル 1 つ。HTML ではツリーの 1 行になる。
 struct Page {
@@ -164,7 +178,8 @@ fn render(project: &Project, out: &Path, index: Option<&Path>) -> Result<Vec<Slo
         _ => None,
     };
     let slots = slot::load(project)?;
-    let adrs = adr::load(project)?;
+    let adrs = decision::load(project, Kind::Adr)?;
+    let pdrs = decision::load(project, Kind::Pdr)?;
 
     let site = Site {
         project,
@@ -174,13 +189,21 @@ fn render(project: &Project, out: &Path, index: Option<&Path>) -> Result<Vec<Slo
         pages: &pages,
         slots: &slots,
         adrs: &adrs,
+        pdrs: &pdrs,
     };
     if let Some(readme) = &readme {
         write(&out.join(README_PAGE), &site.render_readme(readme))?;
     }
     write(&out.join(PAGE), &site.render_index())?;
-    if !adrs.is_empty() {
-        write(&out.join(ADR_PAGE), &site.render_adr_index())?;
+    let kinds: Vec<Kind> = Kind::ALL
+        .into_iter()
+        .filter(|kind| !site.decisions(*kind).is_empty())
+        .collect();
+    for kind in &kinds {
+        write(
+            &out.join(Nav::of(*kind).path()),
+            &site.render_decision_index(*kind),
+        )?;
     }
     write(&out.join(DETAIL_PAGE), &site.render_detail())?;
     write(&out.join(CONFIG_PAGE), &site.render_config())?;
@@ -188,14 +211,14 @@ fn render(project: &Project, out: &Path, index: Option<&Path>) -> Result<Vec<Slo
     for slot in &slots {
         write(&out.join(page_path(slot)), &site.render_slot(slot))?;
     }
-    for a in &adrs {
-        write(&out.join(adr_page(a)), &site.render_adr(a))?;
+    for d in adrs.iter().chain(&pdrs) {
+        write(&out.join(decision_page(d)), &site.render_decision(d))?;
     }
     for page in &pages {
         write(&out.join(doc_page(&page.source)), &site.render_doc(page))?;
     }
     if let Some(path) = index {
-        let text = index::render(project, path, &slots, !pages.is_empty(), !adrs.is_empty());
+        let text = index::render(project, path, &slots, !pages.is_empty(), &kinds);
         write(path, &text)?;
     }
     Ok(slots)
@@ -304,10 +327,19 @@ struct Site<'a> {
     readme: Option<&'a Page>,
     pages: &'a [Page],
     slots: &'a [Slot],
-    adrs: &'a [Adr],
+    adrs: &'a [Decision],
+    pdrs: &'a [Decision],
 }
 
 impl Site<'_> {
+    /// 1 つの種類の決定。日付と id の順。
+    fn decisions(&self, kind: Kind) -> &[Decision] {
+        match kind {
+            Kind::Adr => self.adrs,
+            Kind::Pdr => self.pdrs,
+        }
+    }
+
     /// README.html。ルートの README.md を Markdown のまま HTML にする。
     fn render_readme(&self, readme: &Page) -> String {
         *self.dir.borrow_mut() = self.out.to_path_buf();
@@ -335,14 +367,14 @@ impl Site<'_> {
         self.page(&escape(&self.project.title()), Nav::Overview, &out)
     }
 
-    /// ADR.html。決定のつながりの図。
-    fn render_adr_index(&self) -> String {
+    /// ADR.html と PDR.html。決定のつながりの図。
+    fn render_decision_index(&self, kind: Kind) -> String {
         *self.dir.borrow_mut() = self.out.to_path_buf();
         let mut out = String::new();
-        self.adr_lanes(&mut out);
+        self.decision_lanes(&mut out, kind);
         self.page(
-            &format!("ADR - {}", escape(&self.project.title())),
-            Nav::Adr,
+            &format!("{} - {}", kind.label(), escape(&self.project.title())),
+            Nav::of(kind),
             &out,
         )
     }
@@ -379,7 +411,7 @@ impl Site<'_> {
         )
     }
 
-    /// 検索.html。入力欄と、探す先の索引。索引は、Slot ファイル、ADR、Free ファイルの順に、中身を行ごとに持つ。
+    /// 検索.html。入力欄と、探す先の索引。索引は、Slot ファイル、ADR、PDR、Free ファイルの順に、中身を行ごとに持つ。
     /// 入力欄は JS が動くときだけ出し、結果は JS が入力欄の下に並べる。
     fn render_search(&self) -> Result<String> {
         *self.dir.borrow_mut() = self.out.to_path_buf();
@@ -387,8 +419,8 @@ impl Site<'_> {
         for s in self.slots {
             entries.push(self.search_entry(&s.path, &[])?);
         }
-        for a in self.adrs {
-            entries.push(self.search_entry(&a.path, &[])?);
+        for d in self.adrs.iter().chain(self.pdrs) {
+            entries.push(self.search_entry(&d.path, &[])?);
         }
         for p in self.pages {
             entries.push(self.search_entry(&p.source, &p.tags)?);
@@ -531,7 +563,8 @@ impl Site<'_> {
         )
     }
 
-    /// HTML の全体。左に README とトップの 5 ページへのサイドバーを、右に h2 と h3 の目次を置く。印刷の表示（JPG）では、どちらも出さない。
+    /// HTML の全体。左に README とトップの 6 ページへのサイドバーを、右に h2 と h3 の目次を置く。印刷の表示（JPG）では、どちらも出さない。
+    /// README、ADR、PDR は、そのページがあるときだけ出す。
     fn page(&self, title: &str, current: Nav, body: &str) -> String {
         let mut nav = format!(
             "<nav class=\"sidebar\">\n<p class=\"project\">{}</p>\n<ul>\n",
@@ -541,12 +574,14 @@ impl Site<'_> {
             Nav::Readme,
             Nav::Overview,
             Nav::Adr,
+            Nav::Pdr,
             Nav::Detail,
             Nav::Config,
             Nav::Search,
         ] {
             if (item == Nav::Readme && self.readme.is_none())
                 || (item == Nav::Adr && self.adrs.is_empty())
+                || (item == Nav::Pdr && self.pdrs.is_empty())
             {
                 continue;
             }
@@ -628,25 +663,27 @@ impl Site<'_> {
         }
     }
 
-    /// ADR の図。まとまりごとに h2 を置き、決定のつながりを過去から未来へ、左から右に箱と矢印で並べる。
+    /// ADR と PDR の図。まとまりごとに h2 を置き、決定のつながりを過去から未来へ、左から右に箱と矢印で並べる。
     /// つながりのない決定は、1 行に 1 つずつ並べず、つながりの後ろに箱を折り返して並べる。箱は、その決定のページへのリンク。
-    fn adr_lanes(&self, out: &mut String) {
-        let _ = writeln!(out, "<h1>{}</h1>", Nav::Adr.label());
-        if self.adrs.iter().any(|a| !a.superseded_by.is_empty()) {
+    fn decision_lanes(&self, out: &mut String, kind: Kind) {
+        let decisions = self.decisions(kind);
+        let _ = writeln!(out, "<h1>{}</h1>", kind.label());
+        if decisions.iter().any(|a| !a.superseded_by.is_empty()) {
             let _ = writeln!(
                 out,
                 "<p class=\"note\">破線の箱は、新しい決定に打ち消された決定。</p>"
             );
         }
-        for group in adr::groups(self.adrs) {
-            let members: Vec<&Adr> = self.adrs.iter().filter(|a| a.group() == group).collect();
+        for group in decision::groups(decisions) {
+            let members: Vec<&Decision> = decisions.iter().filter(|a| a.group() == group).collect();
             let _ = writeln!(out, "<h2 class=\"group\">{}</h2>", escape(group));
-            let (chains, singles): (Vec<_>, Vec<_>) =
-                adr::lanes(&members).into_iter().partition(|l| l.len() > 1);
+            let (chains, singles): (Vec<_>, Vec<_>) = decision::lanes(&members)
+                .into_iter()
+                .partition(|l| l.len() > 1);
             if !chains.is_empty() {
                 let _ = writeln!(out, "<div class=\"lanes\">");
                 for lane in chains {
-                    let boxes: Vec<String> = lane.iter().map(|a| self.adr_box(a)).collect();
+                    let boxes: Vec<String> = lane.iter().map(|a| self.decision_box(a)).collect();
                     let _ = writeln!(
                         out,
                         "<div class=\"lane\">{}</div>",
@@ -656,61 +693,63 @@ impl Site<'_> {
                 let _ = writeln!(out, "</div>");
             }
             if !singles.is_empty() {
-                let boxes: String = singles.iter().map(|l| self.adr_box(l[0])).collect();
-                let _ = writeln!(out, "<div class=\"adr-grid\">{boxes}</div>");
+                let boxes: String = singles.iter().map(|l| self.decision_box(l[0])).collect();
+                let _ = writeln!(out, "<div class=\"decision-grid\">{boxes}</div>");
             }
         }
     }
 
     /// 決定 1 つのページ。
-    fn render_adr(&self, a: &Adr) -> String {
-        *self.dir.borrow_mut() = self.out.join(ADR_DIR).join(file_name(a.group()));
+    fn render_decision(&self, a: &Decision) -> String {
+        *self.dir.borrow_mut() = self.out.join(a.kind.label()).join(file_name(a.group()));
         let mut out = source(&a.path);
         let _ = writeln!(out, "<section class=\"slot\">");
-        self.adr_detail(&mut out, a);
+        self.decision_detail(&mut out, a);
         let _ = writeln!(out, "</section>");
         self.page(
             &format!(
-                "{} - ADR - {}",
+                "{} - {} - {}",
                 escape(&a.record.title),
+                a.kind.label(),
                 escape(&self.project.title())
             ),
-            Nav::Adr,
+            Nav::of(a.kind),
             &out,
         )
     }
 
     /// 決定のページへのリンク。描いているページのディレクトリからの相対パス。
-    fn adr_href(&self, a: &Adr) -> String {
-        let to = self.out.join(adr_page(a));
+    fn decision_href(&self, a: &Decision) -> String {
+        let to = self.out.join(decision_page(a));
         encode_path(&relative_path(&self.dir.borrow(), &to))
     }
 
-    fn adr_box(&self, a: &Adr) -> String {
+    fn decision_box(&self, a: &Decision) -> String {
         format!(
-            "<a class=\"adr-box{}\" href=\"{}\">{}</a>",
+            "<a class=\"decision-box{}\" href=\"{}\">{}</a>",
             if a.superseded_by.is_empty() {
                 ""
             } else {
                 " superseded"
             },
-            self.adr_href(a),
+            self.decision_href(a),
             escape(&a.record.title)
         )
     }
 
-    fn adr_detail(&self, out: &mut String, a: &Adr) {
+    fn decision_detail(&self, out: &mut String, a: &Decision) {
         let r = &a.record;
-        let _ = writeln!(out, "<h1>{}{}</h1>", icon("adr"), escape(&r.title));
+        let decisions = self.decisions(a.kind);
+        let _ = writeln!(out, "<h1>{}{}</h1>", icon(a.kind.dir()), escape(&r.title));
         // 打ち消された決定は、題の下に、打ち消されたことと新しい決定へのリンクを出す。下のカードまで読まなくても分かるように。
         let newer: Vec<String> = a
             .superseded_by
             .iter()
-            .filter_map(|id| self.adrs.iter().find(|x| &x.record.id == id))
+            .filter_map(|id| decisions.iter().find(|x| &x.record.id == id))
             .map(|x| {
                 format!(
                     "<a href=\"{}\">{}</a>",
-                    self.adr_href(x),
+                    self.decision_href(x),
                     escape(&x.record.title)
                 )
             })
@@ -732,8 +771,8 @@ impl Site<'_> {
         // カーソルキーの ← と → で、それぞれの先頭のカードのページへ移る。移れることも書いておく。
         let boxes = |ids: &[String]| -> String {
             ids.iter()
-                .filter_map(|id| self.adrs.iter().find(|x| &x.record.id == id))
-                .map(|x| self.adr_box(x))
+                .filter_map(|id| decisions.iter().find(|x| &x.record.id == id))
+                .map(|x| self.decision_box(x))
                 .collect()
         };
         let (prev, next) = (boxes(&r.supersedes), boxes(&a.superseded_by));
@@ -745,12 +784,12 @@ impl Site<'_> {
                 return format!("<div class=\"{class}\"></div>");
             }
             format!(
-                "<div class=\"{class}\"><p class=\"adr-nav-label\">{label}</p><div class=\"boxes\">{html}</div></div>"
+                "<div class=\"{class}\"><p class=\"decision-nav-label\">{label}</p><div class=\"boxes\">{html}</div></div>"
             )
         };
         let _ = writeln!(
             out,
-            "<nav class=\"adr-nav\">{}{}</nav>\n<p class=\"note\">カーソルキーの ← と → でも移れる。</p>",
+            "<nav class=\"decision-nav\">{}{}</nav>\n<p class=\"note\">カーソルキーの ← と → でも移れる。</p>",
             side("prev", "← 過去の決定", &prev),
             side("next", "新しい決定 →", &next)
         );
@@ -1457,7 +1496,11 @@ impl Site<'_> {
         if let Some(slot) = self.slots.iter().find(|s| s.path == target) {
             return Some(page_path(slot));
         }
-        self.adrs.iter().find(|a| a.path == target).map(adr_page)
+        self.adrs
+            .iter()
+            .chain(self.pdrs)
+            .find(|a| a.path == target)
+            .map(decision_page)
     }
 
     /// URL ならそのまま、ルートからのパスなら、ページのあるファイルだけリンク先にする。
@@ -1469,7 +1512,7 @@ impl Site<'_> {
         }
     }
 
-    /// ルートの中のファイルへのリンク先。README.md、Free ファイル、Slot ファイル、ADR だけ、そのページに出力先の中の相対パスで向ける。
+    /// ルートの中のファイルへのリンク先。README.md、Free ファイル、Slot ファイル、ADR、PDR だけ、そのページに出力先の中の相対パスで向ける。
     /// docv.yaml は、現在の設定のページに向ける。
     /// HTML は clone したリポジトリで見るので、ほかのファイルはエディタで開けばよく、リンクにしない（None）。
     fn link(&self, target: &str, fragment: &str) -> Option<String> {
@@ -1559,8 +1602,12 @@ fn icon(id: &str) -> String {
         "cost" => {
             r#"<circle cx="12" cy="12" r="9"/><path d="M8 7l4 5 4-5"/><path d="M12 12v6"/><path d="M9 13.5h6M9 16.5h6"/>"#
         }
-        // 旗（決定の記録）
+        // 旗（技術の決定の記録）
         "adr" => r#"<path d="M5 21V4"/><path d="M5 4h12l-2.5 4 2.5 4H5"/>"#,
+        // 左右を指す道しるべ（プロダクトやサービスの決定の記録）
+        "pdr" => {
+            r#"<path d="M12 22V3"/><path d="M5 5h11l3 3-3 3H5z"/><path d="M19 13H8l-3 3 3 3h11z"/>"#
+        }
         _ => r#"<rect x="4" y="4" width="16" height="16" rx="2"/>"#,
     };
     format!(
@@ -1590,7 +1637,7 @@ fn page(title: &str, css: &str, js: &str, nav: &str, body: &str, aside: &str) ->
     )
 }
 
-/// Slot、ADR、Free ファイルのページの h1 の上に置く、元のファイルのルートからのパスと、それをコピーするボタン。
+/// Slot、ADR、PDR、Free ファイルのページの h1 の上に置く、元のファイルのルートからのパスと、それをコピーするボタン。
 /// 編集したいときに、元のファイルを見つけられるように。ボタンは JS が動くときだけ出し、印刷の表示（JPG）には写さない。
 fn source(path: &str) -> String {
     let path = escape(path);
@@ -1769,10 +1816,12 @@ impl<'a> Dir<'a> {
     }
 }
 
-/// 決定のページの、出力先からの相対パス。`ADR/<まとまり>/<題>.html`。名前の空白は除く（`ADR/言語/Goにする.html`）。
-fn adr_page(a: &Adr) -> String {
+/// 決定のページの、出力先からの相対パス。`ADR/<まとまり>/<題>.html` か `PDR/<まとまり>/<題>.html`。
+/// 名前の空白は除く（`ADR/言語/Goにする.html`）。
+fn decision_page(a: &Decision) -> String {
     format!(
-        "{ADR_DIR}/{}/{}.html",
+        "{}/{}/{}.html",
+        a.kind.label(),
         file_name(a.group()),
         file_name(&a.record.title)
     )
@@ -2127,7 +2176,7 @@ mod tests {
             detail.contains("<a href=\"プロジェクト詳細.html\" aria-current=\"page\">"),
             "{detail}"
         );
-        assert!(!index.contains("class=\"adr-box"), "{index}");
+        assert!(!index.contains("class=\"decision-box"), "{index}");
         assert!(!index.contains(">spec/</td>"), "{index}");
         // トップのページにも、ページの名前の h1 を置く。現在の設定の項目の表の見出しは、h1 と重ならないように docv.yaml にする
         assert!(
@@ -2313,12 +2362,12 @@ mod tests {
             "{adr_index}"
         );
         assert!(
-            adr_index.contains("<div class=\"lane\"><a class=\"adr-box superseded\" href=\"ADR/言語/Goにする.html\">Go にする</a><span class=\"arrow\">→</span><a class=\"adr-box\" href=\"ADR/言語/Rustにする.html\">"),
+            adr_index.contains("<div class=\"lane\"><a class=\"decision-box superseded\" href=\"ADR/言語/Goにする.html\">Go にする</a><span class=\"arrow\">→</span><a class=\"decision-box\" href=\"ADR/言語/Rustにする.html\">"),
             "{adr_index}"
         );
         // つながりのない決定は、つながりの後ろに、箱を折り返して並べる
         assert!(
-            adr_index.contains("</div>\n<div class=\"adr-grid\"><a class=\"adr-box\" href=\"ADR/言語/Reactにする.html\">React にする</a></div>"),
+            adr_index.contains("</div>\n<div class=\"decision-grid\"><a class=\"decision-box\" href=\"ADR/言語/Reactにする.html\">React にする</a></div>"),
             "{adr_index}"
         );
         let go = read("ADR/言語/Goにする.html");
@@ -2334,7 +2383,7 @@ mod tests {
             "{go}"
         );
         assert!(
-            go.contains("<nav class=\"adr-nav\"><div class=\"prev\"></div><div class=\"next\"><p class=\"adr-nav-label\">新しい決定 →</p><div class=\"boxes\"><a class=\"adr-box\" href=\"Rustにする.html\">Rust にする</a></div></div></nav>\n<p class=\"note\">カーソルキーの ← と → でも移れる。</p>"),
+            go.contains("<nav class=\"decision-nav\"><div class=\"prev\"></div><div class=\"next\"><p class=\"decision-nav-label\">新しい決定 →</p><div class=\"boxes\"><a class=\"decision-box\" href=\"Rustにする.html\">Rust にする</a></div></div></nav>\n<p class=\"note\">カーソルキーの ← と → でも移れる。</p>"),
             "{go}"
         );
         assert!(
@@ -2357,12 +2406,12 @@ mod tests {
         assert!(!rust.contains("class=\"status\""), "{rust}");
         // 前後のカードは本文の後に置き、カーソルキーで移れるようにする。id と日付は出さない
         assert!(
-            rust.find("<td>Zig</td>").unwrap() < rust.find("<nav class=\"adr-nav\">").unwrap(),
+            rust.find("<td>Zig</td>").unwrap() < rust.find("<nav class=\"decision-nav\">").unwrap(),
             "{rust}"
         );
         assert!(!rust.contains("2026-03-01"), "{rust}");
         assert!(
-            rust.contains("<nav class=\"adr-nav\"><div class=\"prev\"><p class=\"adr-nav-label\">← 過去の決定</p><div class=\"boxes\"><a class=\"adr-box superseded\" href=\"Goにする.html\">Go にする</a></div></div><div class=\"next\"></div></nav>"),
+            rust.contains("<nav class=\"decision-nav\"><div class=\"prev\"><p class=\"decision-nav-label\">← 過去の決定</p><div class=\"boxes\"><a class=\"decision-box superseded\" href=\"Goにする.html\">Go にする</a></div></div><div class=\"next\"></div></nav>"),
             "{rust}"
         );
         assert_headings(&rust);
@@ -2398,6 +2447,93 @@ mod tests {
     }
 
     #[test]
+    fn builds_pdr_pages_like_adr_pages() {
+        let (dir, project) = project(&[
+            (
+                "docv/adr/go.md",
+                "---\ngroup: 言語\ndate: 2026-01-01\n---\n\n# Go にする\n",
+            ),
+            (
+                "docv/pdr/free.md",
+                "---\ngroup: 料金\ndate: 2026-01-01\n---\n\n# 無料で始める\n",
+            ),
+            (
+                "docv/pdr/paid.md",
+                "---\ngroup: 料金\ndate: 2026-02-01\nsupersedes: [free]\n---\n\n# 有料のプランを足す\n\n## 見直す条件\n\n解約が増えたら見直す\n",
+            ),
+            (
+                "docs/a.md",
+                "---\nmission: a\n---\n\n# A\n\n[料金](../docv/pdr/paid.md)\n",
+            ),
+        ]);
+        let out = dir.path().join("out");
+        run(&project, &out, None).unwrap();
+        let read = |path: &str| fs::read_to_string(out.join(path)).unwrap();
+
+        // サイドバーの ADR の下に PDR を置く
+        let index = read(PAGE);
+        assert!(
+            index.contains("<li><a href=\"ADR.html\">ADR</a></li>\n<li><a href=\"PDR.html\">PDR</a></li>\n<li><a href=\"プロジェクト詳細.html\">"),
+            "{index}"
+        );
+        // PDR.html も、まとまりごとに決定のつながりの図を置く
+        let pdr_index = read("PDR.html");
+        assert!(
+            pdr_index.contains("<title>PDR - demo</title>"),
+            "{pdr_index}"
+        );
+        assert!(
+            pdr_index.contains("<main>\n<h1>PDR</h1>\n<p class=\"note\">破線の箱は、新しい決定に打ち消された決定。</p>\n<h2 id=\"料金\" class=\"group\">料金</h2>"),
+            "{pdr_index}"
+        );
+        assert!(
+            pdr_index.contains("<a class=\"decision-box superseded\" href=\"PDR/料金/無料で始める.html\">無料で始める</a><span class=\"arrow\">→</span><a class=\"decision-box\" href=\"PDR/料金/有料のプランを足す.html\">"),
+            "{pdr_index}"
+        );
+        assert!(
+            pdr_index.contains("<a href=\"PDR.html\" aria-current=\"page\">PDR</a>"),
+            "{pdr_index}"
+        );
+        // 決定 1 つのページは PDR/<group>/<title>.html。題の左に、PDR のアイコンを付ける
+        let paid = read("PDR/料金/有料のプランを足す.html");
+        assert!(
+            paid.contains("<title>有料のプランを足す - PDR - demo</title>"),
+            "{paid}"
+        );
+        assert!(
+            paid.contains("<a href=\"../../PDR.html\" aria-current=\"page\">PDR</a>"),
+            "{paid}"
+        );
+        assert!(paid.contains("<path d=\"M12 22V3\"/>"), "{paid}");
+        assert!(
+            paid.contains("<p class=\"decision-nav-label\">← 過去の決定</p><div class=\"boxes\"><a class=\"decision-box superseded\" href=\"無料で始める.html\">"),
+            "{paid}"
+        );
+        // Free ファイルからのリンクと検索の索引も、PDR のページに向く。索引は ADR の後に PDR を並べる
+        let a = read("プロジェクト詳細/docs/a.html");
+        assert!(a.contains("href=\"../../PDR/"), "{a}");
+        let search = read(SEARCH_PAGE);
+        let adr = search.find("\"path\":\"docv/adr/go.md\"").unwrap();
+        let pdr = search
+            .find("\"path\":\"docv/pdr/free.md\",\"href\":\"PDR/料金/無料で始める.html\"")
+            .unwrap();
+        assert!(adr < pdr, "{search}");
+    }
+
+    #[test]
+    fn does_not_build_pdr_page_without_pdr() {
+        // PDR がなければ、サイドバーに出さず、PDR.html も作らない
+        let (dir, project) = project(&[(
+            "docv/adr/go.md",
+            "---\ndate: 2026-01-01\n---\n\n# Go にする\n",
+        )]);
+        let out = dir.path().join("out");
+        run(&project, &out, None).unwrap();
+        assert!(!out.join("PDR.html").exists());
+        assert!(!fs::read_to_string(out.join(PAGE)).unwrap().contains("PDR"));
+    }
+
+    #[test]
     fn links_slot_and_adr_files_to_their_pages() {
         let (dir, project) = project(&[
             (
@@ -2418,7 +2554,7 @@ mod tests {
         assert!(!adr_index.contains("破線の箱"), "{adr_index}");
         assert!(!adr_index.contains("class=\"lanes\""), "{adr_index}");
         assert!(
-            adr_index.contains("<div class=\"adr-grid\"><a class=\"adr-box\""),
+            adr_index.contains("<div class=\"decision-grid\"><a class=\"decision-box\""),
             "{adr_index}"
         );
         let page = fs::read_to_string(out.join("プロジェクト詳細/docs/a.html")).unwrap();

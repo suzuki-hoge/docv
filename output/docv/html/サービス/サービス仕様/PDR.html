@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDR - サービス仕様 - docv</title>
+<link rel="stylesheet" href="../../docv.css">
+<script src="../../docv.js" defer></script>
+</head>
+<body>
+<nav class="sidebar">
+<p class="project">docv</p>
+<ul>
+<li><a href="../../README.html">README</a></li>
+<li><a href="../../index.html" aria-current="page">プロジェクト概要</a></li>
+<li><a href="../../ADR.html">ADR</a></li>
+<li><a href="../../プロジェクト詳細.html">プロジェクト詳細</a></li>
+<li><a href="../../現在の設定.html">現在の設定</a></li>
+<li><a href="../../検索.html">検索</a></li>
+</ul>
+</nav>
+<main>
+<p class="source"><code>docv/service/service/pdr.md</code><button type="button" class="copy" data-path="docv/service/service/pdr.md" title="パスをコピーする" aria-label="パスをコピーする" hidden><svg class="ready" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></p>
+<section class="slot" id="service">
+<h1><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M3 7l9 5 9-5"/><path d="M12 12v10"/></svg>サービス仕様</h1>
+<nav class="page-tabs"><a href="概要.html">概要</a><a href="Slot.html">Slot</a><a href="Free.html">Free</a><a href="ADR.html">ADR</a><a href="PDR.html" aria-current="page">PDR</a><a href="設定ファイル.html">設定ファイル</a><a href="コマンド.html">コマンド</a><a href="ビジュアライズ.html">ビジュアライズ</a></nav>
+<p>PDR（Product Decision Record）は、プロダクトやサービスの決定 1 つを、見直す条件や選ばなかった案と一緒に残す記録。料金、プラン、提供する機能の範囲、対象とする利用者などの決定を残す。技術の決定は <a href="ADR.html">ADR</a> に残す。</p>
+<p>置き場所、YAML front matter、決めた後に書き換えないこと、HTML の作りは ADR と同じ。このページには、ADR と違うところを書く。</p>
+<hr />
+<h2 id="1-置き場所と書き方">1. 置き場所と書き方</h2>
+<ul>
+<li><code>dir.slot</code>（既定は <code>docv</code>）の下の <code>pdr/</code> に、決定 1 つを 1 つの Markdown で置く</li>
+<li>ファイル名と id、YAML front matter の項目（<code>group</code>、<code>date</code>、<code>supersedes</code>）、状態を持たないこと、決めた後に書き換えないことは、<a href="ADR.html">ADR</a> と同じ</li>
+<li><code>supersedes</code> は、PDR だけを指す。ADR と PDR は、同じ id でも別の決定。PDR から ADR に触れるときは、本文のリンクで示す</li>
+</ul>
+<hr />
+<h2 id="2-本文の章">2. 本文の章</h2>
+<p>本文は、h1 の題の下に、次の章をこの順に h2 で書く。任意の章は、書くことがなければ置かない。ADR の章に、見直す条件を足した形。</p>
+<div class="table-scroll"><table><thead><tr><th>章</th><th>必須</th><th>書くこと</th></tr></thead><tbody>
+<tr><td>背景</td><td>必須</td><td>決める必要が生じた課題と、そのときの利用者、市場、事業の状況</td></tr>
+<tr><td>決めたこと</td><td>必須</td><td>決めたことと、その案を選んだ理由。決めたことが当てはまる範囲（対象の利用者、プラン、機能など）</td></tr>
+<tr><td>決めないこと</td><td>任意</td><td>この PDR では決めないことと、それをどこで決めるか</td></tr>
+<tr><td>結果</td><td>必須</td><td>利用者と事業に起きると見込むこと。引き受けること（できなくなること、後で考えること）も書く</td></tr>
+<tr><td>見直す条件</td><td>必須</td><td>どんな状況になったら、この決定を見直すか。数や時期など、起きたかどうかを確かめられる形で書く</td></tr>
+<tr><td>選ばなかった案</td><td>必須</td><td>比べた案と、それぞれを選ばなかった理由</td></tr>
+<tr><td>参考</td><td>任意</td><td>根拠にしたファイルや資料へのリンク。PDR だけで読めるように、本文の根拠をここにまとめる</td></tr>
+</tbody></table></div>
+<ul>
+<li>見直す条件は、必ず書く。プロダクトやサービスの決定は、利用者や市場が変わると正しさが変わる。決めたときに見込んだことが外れたと、後から気づけるようにするため</li>
+<li>見直す条件に当たっても、PDR は書き換えない。見直して決定を変えるなら、新しい PDR を書き、その <code>supersedes</code> から指す</li>
+<li>章の形は check で確かめない</li>
+</ul>
+<pre><code class="language-markdown"><span style="color:#a71d5d;">---
+</span><span style="color:#323232;">group: 料金
+</span><span style="color:#323232;">date: 2026-04-01
+</span><span style="color:#323232;">supersedes: [free-only]
+</span><span style="font-weight:bold;color:#a71d5d;">---
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;"># </span><span style="font-weight:bold;color:#323232;">注文の多い店舗に有料のプランを求める
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">## </span><span style="font-weight:bold;color:#323232;">背景
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">無料のプランだけで提供してきた。月の注文が 1 万件を超える店舗が増え、サーバの費用が売上を上回った。
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">## </span><span style="font-weight:bold;color:#323232;">決めたこと
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">月の注文が 1,000 件を超える店舗には、有料のプランを求める。1,000 件までは、今までどおり無料にする。
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">## </span><span style="font-weight:bold;color:#323232;">決めないこと
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">有料のプランの金額は決めない。サービス仕様の料金の章で決める。
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">## </span><span style="font-weight:bold;color:#323232;">結果
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">注文の多い店舗の一部は、解約すると見込む。注文の少ない店舗は、今までどおり無料で使える。
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">## </span><span style="font-weight:bold;color:#323232;">見直す条件
+</span><span style="color:#323232;">
+</span><span style="color:#a71d5d;">- </span><span style="color:#ed6a43;">有料のプランに移った店舗が、対象の店舗の半分を下回ったとき
+</span><span style="color:#a71d5d;">-</span><span style="color:#ed6a43;"> 2027 年 3 月の時点で、サーバの費用が売上を上回ったままのとき
+</span><span style="color:#ed6a43;">
+</span><span style="font-weight:bold;color:#a71d5d;">## </span><span style="font-weight:bold;color:#323232;">選ばなかった案
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">| 案                       | 選ばなかった理由                 |
+</span><span style="color:#323232;">| ------------------------ | -------------------------------- |
+</span><span style="color:#323232;">| すべての店舗を有料にする | 小さな店舗が使い始められなくなる |
+</span><span style="color:#323232;">| 店舗の画面に広告を出す   | 注文を受ける画面が狭くなる       |
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">## </span><span style="font-weight:bold;color:#323232;">参考
+</span><span style="color:#323232;">
+</span><span style="color:#a71d5d;">- [</span><span style="color:#4183c4;">サービス仕様</span><span style="color:#a71d5d;">](</span><span style="font-style:italic;color:#4183c4;">../service/service.md</span><span style="color:#a71d5d;">)
+</span></code></pre>
+<hr />
+<h2 id="3-check">3. check</h2>
+<div class="table-scroll"><table><thead><tr><th>ID</th><th>内容</th></tr></thead><tbody>
+<tr><td>pdr-invalid</td><td>YAML front matter が PDR の形に合わない（知らない項目、<code>date</code> の形も含む）。本文に h1 がない</td></tr>
+<tr><td>pdr-unknown-ref</td><td><code>supersedes</code> の先の PDR がない。または、その決定より後の決定を指している</td></tr>
+</tbody></table></div>
+<ul>
+<li>本文には、YAML front matter のほかは、Free ファイルと同じ検査（<a href="Free.html">Free</a> のページの「check のルール」の章）をかける</li>
+</ul>
+<hr />
+<h2 id="4-ai-agent">4. AI Agent</h2>
+<ul>
+<li>AI Agent が PDR を読むのは、決めた理由を聞かれたときと、見直す条件に当たるかを確かめるときだけ。今の姿は <code>docs/</code> と Slot を読む</li>
+</ul>
+
+</section>
+</main>
+<nav class="outline">
+<p class="outline-title">目次</p>
+<ul>
+<li class="h2"><a href="#1-置き場所と書き方">1. 置き場所と書き方</a></li>
+<li class="h2"><a href="#2-本文の章">2. 本文の章</a></li>
+<li class="h2"><a href="#3-check">3. check</a></li>
+<li class="h2"><a href="#4-ai-agent">4. AI Agent</a></li>
+</ul>
+</nav>
+</body>
+</html>

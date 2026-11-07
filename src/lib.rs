@@ -1,9 +1,9 @@
-pub mod adr;
 pub mod build;
 pub mod check;
 pub mod cli;
 pub mod config;
 pub mod config_view;
+pub mod decision;
 pub mod desc;
 pub mod diagnostic;
 pub mod fix;
