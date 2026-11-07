@@ -30,6 +30,11 @@
 <p>違うマシンで同じ JPG にすることはしない。<code>docv build --no-image</code> は、<code>dir.image</code> を書いていても JPG を作らず、<code>dir.image</code> の中も変えない。チームで JPG を共有するなら、GitHub Actions などの決まった環境で作る。</p>
 <h2 id="結果">結果</h2>
 <p>手元では、HTML だけを速く作り直せ、Chrome がなくても build できる。共有する JPG は、決まった環境で作る限り揃う。</p>
+<h2 id="見直す条件">見直す条件</h2>
+<ul>
+<li>バイナリを大きくせずに、どのマシンでも同じ JPG を作れる手段が見つかったとき</li>
+<li>JPG をコミットするプロジェクトで、マシンの違いによる JPG の差分がレビューの妨げになったとき</li>
+</ul>
 <h2 id="選ばなかった案">選ばなかった案</h2>
 <div class="table-scroll"><table><thead><tr><th>案</th><th>選ばなかった理由</th></tr></thead><tbody>
 <tr><td>フォントを埋め込み、どのマシンでも揃える</td><td>日本語のフォントでバイナリが大きくなる</td></tr>
@@ -43,6 +48,7 @@
 <li class="h2"><a href="#背景">背景</a></li>
 <li class="h2"><a href="#決めたこと">決めたこと</a></li>
 <li class="h2"><a href="#結果">結果</a></li>
+<li class="h2"><a href="#見直す条件">見直す条件</a></li>
 <li class="h2"><a href="#選ばなかった案">選ばなかった案</a></li>
 </ul>
 </nav>

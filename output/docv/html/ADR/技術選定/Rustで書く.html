@@ -24,10 +24,15 @@
 <p class="source"><code>docv/adr/rust.md</code><button type="button" class="copy" data-path="docv/adr/rust.md" title="パスをコピーする" aria-label="パスをコピーする" hidden><svg class="ready" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></p>
 <section class="slot">
 <h1><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"/><path d="M5 4h12l-2.5 4 2.5 4H5"/></svg>Rust で書く</h1>
+<h2 id="背景">背景</h2>
+<p>TypeScript で書くと、利用者は Node.js を入れておく必要がある。textlint を使わないプロジェクトでも、docv を動かすためだけに Node.js が要る。docv は多くのプロジェクトに入れて使うので、入れる手間を小さくしたい。</p>
 <h2 id="決めたこと">決めたこと</h2>
 <p>CLI は Rust で書き、単一のバイナリにして配る。</p>
+<h2 id="結果">結果</h2>
+<p>利用者は、Node.js がなくても docv を使える。textlint を使うときだけ Node.js が要り、docv は textlint を外のコマンドとして呼ぶ。開発者は、Rust の環境を用意する。</p>
 <h2 id="選ばなかった案">選ばなかった案</h2>
 <div class="table-scroll"><table><thead><tr><th>案</th><th>選ばなかった理由</th></tr></thead><tbody>
+<tr><td>TypeScript で書き続ける</td><td>textlint を使わないプロジェクトにも Node.js が要る</td></tr>
 <tr><td>Go で書く</td><td>GitHub Actions で各プラットフォーム向けにビルドするなら、Go のクロスコンパイルの手軽さは決め手にならない</td></tr>
 </tbody></table></div>
 
@@ -38,7 +43,9 @@
 <nav class="outline">
 <p class="outline-title">目次</p>
 <ul>
+<li class="h2"><a href="#背景">背景</a></li>
 <li class="h2"><a href="#決めたこと">決めたこと</a></li>
+<li class="h2"><a href="#結果">結果</a></li>
 <li class="h2"><a href="#選ばなかった案">選ばなかった案</a></li>
 </ul>
 </nav>

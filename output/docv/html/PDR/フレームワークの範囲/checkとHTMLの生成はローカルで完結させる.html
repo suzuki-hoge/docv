@@ -24,8 +24,16 @@
 <p class="source"><code>docv/pdr/local-only.md</code><button type="button" class="copy" data-path="docv/pdr/local-only.md" title="パスをコピーする" aria-label="パスをコピーする" hidden><svg class="ready" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></p>
 <section class="slot">
 <h1><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22V3"/><path d="M5 5h11l3 3-3 3H5z"/><path d="M19 13H8l-3 3 3 3h11z"/></svg>check と HTML の生成はローカルで完結させる</h1>
+<h2 id="背景">背景</h2>
+<p>docv は、ドキュメントを書く人が手元で確かめ、手元で読むための道具。CI や公開の仕組みは、プロジェクトごとに違う。</p>
 <h2 id="決めたこと">決めたこと</h2>
 <p>check と build は、手元で実行して完結させる。CI での実行と公開は、利用者が必要なら自分で組む。</p>
+<h2 id="結果">結果</h2>
+<p>利用者は、docv だけで check と HTML の生成ができる。CI で動かすときは、docv のコマンドを呼ぶ手順を利用者が組む。</p>
+<h2 id="見直す条件">見直す条件</h2>
+<ul>
+<li>docv を入れたプロジェクトで、CI で check を実行する同じ手順を、それぞれが書き写しているのを見つけたとき</li>
+</ul>
 <h2 id="選ばなかった案">選ばなかった案</h2>
 <div class="table-scroll"><table><thead><tr><th>案</th><th>選ばなかった理由</th></tr></thead><tbody>
 <tr><td>GitHub Actions で check を実行し、HTML を公開する</td><td>ローカルで完結するほうが使いやすい</td></tr>
@@ -36,7 +44,10 @@
 <nav class="outline">
 <p class="outline-title">目次</p>
 <ul>
+<li class="h2"><a href="#背景">背景</a></li>
 <li class="h2"><a href="#決めたこと">決めたこと</a></li>
+<li class="h2"><a href="#結果">結果</a></li>
+<li class="h2"><a href="#見直す条件">見直す条件</a></li>
 <li class="h2"><a href="#選ばなかった案">選ばなかった案</a></li>
 </ul>
 </nav>
