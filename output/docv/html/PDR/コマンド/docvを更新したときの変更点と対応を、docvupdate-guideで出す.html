@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>docv を更新したときの変更点と対応を、docv update-guide で出す - PDR - docv</title>
+<link rel="stylesheet" href="../../docv.css">
+<script src="../../docv.js" defer></script>
+</head>
+<body>
+<nav class="sidebar">
+<p class="project">docv</p>
+<ul>
+<li><a href="../../README.html">README</a></li>
+<li><a href="../../index.html">プロジェクト概要</a></li>
+<li><a href="../../ADR.html">ADR</a></li>
+<li><a href="../../PDR.html" aria-current="page">PDR</a></li>
+<li><a href="../../プロジェクト詳細.html">プロジェクト詳細</a></li>
+<li><a href="../../現在の設定.html">現在の設定</a></li>
+<li><a href="../../検索.html">検索</a></li>
+</ul>
+</nav>
+<main>
+<p class="source"><code>docv/pdr/update-guide.md</code><button type="button" class="copy" data-path="docv/pdr/update-guide.md" title="パスをコピーする" aria-label="パスをコピーする" hidden><svg class="ready" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></p>
+<section class="slot">
+<h1><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22V3"/><path d="M5 5h11l3 3-3 3H5z"/><path d="M19 13H8l-3 3 3 3h11z"/></svg>docv を更新したときの変更点と対応を、docv update-guide で出す</h1>
+<h2 id="背景">背景</h2>
+<p>docv の版を上げたとき、利用者が変わったことを知る手段は、<code>docv check</code> の error と <code>docv desc</code> だけだった。check で気づけるのは、ルールに合わなくなったことだけである。足された機能、Doc ガイドの雛形の変更、出力のパスの変更は、check を通っても伝わらない。出力のパスが変わると、README から JPG へのリンクが切れる。</p>
+<p>以前は、ファイルと <code>docv.yaml</code> に版を書き、版ごとの手順を出すコマンドを持っていた。<code>docv desc</code> と <code>docv check</code> で直せるとして、どちらもやめていた。そのため、docv を更新した後では、直前まで使っていた版が分からない。<code>docv init</code> と <code>docv slot gen</code> が 1 行目に書くスキーマの URL には版があるが、書いたときの版で、docv を更新しても変わらない。</p>
+<h2 id="決めたこと">決めたこと</h2>
+<ul>
+<li><code>docv update-guide --from &lt;版&gt;</code> で、指定した版より後の版の変更点と対応を、古い版から順に出す。対応のない版も、「対応は要らない」と書いて出す</li>
+<li>変更点と対応はバイナリに埋め込み、版を上げるときに足す。手元の docv の版と、出す内容を一致させるため</li>
+<li><code>docv.yaml</code> の <code>docv_version</code> に、ドキュメントを合わせた docv の版を書く。<code>docv init</code> が書く</li>
+<li><code>docv_version</code> が docv の版と違えば、パッチの版の違いでも check が error にし、update-guide に渡す版を案内する。docv を更新した AI Agent が、check の error を手がかりに update-guide を見つけられるようにするため</li>
+<li><code>docv.yaml</code> と YAML の Slot の 1 行目にあるスキーマの URL の版も、<code>docv_version</code> と違えば check が error にする。エディタが、古い版のスキーマで補完と検証をしないようにするため</li>
+<li>update-guide の最後に、<code>docv_version</code> とスキーマの URL の版を上げるよう案内する</li>
+<li>update-guide の使い方は、<code>docv desc</code> と利用マニュアルに書き、Doc ガイドの雛形には書かない。docv を更新するときにしか要らないため</li>
+</ul>
+<h2 id="結果">結果</h2>
+<p>docv を更新すると check が error になり、AI Agent は案内に従って update-guide を実行する。check では気づけない変更にも対応できる。</p>
+<p>版を上げるたびに、対応のない版でも、<code>docv_version</code> とスキーマの URL を書き換えるコミットが要る。チームの中では、docv の版を揃えることになる。CI で docv の最新を入れていると、新しい版が出たときに check が落ちるので、<code>docv_version</code> の版を入れる。</p>
+<p>1.8.0 より前から使っているプロジェクトには <code>docv_version</code> がないので、check が error にする。使っていた版は、<code>docv.yaml</code> の 1 行目のスキーマの URL から推して案内する。</p>
+<h2 id="見直す条件">見直す条件</h2>
+<ul>
+<li>「対応は要らない」だけの版が、3 つ続けて出たとき。パッチの版の違いでは check を落とさない形を考える</li>
+<li>update-guide の対応をせずに、<code>docv_version</code> だけを書き換えたプロジェクトを見つけたとき</li>
+</ul>
+<h2 id="選ばなかった案">選ばなかった案</h2>
+<div class="table-scroll"><table><thead><tr><th>案</th><th>選ばなかった理由</th></tr></thead><tbody>
+<tr><td>1 行目のスキーマの URL の版を、使っている版として扱う</td><td>決まりをコメントの行に持たせることになる。ローカルのパスでスキーマを指すと、版が分からない</td></tr>
+<tr><td>更新の前に <code>docv --version</code> で版を控えてもらう</td><td>人が cargo install で更新すると、控える機会がない</td></tr>
+<tr><td>変更点を GitHub の CHANGELOG に置く</td><td>手元の docv の版と、読む内容がずれる。AI Agent がネットワークで取りに行くことになる</td></tr>
+<tr><td>Doc ガイドの雛形で update-guide を案内する</td><td>更新のときにしか要らない情報を、いつも読ませることになる</td></tr>
+<tr><td><code>docv_version</code> の違いを check で知らせず、<code>docv desc</code> の案内だけにする</td><td>AI Agent は、docv が更新されたことを知らない</td></tr>
+<tr><td>パッチの版の違いは、check で知らせない</td><td>パッチの版にも、対応の要る変更が入ることがある</td></tr>
+</tbody></table></div>
+<h2 id="参考">参考</h2>
+<ul>
+<li><a href="../../%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9/%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E4%BB%95%E6%A7%98/%E8%A8%AD%E5%AE%9A%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB.html">設定ファイル</a></li>
+<li><a href="../../%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9/%E5%88%A9%E7%94%A8%E3%83%9E%E3%83%8B%E3%83%A5%E3%82%A2%E3%83%AB.html">利用マニュアル</a></li>
+<li><a href="../../%E9%81%8B%E7%94%A8/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9.html">リリース</a></li>
+</ul>
+
+</section>
+</main>
+<nav class="outline">
+<p class="outline-title">目次</p>
+<ul>
+<li class="h2"><a href="#背景">背景</a></li>
+<li class="h2"><a href="#決めたこと">決めたこと</a></li>
+<li class="h2"><a href="#結果">結果</a></li>
+<li class="h2"><a href="#見直す条件">見直す条件</a></li>
+<li class="h2"><a href="#選ばなかった案">選ばなかった案</a></li>
+<li class="h2"><a href="#参考">参考</a></li>
+</ul>
+</nav>
+</body>
+</html>

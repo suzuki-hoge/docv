@@ -9,10 +9,13 @@ use anyhow::{Result, bail};
 use crate::generate;
 use crate::slot::{self, Format};
 
+/// スキーマの URL の、版の手前まで。版のタグ（v1.8.0 など）の assets/schema/ を指す。
+pub const URL_BASE: &str = "https://raw.githubusercontent.com/suzuki-hoge/docv/v";
+
 /// 実行した CLI の版の、assets/schema/ のファイルの URL。docv.yaml と YAML の Slot の 1 行目から参照する。
 pub fn url(file: &str) -> String {
     format!(
-        "https://raw.githubusercontent.com/suzuki-hoge/docv/v{}/assets/schema/{file}",
+        "{URL_BASE}{}/assets/schema/{file}",
         env!("CARGO_PKG_VERSION")
     )
 }

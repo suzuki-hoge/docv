@@ -20,7 +20,7 @@ fix:
 # そのうえで docv check を通す
 check-doc-guide: install
 	@set -e; tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
-	printf 'lint:\n  textlint: enable\nformat:\n  enabled: true\n' > "$$tmp/docv.yaml"; \
+	printf 'docv_version: %s\nlint:\n  textlint: enable\nformat:\n  enabled: true\n' "$$($(DOCV) --version | cut -d ' ' -f 2)" > "$$tmp/docv.yaml"; \
 	(cd "$$tmp" && $(DOCV) slot gen doc-guide > /dev/null && $(DOCV) fix > /dev/null); \
 	if ! cmp -s "$$tmp/docv/guide/doc-guide.md" $(TEMPLATE); then \
 		cp "$$tmp/docv/guide/doc-guide.md" $(TEMPLATE); \

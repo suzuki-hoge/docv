@@ -263,6 +263,14 @@
 <li>ガイドライン: ドキュメントを書くときの方針。<code>docv slot gen doc-guide</code> で Doc ガイド（<code>docv/guide/doc-guide.md</code>）に雛形を作り、プロジェクトに合わせて自由に直す</li>
 <li>設定: <code>docv.yaml</code> で切り替えること。check のルールや textlint を使うか、出力を git で管理するかなど。<code>docv init --print</code> で確認する</li>
 </ul>
+<h2 id="10-docv-の更新">10. docv の更新</h2>
+<p><code>docv.yaml</code> の <code>docv_version</code> に、ドキュメントを合わせた docv の版を書く</p>
+<ul>
+<li>docv の版と違えば、パッチの版の違いでも <code>docv check</code> が error にする</li>
+<li>docv を更新したら、<code>docv update-guide --from &lt;docv_version&gt;</code> で版ごとの変更点と対応を確かめ、対応する</li>
+<li>対応が終わったら、<code>docv_version</code> と、<code>docv.yaml</code> と YAML の Slot の 1 行目にあるスキーマの URL の版を、docv の版にする</li>
+<li><code>docv_version</code> が docv の版より新しければ、docv を更新する</li>
+</ul>
 
 </section>
 </main>
@@ -286,6 +294,7 @@
 <li class="h2"><a href="#7-スキーマ--設定ファイル-">7. スキーマ ( 設定ファイル )</a></li>
 <li class="h2"><a href="#8-スキーマ--docv-ファイル-">8. スキーマ ( docv ファイル )</a></li>
 <li class="h2"><a href="#9-ルールガイドライン設定">9. ルール、ガイドライン、設定</a></li>
+<li class="h2"><a href="#10-docv-の更新">10. docv の更新</a></li>
 </ul>
 </nav>
 </body>

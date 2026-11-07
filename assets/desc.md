@@ -271,3 +271,12 @@ docv の決まりは、次の 3 つに分かれる
 - ルール: docv の仕組みが決める決まり。Slot と `docv.yaml` のスキーマ、YAML front matter の key、check が確かめることなど。利用側は変えられない。この概要と `docv slot schema <slot>` で確認する
 - ガイドライン: ドキュメントを書くときの方針。`docv slot gen doc-guide` で Doc ガイド（`docv/guide/doc-guide.md`）に雛形を作り、プロジェクトに合わせて自由に直す
 - 設定: `docv.yaml` で切り替えること。check のルールや textlint を使うか、出力を git で管理するかなど。`docv init --print` で確認する
+
+## 10. docv の更新
+
+`docv.yaml` の `docv_version` に、ドキュメントを合わせた docv の版を書く
+
+- docv の版と違えば、パッチの版の違いでも `docv check` が error にする
+- docv を更新したら、`docv update-guide --from <docv_version>` で版ごとの変更点と対応を確かめ、対応する
+- 対応が終わったら、`docv_version` と、`docv.yaml` と YAML の Slot の 1 行目にあるスキーマの URL の版を、docv の版にする
+- `docv_version` が docv の版より新しければ、docv を更新する

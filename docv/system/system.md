@@ -8,7 +8,7 @@ mission: 部品ごとの振る舞いと、部品の間の流れと、部品を�
 
 ## 処理の流れ
 
-1. `docv.yaml` を読み、スキーマで確かめる。init、desc、slot list、slot schema と、`--print` を付けた slot gen は、`docv.yaml` を読まない
+1. `docv.yaml` を読み、スキーマで確かめる。init、desc、update-guide、slot list、slot schema と、`--print` を付けた slot gen は、`docv.yaml` を読まない
 2. ルート以下のファイルを分類し、Slot、ADR、PDR、Free ファイルを読む
 3. コマンドに応じて、次の部品を使う
 
@@ -25,6 +25,7 @@ Rust で書いた単一のバイナリにし、次のものを埋め込む。
 - Slot のテンプレ（`assets/template/`。YAML の Slot の項目のサンプルと、ドキュメントのガイドラインの雛形）
 - YAML の Slot と `docv.yaml` のスキーマ（`assets/schema/`）
 - docv の概要（`docv desc` が出す `assets/desc.md`）。サービス仕様の 1 ページ目（`docv/service/service/desc.md`）は、このファイルへのシンボリックリンク
+- 版ごとの変更点と対応（`docv update-guide` が出す `assets/update-guide.yaml`）。手元の docv の版と、出す内容を一致させるため
 - HTML の CSS（`assets/docv.css`）と JS（`assets/docv.js`）。build が、出力先の直下にそのまま書く
 - Markdown の整形に使う dprint-plugin-markdown
 - コードブロックの色付けに使う syntect と、その構文の定義とテーマ

@@ -76,7 +76,7 @@
 <h2 id="3-yaml-の-slot-の項目">3. YAML の Slot の項目</h2>
 <ul>
 <li>項目の形と意味は、Slot ごとのスキーマ（JSON Schema）で決める。<code>docv slot schema &lt;slot&gt;</code> で出す。元のファイルは <code>assets/schema/&lt;ID&gt;.schema.json</code> で、<code>docs/schema/</code> に写しを置く</li>
-<li><code>docv slot gen</code> は、YAML の Slot の 1 行目に、yaml-language-server の書式でスキーマの URL を書く。URL は、実行した CLI の版のタグの <code>assets/schema/</code> を指す。エディタで項目の補完と検証が効く</li>
+<li><code>docv slot gen</code> は、YAML の Slot の 1 行目に、yaml-language-server の書式でスキーマの URL を書く。URL は、実行した CLI の版のタグの <code>assets/schema/</code> を指す。エディタで項目の補完と検証が効く。URL の版は <code>docv.yaml</code> の <code>docv_version</code> と揃える（<a href="%E8%A8%AD%E5%AE%9A%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB.html">設定ファイル</a> の「docv の版」の章）</li>
 <li>名前が <code>_markdown</code> で終わる項目は Markdown。値は、1 行でも必ず <code>|</code> のブロックで書く。<code>|-</code>、<code>|+</code>、字下げの数を付けた <code>|2</code> などは使わない。それ以外の文字列の項目は、Markdown として扱わず、1 行で書く</li>
 <li>Markdown の項目の中のリンクは、ルートからの相対パスで書く</li>
 <li>どの YAML の Slot にも、<code>appendix_markdown</code> を書ける。項目に収まらない補足を書く</li>

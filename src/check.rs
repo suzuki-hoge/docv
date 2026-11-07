@@ -11,7 +11,7 @@ use crate::markdown::{self, Document, Outline};
 use crate::style::{self, Style};
 use crate::textlint::Textlint;
 use crate::workspace::Project;
-use crate::{decision, format, slot, slot_markdown};
+use crate::{decision, format, slot, slot_markdown, version};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Options {
@@ -84,6 +84,12 @@ pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Ve
     );
     diagnostics.extend(
         decision::check(project)?
+            .into_iter()
+            .filter(|d| wanted(&d.path)),
+    );
+    // docv.yaml の docv_version と、docv.yaml と YAML の Slot の 1 行目のスキーマの URL の版。
+    diagnostics.extend(
+        version::check(project)?
             .into_iter()
             .filter(|d| wanted(&d.path)),
     );
@@ -359,7 +365,11 @@ mod tests {
 
     const OPTIONS: Options = Options { textlint: true };
 
-    const CONFIG: &str = "ignore:
+    const CONFIG: &str = concat!(
+        "docv_version: ",
+        env!("CARGO_PKG_VERSION"),
+        "
+ignore:
   - docs/ignored/**
 tags:
   - name: 仕様
@@ -368,7 +378,8 @@ tags:
     color: green
 lint:
   bold: deny
-";
+"
+    );
 
     /// mission を書いた YAML front matter。
     fn fm(rest: &str) -> String {
@@ -605,7 +616,15 @@ lint:
     #[test]
     fn checks_only_format_in_slot_markdown() {
         let dir = tempfile::tempdir().unwrap();
-        write(dir.path(), "docv.yaml", "format:\n  enabled: true\n");
+        write(
+            dir.path(),
+            "docv.yaml",
+            concat!(
+                "docv_version: ",
+                env!("CARGO_PKG_VERSION"),
+                "\nformat:\n  enabled: true\n"
+            ),
+        );
         write(
             dir.path(),
             "docv/service/manual.md",

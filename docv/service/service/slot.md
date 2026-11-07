@@ -62,7 +62,7 @@ HTML には、この表の順に、まとまりごとに並べる。
 ## 3. YAML の Slot の項目
 
 - 項目の形と意味は、Slot ごとのスキーマ（JSON Schema）で決める。`docv slot schema <slot>` で出す。元のファイルは `assets/schema/<ID>.schema.json` で、`docs/schema/` に写しを置く
-- `docv slot gen` は、YAML の Slot の 1 行目に、yaml-language-server の書式でスキーマの URL を書く。URL は、実行した CLI の版のタグの `assets/schema/` を指す。エディタで項目の補完と検証が効く
+- `docv slot gen` は、YAML の Slot の 1 行目に、yaml-language-server の書式でスキーマの URL を書く。URL は、実行した CLI の版のタグの `assets/schema/` を指す。エディタで項目の補完と検証が効く。URL の版は `docv.yaml` の `docv_version` と揃える（[設定ファイル](config.md) の「docv の版」の章）
 - 名前が `_markdown` で終わる項目は Markdown。値は、1 行でも必ず `|` のブロックで書く。`|-`、`|+`、字下げの数を付けた `|2` などは使わない。それ以外の文字列の項目は、Markdown として扱わず、1 行で書く
 - Markdown の項目の中のリンクは、ルートからの相対パスで書く
 - どの YAML の Slot にも、`appendix_markdown` を書ける。項目に収まらない補足を書く

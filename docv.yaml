@@ -1,4 +1,5 @@
 # yaml-language-server: $schema=./assets/schema/docv.schema.json
+docv_version: 1.7.0
 title: docv
 
 dir:

@@ -5,7 +5,7 @@
 use std::fs;
 use std::path::Path;
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result, anyhow, bail};
 use globset::{GlobBuilder, GlobMatcher};
 use serde::Deserialize;
 use serde_json::Value;
@@ -15,6 +15,8 @@ pub const SCHEMA: &str = include_str!("../assets/schema/docv.schema.json");
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
+    /// ドキュメントを合わせた docv の版。docv の版と違えば、check が error にする。docv/service/service/config.md の「docv の版」。
+    pub docv_version: Option<String>,
     pub title: Option<String>,
     #[serde(default)]
     pub dir: Dirs,
@@ -145,7 +147,14 @@ pub fn normalize_dir(dir: &str) -> String {
 pub fn load(path: &Path) -> Result<Config> {
     let text =
         fs::read_to_string(path).with_context(|| format!("{} を読めない", path.display()))?;
-    parse(&text).with_context(|| format!("{} が正しくない", path.display()))
+    parse(&text).map_err(|e| {
+        let e = e.context(format!("{} が正しくない", path.display()));
+        // 古い版の docv.yaml がスキーマに合わず読めないときも、docv update-guide にたどり着けるように、版の直し方を添える。
+        match crate::version::advice_for_unreadable(&text) {
+            Some(advice) => anyhow!("{e:#}\n{advice}"),
+            None => e,
+        }
+    })
 }
 
 impl Config {
@@ -299,6 +308,45 @@ mod tests {
         let error = error_of("unknown: 1\n");
         assert!(error.contains("スキーマに合わない"), "{error}");
         assert!(error.contains("unknown"), "{error}");
+    }
+
+    #[test]
+    fn reads_docv_version() {
+        let config = parse("docv_version: 1.8.0\n").unwrap();
+        assert_eq!(config.docv_version.as_deref(), Some("1.8.0"));
+        assert_eq!(parse("{}\n").unwrap().docv_version, None);
+        for text in [
+            "docv_version: 1.8\n",
+            "docv_version: v1.8.0\n",
+            "docv_version: 1.8.0.1\n",
+        ] {
+            let error = error_of(text);
+            assert!(error.contains("/docv_version"), "{text}: {error}");
+        }
+    }
+
+    #[test]
+    fn advises_the_version_when_the_config_cannot_be_read() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(FILE_NAME);
+        fs::write(&path, "docv_version: 1.0.0\ndir:\n  slots: docv\n").unwrap();
+        let error = format!("{:#}", load(&path).unwrap_err());
+        assert!(error.contains("スキーマに合わない"), "{error}");
+        assert!(
+            error.ends_with(&format!(
+                "docv update-guide --from 1.0.0 で変わったことと対応を確かめ、対応してから docv_version を {} にする",
+                env!("CARGO_PKG_VERSION")
+            )),
+            "{error}"
+        );
+        // docv の版と同じなら、添えない
+        fs::write(
+            &path,
+            format!("docv_version: {}\nunknown: 1\n", env!("CARGO_PKG_VERSION")),
+        )
+        .unwrap();
+        let error = format!("{:#}", load(&path).unwrap_err());
+        assert!(!error.contains("update-guide"), "{error}");
     }
 
     #[test]

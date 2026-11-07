@@ -13,6 +13,7 @@ mission: 外から見た機能と、それぞれの振る舞いと決まり
 
 ```yaml
 # yaml-language-server: $schema=https://raw.githubusercontent.com/suzuki-hoge/docv/v1.7.0/assets/schema/docv.schema.json
+docv_version: 1.7.0
 title: shop-app
 
 dir:
@@ -39,6 +40,7 @@ format:
 
 | 項目             | 必須 | 既定               | 意味                                                                                                            |
 | ---------------- | ---- | ------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `docv_version`   |      |                    | ドキュメントを合わせた docv の版。docv の版と違えば、check が error にする（「docv の版」の章）                 |
 | `title`          |      | ルートの名前       | HTML に出すプロジェクト名                                                                                       |
 | `dir.free`       |      | `docs`             | 管理対象の Markdown（Free ファイル）を置くディレクトリ（「管理対象と管理外」の章）                              |
 | `dir.slot`       |      | `docv`             | Slot ファイルを置くディレクトリ                                                                                 |
@@ -212,5 +214,23 @@ output/docv/     # docv build の出力
 ## 8. スキーマの参照
 
 - `docv.yaml` の先頭に、yaml-language-server の書式でスキーマの URL を書くと、エディタで補完と検証が効く
-- URL には docv の版を含める。`docv init` は、実行した CLI の版の URL を書く
+- URL には docv の版を含める。`docv init` は、実行した CLI の版の URL を書く。URL の版は `docv_version` と揃える（「docv の版」の章）
 - `docv init --print` で、すべての項目を既定の値でコメントにした `docv.yaml` を出す。スキーマの写しは `docs/schema/config.md` に置く
+
+---
+
+## 9. docv の版（`docv_version`）
+
+`docv_version` には、ドキュメントを合わせた docv の版を書く。docv を更新した後で、前の版から変わったことに気づき、`docv update-guide` に渡す版が分かるようにするため。
+
+- `docv init` は、実行した CLI の版を書く
+- check は、`docv_version` を docv の版と比べ、違えば error にする。パッチの版の違いも error にする。対応の要る変更は、パッチの版にも入ることがあるため
+- `docv.yaml` と YAML の Slot の 1 行目に docv のスキーマの URL があれば、check は、URL の版を `docv_version` と比べる。エディタが、古い版のスキーマで補完と検証をしないようにするため
+- ローカルのパスなど、版のタグを指す URL でないものは比べない。`docv_version` がないときも比べず、先に `docv_version` を直させる
+- `docv.yaml` がスキーマに合わず読めないときも、`docv_version` が docv の版と違えば、エラーに update-guide の案内を添える。古い版の `docv.yaml` が読めず、案内まで届かないことがないようにするため
+- `docv_version` とスキーマの URL は、docv では書き換えない。update-guide の対応を終えたかは、docv には分からないため
+
+| ID             | 内容                                                                                                                                                                                                                    |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| docv-version   | `docv_version` がないか、docv の版と違う。古ければ `docv update-guide --from <docv_version>` を、新しければ docv の更新を案内する。ないときは、`docv.yaml` の 1 行目のスキーマの URL から、使っていた版を推して案内する |
+| schema-version | `docv.yaml` か YAML の Slot の 1 行目にあるスキーマの URL の版が、`docv_version` と違う                                                                                                                                 |

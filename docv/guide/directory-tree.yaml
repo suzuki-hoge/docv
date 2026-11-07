@@ -24,6 +24,9 @@ entries:
   - path: assets/docv.css
     desc_markdown: |
       HTML の CSS。build が出力先の直下に書き、すべてのページが読む
+  - path: assets/update-guide.yaml
+    desc_markdown: |
+      docv update-guide が出す、版ごとの変更点と対応。版を上げるときに、その版の分を足す
   - path: assets/docv.js
     desc_markdown: |
       HTML の JS（パスのコピー、決定のページのカーソルキーでの移動、タグのトグル、検索）。build が出力先の直下に書き、すべてのページが読む

@@ -13,6 +13,10 @@ pub fn config_text() -> String {
         "{}# docv の設定。項目の型と意味は、1 行目の URL のスキーマにある。
 # コメントにした項目は、使うときにコメントを外して書き換える。
 
+# ドキュメントを合わせた docv の版。docv の版と違えば、docv check が error にする
+# docv を更新したら、docv update-guide --from <この版> で変わったことと対応を確かめ、対応してから書き換える
+docv_version: {}
+
 # HTML に出すプロジェクト名。省略するとルートのディレクトリ名
 # title: my-project
 
@@ -55,7 +59,8 @@ format:
   # check で、整形が要るファイルを error にするか
   enabled: false
 ",
-        schema::header("docv.schema.json")
+        schema::header("docv.schema.json"),
+        env!("CARGO_PKG_VERSION")
     )
 }
 
@@ -86,6 +91,10 @@ mod tests {
             env!("CARGO_PKG_VERSION")
         )));
         let config = config::parse(&text).unwrap();
+        assert_eq!(
+            config.docv_version.as_deref(),
+            Some(env!("CARGO_PKG_VERSION"))
+        );
         assert_eq!(config.free_dir(), "docs");
         assert_eq!(config.slot_dir(), "docv");
         assert_eq!(config.image_dir(), None);

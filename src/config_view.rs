@@ -27,6 +27,14 @@ pub fn rows(config: &Config, title: &str) -> Vec<Row> {
     let row = |key, value| Row { key, value };
     let list = |items: &[String]| Cell::List(items.to_vec());
     vec![
+        // docv_version は既定の値を持たない。書いていなければ `-` を出す。
+        row(
+            "docv_version",
+            config
+                .docv_version
+                .clone()
+                .map_or(Cell::List(Vec::new()), Cell::Value),
+        ),
         row("title", Cell::Value(title.to_string())),
         row("dir.free", Cell::Value(config.free_dir())),
         row("dir.slot", Cell::Value(config.slot_dir())),
@@ -111,7 +119,8 @@ mod tests {
     #[test]
     fn lists_every_item_with_current_values() {
         let config = config::parse(
-            "tags:
+            "docv_version: 1.8.0
+tags:
   - name: 仕様
     color: red
 dir:
@@ -126,6 +135,8 @@ lint:
         assert_eq!(
             lines(&rows(&config, "repo")),
             "\
+docv_version
+  1.8.0
 title
   repo
 dir.free

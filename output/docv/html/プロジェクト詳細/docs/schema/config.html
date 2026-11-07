@@ -31,6 +31,11 @@
 </span><span style="color:#323232;">  </span><span style="font-weight:bold;color:#183691;">&quot;type&quot;</span><span style="color:#323232;">: &quot;object&quot;,
 </span><span style="color:#323232;">  </span><span style="font-weight:bold;color:#183691;">&quot;additionalProperties&quot;</span><span style="color:#323232;">: </span><span style="color:#0086b3;">false</span><span style="color:#323232;">,
 </span><span style="color:#323232;">  </span><span style="font-weight:bold;color:#183691;">&quot;properties&quot;</span><span style="color:#323232;">: {
+</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#183691;">&quot;docv_version&quot;</span><span style="color:#323232;">: {
+</span><span style="color:#323232;">      </span><span style="font-weight:bold;color:#183691;">&quot;description&quot;</span><span style="color:#323232;">: &quot;ドキュメントを合わせた docv の版（`1.8.0` の形）。docv の版と違えば、docv check が error にする。docv を更新したら、`docv update-guide --from &lt;この版&gt;` で変わったことと対応を確かめ、対応してから書き換える。&quot;,
+</span><span style="color:#323232;">      </span><span style="font-weight:bold;color:#183691;">&quot;type&quot;</span><span style="color:#323232;">: &quot;string&quot;,
+</span><span style="color:#323232;">      </span><span style="font-weight:bold;color:#183691;">&quot;pattern&quot;</span><span style="color:#323232;">: &quot;^[0-9]+</span><span style="color:#0086b3;">\\</span><span style="color:#323232;">.[0-9]+</span><span style="color:#0086b3;">\\</span><span style="color:#323232;">.[0-9]+$&quot;
+</span><span style="color:#323232;">    },
 </span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#183691;">&quot;title&quot;</span><span style="color:#323232;">: {
 </span><span style="color:#323232;">      </span><span style="font-weight:bold;color:#183691;">&quot;description&quot;</span><span style="color:#323232;">: &quot;HTML とインデックスに出すプロジェクト名。省略するとルートのディレクトリ名。&quot;,
 </span><span style="color:#323232;">      </span><span style="font-weight:bold;color:#183691;">&quot;type&quot;</span><span style="color:#323232;">: &quot;string&quot;,

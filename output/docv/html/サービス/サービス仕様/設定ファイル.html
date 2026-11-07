@@ -29,6 +29,7 @@
 <hr />
 <h2 id="1-例">1. 例</h2>
 <pre><code class="language-yaml"><span style="font-style:italic;color:#969896;"># yaml-language-server: $schema=https://raw.githubusercontent.com/suzuki-hoge/docv/v1.7.0/assets/schema/docv.schema.json
+</span><span style="color:#63a35c;">docv_version</span><span style="color:#323232;">: </span><span style="color:#0086b3;">1.7.0
 </span><span style="color:#63a35c;">title</span><span style="color:#323232;">: </span><span style="color:#183691;">shop-app
 </span><span style="color:#323232;">
 </span><span style="color:#63a35c;">dir</span><span style="color:#323232;">:
@@ -53,6 +54,7 @@
 </span><span style="color:#323232;">  </span><span style="color:#63a35c;">enabled</span><span style="color:#323232;">: </span><span style="color:#0086b3;">true
 </span></code></pre>
 <div class="table-scroll"><table><thead><tr><th>項目</th><th>必須</th><th>既定</th><th>意味</th></tr></thead><tbody>
+<tr><td><code>docv_version</code></td><td></td><td></td><td>ドキュメントを合わせた docv の版。docv の版と違えば、check が error にする（「docv の版」の章）</td></tr>
 <tr><td><code>title</code></td><td></td><td>ルートの名前</td><td>HTML に出すプロジェクト名</td></tr>
 <tr><td><code>dir.free</code></td><td></td><td><code>docs</code></td><td>管理対象の Markdown（Free ファイル）を置くディレクトリ（「管理対象と管理外」の章）</td></tr>
 <tr><td><code>dir.slot</code></td><td></td><td><code>docv</code></td><td>Slot ファイルを置くディレクトリ</td></tr>
@@ -200,9 +202,24 @@ output/docv/     # docv build の出力
 <h2 id="8-スキーマの参照">8. スキーマの参照</h2>
 <ul>
 <li><code>docv.yaml</code> の先頭に、yaml-language-server の書式でスキーマの URL を書くと、エディタで補完と検証が効く</li>
-<li>URL には docv の版を含める。<code>docv init</code> は、実行した CLI の版の URL を書く</li>
+<li>URL には docv の版を含める。<code>docv init</code> は、実行した CLI の版の URL を書く。URL の版は <code>docv_version</code> と揃える（「docv の版」の章）</li>
 <li><code>docv init --print</code> で、すべての項目を既定の値でコメントにした <code>docv.yaml</code> を出す。スキーマの写しは <code>docs/schema/config.md</code> に置く</li>
 </ul>
+<hr />
+<h2 id="9-docv-の版docv_version">9. docv の版（<code>docv_version</code>）</h2>
+<p><code>docv_version</code> には、ドキュメントを合わせた docv の版を書く。docv を更新した後で、前の版から変わったことに気づき、<code>docv update-guide</code> に渡す版が分かるようにするため。</p>
+<ul>
+<li><code>docv init</code> は、実行した CLI の版を書く</li>
+<li>check は、<code>docv_version</code> を docv の版と比べ、違えば error にする。パッチの版の違いも error にする。対応の要る変更は、パッチの版にも入ることがあるため</li>
+<li><code>docv.yaml</code> と YAML の Slot の 1 行目に docv のスキーマの URL があれば、check は、URL の版を <code>docv_version</code> と比べる。エディタが、古い版のスキーマで補完と検証をしないようにするため</li>
+<li>ローカルのパスなど、版のタグを指す URL でないものは比べない。<code>docv_version</code> がないときも比べず、先に <code>docv_version</code> を直させる</li>
+<li><code>docv.yaml</code> がスキーマに合わず読めないときも、<code>docv_version</code> が docv の版と違えば、エラーに update-guide の案内を添える。古い版の <code>docv.yaml</code> が読めず、案内まで届かないことがないようにするため</li>
+<li><code>docv_version</code> とスキーマの URL は、docv では書き換えない。update-guide の対応を終えたかは、docv には分からないため</li>
+</ul>
+<div class="table-scroll"><table><thead><tr><th>ID</th><th>内容</th></tr></thead><tbody>
+<tr><td>docv-version</td><td><code>docv_version</code> がないか、docv の版と違う。古ければ <code>docv update-guide --from &lt;docv_version&gt;</code> を、新しければ docv の更新を案内する。ないときは、<code>docv.yaml</code> の 1 行目のスキーマの URL から、使っていた版を推して案内する</td></tr>
+<tr><td>schema-version</td><td><code>docv.yaml</code> か YAML の Slot の 1 行目にあるスキーマの URL の版が、<code>docv_version</code> と違う</td></tr>
+</tbody></table></div>
 
 </section>
 </main>
@@ -219,6 +236,7 @@ output/docv/     # docv build の出力
 <li class="h2"><a href="#6-整形との連動formatenabled">6. 整形との連動（format.enabled）</a></li>
 <li class="h2"><a href="#7-推奨する配置">7. 推奨する配置</a></li>
 <li class="h2"><a href="#8-スキーマの参照">8. スキーマの参照</a></li>
+<li class="h2"><a href="#9-docv-の版docv_version">9. docv の版（docv_version）</a></li>
 </ul>
 </nav>
 </body>

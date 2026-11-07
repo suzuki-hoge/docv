@@ -6,17 +6,18 @@ mission: 利用者の使い方（CLI のコマンド、GUI の操作など）
 
 ## コマンド一覧
 
-| コマンド                                       | 説明                                 | 実行ディレクトリ |
-| ---------------------------------------------- | ------------------------------------ | ---------------- |
-| [`docv init`](#docv-init)                      | `docv.yaml` を作る                   | 任意             |
-| [`docv desc`](#docv-desc)                      | docv の概要を出す                    | 任意             |
-| [`docv check [path...]`](#docv-check)          | 管理対象のチェックを行う             | docv ルート      |
-| [`docv fix [path...]`](#docv-fix)              | 管理対象のフォーマットとリントを行う | docv ルート      |
-| [`docv build`](#docv-build)                    | 人間向けの HTML を作る               | docv ルート      |
-| [`docv open`](#docv-open)                      | 作った HTML をブラウザで開く         | docv ルート      |
-| [`docv slot list`](#docv-slot-list)            | Slot の一覧を出す                    | 任意             |
-| [`docv slot schema <slot>`](#docv-slot-schema) | YAML の Slot のスキーマを出す        | 任意             |
-| [`docv slot gen <slot>`](#docv-slot-gen)       | Slot ファイルを、決まったパスに作る  | docv ルート      |
+| コマンド                                                   | 説明                                    | 実行ディレクトリ |
+| ---------------------------------------------------------- | --------------------------------------- | ---------------- |
+| [`docv init`](#docv-init)                                  | `docv.yaml` を作る                      | 任意             |
+| [`docv desc`](#docv-desc)                                  | docv の概要を出す                       | 任意             |
+| [`docv update-guide --from <version>`](#docv-update-guide) | docv を更新したときの変更点と対応を出す | 任意             |
+| [`docv check [path...]`](#docv-check)                      | 管理対象のチェックを行う                | docv ルート      |
+| [`docv fix [path...]`](#docv-fix)                          | 管理対象のフォーマットとリントを行う    | docv ルート      |
+| [`docv build`](#docv-build)                                | 人間向けの HTML を作る                  | docv ルート      |
+| [`docv open`](#docv-open)                                  | 作った HTML をブラウザで開く            | docv ルート      |
+| [`docv slot list`](#docv-slot-list)                        | Slot の一覧を出す                       | 任意             |
+| [`docv slot schema <slot>`](#docv-slot-schema)             | YAML の Slot のスキーマを出す           | 任意             |
+| [`docv slot gen <slot>`](#docv-slot-gen)                   | Slot ファイルを、決まったパスに作る     | docv ルート      |
 
 docv ルート: `docv.yaml` のあるディレクトリ。
 
@@ -36,6 +37,34 @@ docv ルート: `docv.yaml` のあるディレクトリ。
 docv の概要を表示する。
 
 AI Agent にはこれを入力にして進めさせる。
+
+### docv update-guide
+
+docv を更新したときに、版ごとの変更点と対応を表示する。
+
+| オプション         | 意味                                                                                   |
+| ------------------ | -------------------------------------------------------------------------------------- |
+| `--from <version>` | 更新する前に使っていた docv の版。`docv.yaml` の `docv_version` を渡す。省略はできない |
+
+- `--from` の版より後の版から、今の docv の版までを、古い版から順に出す。対応のない版も出す
+- 変更 1 つを 1 行にし、何が変わったかと、それへの対応を書く。対応は、要るもの、選ぶもの、要らないものがある
+- 最後に、`docv_version` と、`docv.yaml` と YAML の Slot の 1 行目にあるスキーマの URL の版を上げるよう案内する
+- `--from` には `1.4.0` の形のほか、`v1.4.0` の形も書ける。最初の版（1.0.0）より前か、今の docv の版より新しければ、終了コード 2 で終わる
+- docv を更新した後は、`docv check` が `docv_version` の違いを指摘し、`--from` に渡す版を案内する（[設定ファイル](service/config.md) の「docv の版」の章）
+
+```sh
+docv update-guide --from 1.4.0
+```
+
+docv 1.5.0 で実行したときの出力は次のとおり（変更の一部を省いた）。
+
+```
+1.5.0 変更点
+- 開発コマンドとインフラと環境のページ分けを追加: 部品ごとにコマンドや環境が違って長いなら、docv desc の「ページ分け」に従って分けられる。開発コマンドのページには order と title を書く
+- インストールと環境構築の手順を、h3 の見出しで出すように変更: 対応は要らない
+
+対応が終わったら、docv.yaml の docv_version を 1.5.0 にし、docv.yaml と YAML の Slot の 1 行目にあるスキーマの URL の版を v1.5.0 にする。最後に docv check で、残りがないかを確かめる
+```
 
 ### docv check
 
@@ -65,6 +94,8 @@ docv check docs/spec/order.md
 Slot ( md ) の YAML front matter は、`mission` が `docv slot list` のミッションと同じかを検査する。ページに分けた Slot は、`order` とページの名前（md は h1、YAML は `title`）があるかと、同じ Slot のページどうしの重なりも検査する。
 
 Slot ( yaml ) の markdown 部は、名前が `_markdown` で終わる項目。値は `|` のブロックで書く。`|` で書いていない項目と、それ以外の項目を複数行で書いたものは、スキーマの検査で error にする。
+
+あわせて、`docv.yaml` の `docv_version` を docv の版と比べる。`docv.yaml` と YAML の Slot の 1 行目にあるスキーマの URL の版も、`docv_version` と比べる（[設定ファイル](service/config.md) の「docv の版」の章）。
 
 パスを渡しても、検査するファイルが絞られるだけで、検査内容は変わらない。
 

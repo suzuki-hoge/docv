@@ -8,7 +8,7 @@ use clap::{Parser, Subcommand};
 
 use crate::check::Options;
 use crate::workspace::{Locate, Project};
-use crate::{build, check, desc, fix, generate, init, open, schema};
+use crate::{build, check, desc, fix, generate, init, open, schema, update_guide};
 
 /// 終了コード。docv/service/service/cli.md の「終了コード」。
 pub const EXIT_FAILURE: u8 = 1;
@@ -41,6 +41,12 @@ enum Command {
     },
     /// docv の概要を出す
     Desc,
+    /// docv を更新したときに、版ごとの変更点と対応を出す
+    UpdateGuide {
+        /// 更新する前に使っていた docv の版（docv.yaml の docv_version）
+        #[arg(long, value_name = "version")]
+        from: String,
+    },
     /// 管理対象のファイルと Slot がルールに沿っているかを確かめる
     Check {
         /// 確かめるファイル。省略すると管理対象のファイルをすべて確かめる
@@ -141,6 +147,10 @@ fn execute(cli: Cli) -> Result<ExitCode> {
             print!("{}", desc::text());
             Ok(ExitCode::SUCCESS)
         }
+        Command::UpdateGuide { from } => {
+            print!("{}", update_guide::text(&from)?);
+            Ok(ExitCode::SUCCESS)
+        }
         command => {
             let project = Project::open(&locate, &root)?;
             execute_in_project(&project, command)
@@ -208,6 +218,7 @@ fn execute_in_project(project: &Project, command: Command) -> Result<ExitCode> {
         }
         Command::Init { .. }
         | Command::Desc
+        | Command::UpdateGuide { .. }
         | Command::Slot(SlotCommand::List | SlotCommand::Schema { .. }) => {
             unreachable!("docv.yaml を読まずに実行するコマンド")
         }

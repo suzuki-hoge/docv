@@ -28,7 +28,11 @@
 <h2 id="手順">手順</h2>
 <ol>
 <li>
-<p><code>Cargo.toml</code> の <code>version</code> を上げてコミットする</p>
+<p><code>Cargo.toml</code> の <code>version</code> を上げ、次の 2 つと一緒にコミットする</p>
+<ul>
+<li><code>assets/update-guide.yaml</code> の先頭に、その版の変更点と対応を足す。対応のない版も書く。足していないと cargo test が落ちる</li>
+<li>このリポジトリの <code>docv.yaml</code> の <code>docv_version</code> を、その版にする</li>
+</ul>
 </li>
 <li>
 <p>v で始まるタグを push する（人間が行う）</p>

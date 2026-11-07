@@ -20,4 +20,6 @@ pub mod slot;
 pub mod slot_markdown;
 pub mod style;
 pub mod textlint;
+pub mod update_guide;
+pub mod version;
 pub mod workspace;

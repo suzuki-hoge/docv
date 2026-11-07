@@ -27,7 +27,7 @@
 <p>部品の全体像は、<a href="%E3%82%B7%E3%82%B9%E3%83%86%E3%83%A0%E6%A6%82%E8%A6%81.html">システム概要</a>。コマンドから見た振る舞いは、サービス仕様に書く。読み書きするファイルと終了コードは <a href="../%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9/%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E4%BB%95%E6%A7%98/%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89.html">コマンド</a>、HTML と JPG は <a href="../%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9/%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E4%BB%95%E6%A7%98/%E3%83%93%E3%82%B8%E3%83%A5%E3%82%A2%E3%83%A9%E3%82%A4%E3%82%BA.html">ビジュアライズ</a> のページ。</p>
 <h2 id="処理の流れ">処理の流れ</h2>
 <ol>
-<li><code>docv.yaml</code> を読み、スキーマで確かめる。init、desc、slot list、slot schema と、<code>--print</code> を付けた slot gen は、<code>docv.yaml</code> を読まない</li>
+<li><code>docv.yaml</code> を読み、スキーマで確かめる。init、desc、update-guide、slot list、slot schema と、<code>--print</code> を付けた slot gen は、<code>docv.yaml</code> を読まない</li>
 <li>ルート以下のファイルを分類し、Slot、ADR、PDR、Free ファイルを読む</li>
 <li>コマンドに応じて、次の部品を使う</li>
 </ol>
@@ -42,6 +42,7 @@
 <li>Slot のテンプレ（<code>assets/template/</code>。YAML の Slot の項目のサンプルと、ドキュメントのガイドラインの雛形）</li>
 <li>YAML の Slot と <code>docv.yaml</code> のスキーマ（<code>assets/schema/</code>）</li>
 <li>docv の概要（<code>docv desc</code> が出す <code>assets/desc.md</code>）。サービス仕様の 1 ページ目（<code>docv/service/service/desc.md</code>）は、このファイルへのシンボリックリンク</li>
+<li>版ごとの変更点と対応（<code>docv update-guide</code> が出す <code>assets/update-guide.yaml</code>）。手元の docv の版と、出す内容を一致させるため</li>
 <li>HTML の CSS（<code>assets/docv.css</code>）と JS（<code>assets/docv.js</code>）。build が、出力先の直下にそのまま書く</li>
 <li>Markdown の整形に使う dprint-plugin-markdown</li>
 <li>コードブロックの色付けに使う syntect と、その構文の定義とテーマ</li>
