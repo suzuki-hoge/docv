@@ -133,7 +133,16 @@
 <ul>
 <li><code>docv/adr/&lt;id&gt;.md</code> に、決定 1 つを 1 ファイルで置く ( ファイル名から <code>.md</code> を除いたものが id )</li>
 <li>ファイルは手で作る</li>
-<li>本文は、h1 に題を書き、<code>## 背景</code>、<code>## 決めたこと</code>、<code>## 結果</code>、<code>## 選ばなかった案</code> の章で書く</li>
+<li>本文は、h1 に題を書き、次の章をこの順に h2 で書く。任意の章は、書くことがなければ置かない
+<ul>
+<li><code>## 背景</code>: 決める必要が生じた課題と、そのときの制約や前提</li>
+<li><code>## 決めたこと</code>: 決めたことと、その案を選んだ理由。決めたことが当てはまる範囲</li>
+<li><code>## 決めないこと</code>（任意）: この ADR では決めないことと、それをどこで決めるか</li>
+<li><code>## 結果</code>: 決めたことで変わること。引き受けること（できなくなること、後で考えること）も書く</li>
+<li><code>## 選ばなかった案</code>: 比べた案と、それぞれを選ばなかった理由</li>
+<li><code>## 参考</code>（任意）: 根拠にしたファイルや資料へのリンク</li>
+</ul>
+</li>
 <li>決めた後は書き換えない
 <ul>
 <li>決定を変えるときは、新しい ADR を書き、その <code>supersedes</code> で過去の決定の id を指す</li>
@@ -151,21 +160,30 @@
 </span><span style="color:#323232;">
 </span><span style="font-weight:bold;color:#a71d5d;">## </span><span style="font-weight:bold;color:#323232;">背景
 </span><span style="color:#323232;">
-</span><span style="color:#323232;">配布するバイナリを 1 つにしたい
+</span><span style="color:#323232;">配布するバイナリを 1 つにしたい。利用者の手元に、言語の実行環境を求めたくない
 </span><span style="color:#323232;">
 </span><span style="font-weight:bold;color:#a71d5d;">## </span><span style="font-weight:bold;color:#323232;">決めたこと
 </span><span style="color:#323232;">
-</span><span style="color:#323232;">CLI は Rust で書く
+</span><span style="color:#323232;">CLI は Rust で書き、単一のバイナリにして配る。CLI の外で動く道具（textlint など）は、この決定の範囲に含めない
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">## </span><span style="font-weight:bold;color:#323232;">決めないこと
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">バイナリをどこで配るかは決めない。リリースの Slot で決める
 </span><span style="color:#323232;">
 </span><span style="font-weight:bold;color:#a71d5d;">## </span><span style="font-weight:bold;color:#323232;">結果
 </span><span style="color:#323232;">
-</span><span style="color:#323232;">利用者は Rust の環境なしで使える
+</span><span style="color:#323232;">利用者は、言語の実行環境なしで使える。開発者は、Rust の環境を用意する
 </span><span style="color:#323232;">
 </span><span style="font-weight:bold;color:#a71d5d;">## </span><span style="font-weight:bold;color:#323232;">選ばなかった案
 </span><span style="color:#323232;">
-</span><span style="color:#323232;">| 案         | 選ばなかった理由 |
-</span><span style="color:#323232;">| ---------- | ---------------- |
-</span><span style="color:#323232;">| Zig で書く | 情報が少ない     |
+</span><span style="color:#323232;">| 案             | 選ばなかった理由             |
+</span><span style="color:#323232;">| -------------- | ---------------------------- |
+</span><span style="color:#323232;">| Node.js で書く | 利用者の手元に実行環境が要る |
+</span><span style="color:#323232;">| Zig で書く     | 情報が少ない                 |
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">## </span><span style="font-weight:bold;color:#323232;">参考
+</span><span style="color:#323232;">
+</span><span style="color:#a71d5d;">- [</span><span style="color:#4183c4;">技術スタック</span><span style="color:#a71d5d;">](</span><span style="font-style:italic;color:#4183c4;">../system/stack.yaml</span><span style="color:#a71d5d;">)
 </span></code></pre>
 <h3 id="group"><code>group</code></h3>
 <p>任意</p>

@@ -24,14 +24,14 @@
 <section class="slot" id="service">
 <h1><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M3 7l9 5 9-5"/><path d="M12 12v10"/></svg>サービス仕様</h1>
 <nav class="page-tabs"><a href="概要.html">概要</a><a href="Slot.html">Slot</a><a href="Free.html">Free</a><a href="ADR.html" aria-current="page">ADR</a><a href="設定ファイル.html">設定ファイル</a><a href="コマンド.html">コマンド</a><a href="ビジュアライズ.html">ビジュアライズ</a></nav>
-<p>決めたこと 1 つを、背景、選ばなかった案、結論と一緒に残す記録。<code>docs/</code> と Slot には今の姿だけを書き、どう決めてきたかは ADR に残す。docv が形を決めるファイルの 1 つで、置き場所は Slot と同じ <code>docv/</code> の下。</p>
+<p>決めたこと 1 つを、背景、結果、選ばなかった案と一緒に残す記録。<code>docs/</code> と Slot には今の姿だけを書き、どう決めてきたかは ADR に残す。docv が形を決めるファイルの 1 つで、置き場所は Slot と同じ <code>docv/</code> の下。</p>
 <hr />
 <h2 id="1-置き場所と書き方">1. 置き場所と書き方</h2>
 <ul>
 <li><code>dir.slot</code>（既定は <code>docv</code>）の下の <code>adr/</code> に、決定 1 つを 1 つの Markdown で置く。ファイル名は <code>&lt;id&gt;.md</code> で、<code>.md</code> を除いた名前が決定を指す id になる</li>
 <li>システムが使う項目（<code>group</code>、<code>date</code>、<code>supersedes</code>）は YAML front matter に書く。決定の中身は本文に書き、本文の h1 を題にする</li>
 <li>状態（採用、却下など）は持たない。ADR に残すのは決めたことだけで、打ち消されたかどうかは、新しい決定の <code>supersedes</code> から指されているかでわかる。打ち消されていない決定が、今の決定</li>
-<li>本文は、背景、決めたこと、結果、選ばなかった案の章で書く</li>
+<li>本文は、決まった章で書く（「本文の章」の章）</li>
 <li>決めた後は書き換えない。決定を変えるときは、新しい ADR を書き、その <code>supersedes</code> から過去の決定の id を指す（未来から過去を参照する）</li>
 <li>過去の決定から新しい決定へのつながりは、docv が <code>supersedes</code> を逆にたどって組み立てる。過去の ADR には書き足さない</li>
 <li>用語を変えても、過去の ADR は書き換えない。過去の ADR が今の用語で読めなくなることは許す。用語集の Slot には今の用語だけを書き、昔の用語との対応は残さない</li>
@@ -43,6 +43,20 @@
 <tr><td><code>date</code></td><td>必須</td><td>決めた日（YYYY-MM-DD）。決定を並べる順と、<code>supersedes</code> が過去を指しているかに使う</td></tr>
 <tr><td><code>supersedes</code></td><td>任意</td><td>打ち消す過去の決定の id の配列</td></tr>
 </tbody></table></div>
+<hr />
+<h2 id="3-本文の章">3. 本文の章</h2>
+<p>本文は、h1 の題の下に、次の章をこの順に h2 で書く。任意の章は、書くことがなければ置かない。</p>
+<div class="table-scroll"><table><thead><tr><th>章</th><th>必須</th><th>書くこと</th></tr></thead><tbody>
+<tr><td>背景</td><td>必須</td><td>決める必要が生じた課題と、そのときの制約や前提</td></tr>
+<tr><td>決めたこと</td><td>必須</td><td>決めたことと、その案を選んだ理由。決めたことが当てはまる範囲</td></tr>
+<tr><td>決めないこと</td><td>任意</td><td>この ADR では決めないことと、それをどこで決めるか</td></tr>
+<tr><td>結果</td><td>必須</td><td>決めたことで変わること。引き受けること（できなくなること、後で考えること）も書く</td></tr>
+<tr><td>選ばなかった案</td><td>必須</td><td>比べた案と、それぞれを選ばなかった理由</td></tr>
+<tr><td>参考</td><td>任意</td><td>根拠にしたファイルや資料へのリンク。ADR だけで読めるように、本文の根拠をここにまとめる</td></tr>
+</tbody></table></div>
+<ul>
+<li>章の形は check で確かめない。章を揃えるのは、ADR を読む人と AI Agent が、どの ADR も同じ順で読めるようにするため</li>
+</ul>
 <pre><code class="language-markdown"><span style="color:#a71d5d;">---
 </span><span style="color:#323232;">group: 言語
 </span><span style="color:#323232;">date: 2026-03-01
@@ -51,18 +65,35 @@
 </span><span style="color:#323232;">
 </span><span style="font-weight:bold;color:#a71d5d;"># </span><span style="font-weight:bold;color:#323232;">Rust で書く
 </span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">## </span><span style="font-weight:bold;color:#323232;">背景
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">配布するバイナリを 1 つにしたい。利用者の手元に、言語の実行環境を求めたくない。
+</span><span style="color:#323232;">
 </span><span style="font-weight:bold;color:#a71d5d;">## </span><span style="font-weight:bold;color:#323232;">決めたこと
 </span><span style="color:#323232;">
-</span><span style="color:#323232;">CLI は Rust で書き、単一のバイナリにして配る。
+</span><span style="color:#323232;">CLI は Rust で書き、単一のバイナリにして配る。CLI の外で動く道具（textlint など）は、この決定の範囲に含めない。
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">## </span><span style="font-weight:bold;color:#323232;">決めないこと
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">バイナリをどこで配るかは決めない。リリースの Slot で決める。
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">## </span><span style="font-weight:bold;color:#323232;">結果
+</span><span style="color:#323232;">
+</span><span style="color:#323232;">利用者は、言語の実行環境なしで使える。開発者は、Rust の環境を用意する。
 </span><span style="color:#323232;">
 </span><span style="font-weight:bold;color:#a71d5d;">## </span><span style="font-weight:bold;color:#323232;">選ばなかった案
 </span><span style="color:#323232;">
-</span><span style="color:#323232;">| 案         | 選ばなかった理由 |
-</span><span style="color:#323232;">| ---------- | ---------------- |
-</span><span style="color:#323232;">| Zig で書く | 情報が少ない     |
+</span><span style="color:#323232;">| 案             | 選ばなかった理由             |
+</span><span style="color:#323232;">| -------------- | ---------------------------- |
+</span><span style="color:#323232;">| Node.js で書く | 利用者の手元に実行環境が要る |
+</span><span style="color:#323232;">| Zig で書く     | 情報が少ない                 |
+</span><span style="color:#323232;">
+</span><span style="font-weight:bold;color:#a71d5d;">## </span><span style="font-weight:bold;color:#323232;">参考
+</span><span style="color:#323232;">
+</span><span style="color:#a71d5d;">- [</span><span style="color:#4183c4;">技術スタック</span><span style="color:#a71d5d;">](</span><span style="font-style:italic;color:#4183c4;">../system/stack.yaml</span><span style="color:#a71d5d;">)
 </span></code></pre>
 <hr />
-<h2 id="3-check">3. check</h2>
+<h2 id="4-check">4. check</h2>
 <div class="table-scroll"><table><thead><tr><th>ID</th><th>内容</th></tr></thead><tbody>
 <tr><td>adr-invalid</td><td>YAML front matter が ADR の形に合わない（知らない項目、<code>date</code> の形も含む）。本文に h1 がない</td></tr>
 <tr><td>adr-unknown-ref</td><td><code>supersedes</code> の先の ADR がない。または、その決定より後の決定を指している</td></tr>
@@ -71,7 +102,7 @@
 <li>本文には、YAML front matter のほかは、Free ファイルと同じ検査（<a href="Free.html">Free</a> のページの「check のルール」の章）をかける</li>
 </ul>
 <hr />
-<h2 id="4-ai-agent">4. AI Agent</h2>
+<h2 id="5-ai-agent">5. AI Agent</h2>
 <ul>
 <li>AI Agent が ADR を読むのは、決めた理由を聞かれたときだけ。今の姿は <code>docs/</code> と Slot を読む</li>
 </ul>
@@ -83,8 +114,9 @@
 <ul>
 <li class="h2"><a href="#1-置き場所と書き方">1. 置き場所と書き方</a></li>
 <li class="h2"><a href="#2-yaml-front-matter-の項目">2. YAML front matter の項目</a></li>
-<li class="h2"><a href="#3-check">3. check</a></li>
-<li class="h2"><a href="#4-ai-agent">4. AI Agent</a></li>
+<li class="h2"><a href="#3-本文の章">3. 本文の章</a></li>
+<li class="h2"><a href="#4-check">4. check</a></li>
+<li class="h2"><a href="#5-ai-agent">5. AI Agent</a></li>
 </ul>
 </nav>
 </body>
