@@ -32,3 +32,14 @@ steps:
         ```sh
         make install
         ```
+  - id: install-tag
+    name: 任意の版の docv を入れる
+    items:
+      body_markdown: |
+        版のタグを指定して、GitHub のソースから入れる。前の版の動きを確かめるときに使う。
+
+        ```sh
+        cargo install --git https://github.com/suzuki-hoge/docv --tag v1.7.0
+        ```
+
+        `make install` で入れた docv は置き換わる。手元のソースに戻すときは、もう一度 `make install` を実行する。
