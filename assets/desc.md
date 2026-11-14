@@ -91,12 +91,15 @@ mission: 利用者の使い方（CLI のコマンド、GUI の操作など）
 
 ### ページ分け
 
-サービス仕様、システム仕様、開発コマンド、インフラと環境は、ページに分けられる
+サービス仕様、システム仕様、開発コマンド、アーキテクチャ、設計・実装、テスト方針、インフラと環境は、ページに分けられる
 
 - 分けるときは、1 つのファイルの代わりに、次のディレクトリの直下に 1 ページ 1 ファイルで置く。拡張子は、分けないときと同じ
     - サービス仕様: `docv/slot/service/service.md` の代わりに `docv/slot/service/service/`
     - システム仕様: `docv/slot/system/system.md` の代わりに `docv/slot/system/system/`
     - 開発コマンド: `docv/slot/guide/develop.yaml` の代わりに `docv/slot/guide/develop/`
+    - アーキテクチャ: `docv/slot/guide/architecture.md` の代わりに `docv/slot/guide/architecture/`
+    - 設計・実装: `docv/slot/guide/design.md` の代わりに `docv/slot/guide/design/`
+    - テスト方針: `docv/slot/guide/testing.md` の代わりに `docv/slot/guide/testing/`
     - インフラと環境: `docv/slot/operation/infrastructure.md` の代わりに `docv/slot/operation/infrastructure/`
 - ページは `order`（整数）の順に並ぶ。ページの名前は、HTML でページを切り替えるタブの名前になる。`order` もページの名前も、同じ Slot のページどうしで重ねない
 - 分けないときは 1 つのファイルに書く

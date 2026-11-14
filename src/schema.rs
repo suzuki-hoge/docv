@@ -129,7 +129,14 @@ mod tests {
             assert!(error.contains(message), "{name}: {error}");
         }
         // ページに分けられる Slot だけ、分けるときの YAML front matter の書き方を案内する
-        for name in ["service", "system", "infrastructure"] {
+        for name in [
+            "service",
+            "system",
+            "architecture",
+            "design",
+            "testing",
+            "infrastructure",
+        ] {
             let error = text(name).unwrap_err().to_string();
             assert!(error.contains("docv desc の「ページ分け」"), "{error}");
         }

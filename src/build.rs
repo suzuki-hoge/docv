@@ -1577,6 +1577,16 @@ fn icon(id: &str) -> String {
         "develop" => {
             r#"<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3"/><path d="M13 15h4"/>"#
         }
+        // 屋根と柱（建物の作り）
+        "architecture" => {
+            r#"<path d="M3 9l9-5 9 5z"/><path d="M6 12v6M10 12v6M14 12v6M18 12v6"/><path d="M3 21h18"/>"#
+        }
+        // 山括弧と斜線（コード）
+        "design" => r#"<path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/><path d="M14 4l-4 16"/>"#,
+        // フラスコ（試験）
+        "testing" => {
+            r#"<path d="M9 3h6"/><path d="M10 3v6l-5.6 9.7A1.5 1.5 0 0 0 5.7 21h12.6a1.5 1.5 0 0 0 1.3-2.3L14 9V3"/><path d="M7 15h10"/>"#
+        }
         // 鉛筆
         "doc-guide" => r#"<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/>"#,
         // 雲

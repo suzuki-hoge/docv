@@ -160,7 +160,7 @@ docv slot gen doc-guide            # docv/slot/guide/doc-guide.md に、ガイ�
 docv slot gen doc-guide --print    # 運用中のファイルと雛形を見比べる
 ```
 
-サービス仕様、システム仕様、開発コマンド、インフラと環境をページに分けるときは、`docv/slot/service/service/` などのページのディレクトリの下にページを手で置く（[ページ分け](service/desc.md#ページ分け)）。ページがあるときは、`docv slot gen service` などは、1 つのファイルを作らずにエラーで終わる。
+Slot をページに分けるときは、`docv/slot/service/service/` などのページのディレクトリの下にページを手で置く（[ページ分け](service/desc.md#ページ分け)）。ページがあるときは、`docv slot gen service` などは、1 つのファイルを作らずにエラーで終わる。
 
 ### docv slot schema
 

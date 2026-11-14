@@ -1,7 +1,7 @@
 //! Slot。どのプロジェクトにも要るドキュメントを、docv が決めたミッションと形で書くファイル。docv/slot/service/service/slot.md。
 //!
 //! Slot ファイルは、Slot のディレクトリ（document_root の下の slot/）の、まとまりのディレクトリに `<まとまり>/<ID>.<拡張子>` の名前で置く。拡張子は Slot ごとに決まる（yaml か md）。
-//! サービス仕様、システム仕様、開発コマンド、インフラと環境は、`<まとまり>/<ID>/` の直下に 1 ページ 1 つのファイルで置いて、ページに分けられる。
+//! サービス仕様、システム仕様、開発コマンド、アーキテクチャ、設計・実装、テスト方針、インフラと環境は、`<まとまり>/<ID>/` の直下に 1 ページ 1 つのファイルで置いて、ページに分けられる。
 //! md のページの名前は h1、並びは YAML front matter の order。YAML のページ（開発コマンド）は、項目の title と order。
 //! md の Slot（分けたページも）は、YAML front matter の mission に、docv が決めたミッションをそのまま書く。違えば check が error にする。
 //! ファイルの中のパスは、すべてルートからの相対パス。
@@ -152,17 +152,38 @@ pub const DEFS: &[Def] = &[
         format: Format::Yaml,
     },
     Def {
-        id: "env",
-        label: "環境変数",
-        group: Group::Developer,
-        mission: "システムを動かすのに要る環境変数と、それぞれを設定している場所",
-        format: Format::Yaml,
-    },
-    Def {
         id: "develop",
         label: "開発コマンド",
         group: Group::Developer,
         mission: "テストやビルドなど、開発者が実行するコマンド",
+        format: Format::Yaml,
+    },
+    Def {
+        id: "architecture",
+        label: "アーキテクチャ",
+        group: Group::Developer,
+        mission: "システム全体で採る方式と決まり（部品の分け方、通信の方式、非同期処理の実現方法など）",
+        format: Format::Markdown,
+    },
+    Def {
+        id: "design",
+        label: "設計・実装",
+        group: Group::Developer,
+        mission: "コードを書くときに従う決まり（フレームワークの使い方、ディレクトリやコーディングの決まりなど）",
+        format: Format::Markdown,
+    },
+    Def {
+        id: "testing",
+        label: "テスト方針",
+        group: Group::Developer,
+        mission: "テストの範囲と方法（自動テストの範囲、E2E テスト、手動テストについてなど）",
+        format: Format::Markdown,
+    },
+    Def {
+        id: "env",
+        label: "環境変数",
+        group: Group::Developer,
+        mission: "システムを動かすのに要る環境変数と、それぞれを設定している場所",
         format: Format::Yaml,
     },
     Def {
@@ -217,10 +238,19 @@ impl Def {
     }
 
     /// ページに分けるときのディレクトリの、Slot のディレクトリからの相対パス。直下に 1 ページ 1 つの、Slot と同じ拡張子のファイルを置く。
-    /// 分けられるのはサービス仕様、システム仕様、開発コマンド、インフラと環境だけで、ほかの Slot は None。
+    /// 分けられるのはサービス仕様、システム仕様、開発コマンド、アーキテクチャ、設計・実装、テスト方針、インフラと環境だけで、ほかの Slot は None。
     pub fn pages_dir(&self) -> Option<String> {
-        matches!(self.id, "service" | "system" | "develop" | "infrastructure")
-            .then(|| format!("{}/{}", self.group.dir(), self.id))
+        matches!(
+            self.id,
+            "service"
+                | "system"
+                | "develop"
+                | "architecture"
+                | "design"
+                | "testing"
+                | "infrastructure"
+        )
+        .then(|| format!("{}/{}", self.group.dir(), self.id))
     }
 }
 
@@ -1267,6 +1297,43 @@ mod tests {
     }
 
     #[test]
+    fn splits_the_guides_for_developers_like_the_service_spec() {
+        let mut files = Vec::new();
+        for id in ["architecture", "design", "testing"] {
+            let mission = def(id).unwrap().mission;
+            for (order, name) in [(1, "web"), (2, "batch")] {
+                files.push((
+                    format!("docv/slot/guide/{id}/{name}.md"),
+                    format!("---\norder: {order}\nmission: {mission}\n---\n\n# {name}\n"),
+                ));
+            }
+        }
+        let files: Vec<(&str, &str)> = files
+            .iter()
+            .map(|(p, t)| (p.as_str(), t.as_str()))
+            .collect();
+        let (_dir, project) = project(&files);
+        let diagnostics = check(&project).unwrap();
+        assert!(diagnostics.is_empty(), "{diagnostics:#?}");
+        let pages: Vec<(&str, String)> = load(&project)
+            .unwrap()
+            .iter()
+            .map(|s| (s.def.id, s.page.as_ref().unwrap().title.clone()))
+            .collect();
+        assert_eq!(
+            pages,
+            [
+                ("architecture", "web".to_string()),
+                ("architecture", "batch".to_string()),
+                ("design", "web".to_string()),
+                ("design", "batch".to_string()),
+                ("testing", "web".to_string()),
+                ("testing", "batch".to_string()),
+            ]
+        );
+    }
+
+    #[test]
     fn splits_the_develop_commands_into_yaml_pages() {
         let (_dir, project) = project(&[
             (
@@ -1450,7 +1517,10 @@ mod tests {
         // ページに分けられる Slot だけ、置ける名前の一覧にそのディレクトリを出す。拡張子は Slot と同じ
         let names = file_names();
         assert!(names.contains("service/service.md、service/service/*.md、service/manual.md"));
-        assert!(names.contains("guide/develop.yaml、guide/develop/*.yaml、guide/doc-guide.md"));
+        assert!(names.contains("guide/develop.yaml、guide/develop/*.yaml、guide/architecture.md"));
+        assert!(names.contains(
+            "guide/architecture/*.md、guide/design.md、guide/design/*.md、guide/testing.md、guide/testing/*.md、guide/env.yaml、guide/doc-guide.md"
+        ));
         assert!(names.contains("operation/infrastructure.md、operation/infrastructure/*.md"));
         assert!(!names.contains("api/*"));
     }
