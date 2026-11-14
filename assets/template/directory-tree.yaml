@@ -1,7 +1,0 @@
-# ディレクトリ: ディレクトリごとの役割
-# path がなくなったら、check が知らせる。
-
-entries:
-  - path: src/
-    desc_markdown: |
-      何があるか

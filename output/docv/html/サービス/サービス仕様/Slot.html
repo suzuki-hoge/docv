@@ -58,7 +58,6 @@
 <tr><td><code>system/stack.yaml</code></td><td>技術スタック</td><td>システム</td><td>作るのに使っている言語、ライブラリ、サービス</td></tr>
 <tr><td><code>system/api.md</code></td><td>API 仕様書</td><td>システム</td><td>API の一覧と、それぞれが受け取るものと返すもの</td></tr>
 <tr><td><code>system/db.md</code></td><td>DB 仕様書</td><td>システム</td><td>保存しているデータと、その保存先と形</td></tr>
-<tr><td><code>guide/directory-tree.yaml</code></td><td>ディレクトリ</td><td>開発者向けガイド</td><td>ディレクトリごとの役割</td></tr>
 <tr><td><code>guide/setup.yaml</code></td><td>環境構築</td><td>開発者向けガイド</td><td>開発を始めるのに用意するものと、実行するコマンド</td></tr>
 <tr><td><code>guide/env.yaml</code></td><td>環境変数</td><td>開発者向けガイド</td><td>システムを動かすのに要る環境変数と、それぞれを設定している場所</td></tr>
 <tr><td><code>guide/develop.yaml</code></td><td>開発コマンド</td><td>開発者向けガイド</td><td>テストやビルドなど、開発者が実行するコマンド</td></tr>
@@ -148,18 +147,9 @@
 <tr><td>slot-text-multiline</td><td><code>_markdown</code> で終わらない文字列の項目が、複数行になっている</td></tr>
 </tbody></table></div>
 <ul>
-<li>
-<p>md の Slot には、YAML front matter のほかは、Free ファイルと同じ検査（<a href="Free.html">Free</a> のページの「check のルール」の章）をかける</p>
-</li>
-<li>
-<p><code>slot/</code> の中の画像には、Free ファイルの画像と同じ検査（image-owner）をかける</p>
-</li>
-<li>
-<p>YAML の Slot の Markdown の項目には、リンク、書式の規則、整形、textlint の検査をかける。見出しの検査はかけない。項目の中に h1 はなく、HTML では見出しの段を付け直すため。指摘の行番号は、YAML の行番号で出す</p>
-</li>
-<li>
-<p>directory-tree の <code>path</code> の先がなくなったら、ディレクトリの Slot が実装からずれたということ。実装とずれたことに気づけるのは、ここだけ</p>
-</li>
+<li>md の Slot には、YAML front matter のほかは、Free ファイルと同じ検査（<a href="Free.html">Free</a> のページの「check のルール」の章）をかける</li>
+<li><code>slot/</code> の中の画像には、Free ファイルの画像と同じ検査（image-owner）をかける</li>
+<li>YAML の Slot の Markdown の項目には、リンク、書式の規則、整形、textlint の検査をかける。見出しの検査はかけない。項目の中に h1 はなく、HTML では見出しの段を付け直すため。指摘の行番号は、YAML の行番号で出す</li>
 </ul>
 
 </section>

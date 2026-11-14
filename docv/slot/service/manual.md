@@ -176,7 +176,6 @@ docv slot schema words # 用語集のスキーマを表示
 - [インストール](../../free/schema/install.md)
 - [用語集](../../free/schema/words.md)
 - [技術スタック](../../free/schema/stack.md)
-- [ディレクトリ](../../free/schema/directory-tree.md)
 - [環境構築](../../free/schema/setup.md)
 - [環境変数](../../free/schema/env.md)
 - [開発コマンド](../../free/schema/develop.md)

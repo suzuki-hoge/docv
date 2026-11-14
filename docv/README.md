@@ -28,7 +28,6 @@
 
 ## 開発者向けガイド
 
-- [ディレクトリ](<../output/docv/image/開発者向けガイド/ディレクトリ.jpg>)
 - [環境構築](<../output/docv/image/開発者向けガイド/環境構築.jpg>)
 - [環境変数](<../output/docv/image/開発者向けガイド/環境変数.jpg>)
 - [開発コマンド](<../output/docv/image/開発者向けガイド/開発コマンド.jpg>)

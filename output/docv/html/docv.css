@@ -143,9 +143,6 @@ table.docs td:nth-child(2) { width: 100%; max-width: 0; overflow: hidden; text-o
 table.docs tr.dir td { padding: 0; }
 table.docs tr.dir div { padding: 5px 9px; background: #eef7fc; color: var(--fg-subtle); font-weight: 600; }
 /* ディレクトリの表。表どうしで、名前の列の幅をそろえる。収まらない名前は折り返す */
-table.tree { table-layout: fixed; }
-table.tree th:nth-child(1) { width: 14em; }
-table.tree td:nth-child(1) { overflow-wrap: anywhere; }
 /* 現在の設定の表。選ぶ項目は候補を横に並べ、選んでいる候補に色を付ける */
 table.config td:nth-child(1), table.textlint td:nth-child(1) { width: 14em; white-space: nowrap; }
 table.config ul { margin: 0; padding-left: 1.2em; }

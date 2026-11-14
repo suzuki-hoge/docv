@@ -7,7 +7,6 @@
 //! ファイルの中のパスは、すべてルートからの相対パス。
 
 use std::fs;
-use std::path::Path;
 
 use anyhow::{Context, Result};
 use serde::Deserialize;
@@ -144,13 +143,6 @@ pub const DEFS: &[Def] = &[
         group: Group::System,
         mission: "保存しているデータと、その保存先と形",
         format: Format::Markdown,
-    },
-    Def {
-        id: "directory-tree",
-        label: "ディレクトリ",
-        group: Group::Developer,
-        mission: "ディレクトリごとの役割",
-        format: Format::Yaml,
     },
     Def {
         id: "setup",
@@ -406,24 +398,6 @@ pub struct StackGroup {
 
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Layout {
-    #[serde(default)]
-    pub entries: Vec<LayoutEntry>,
-    /// 項目のあとに続けて出す Markdown。
-    #[serde(rename = "appendix_markdown")]
-    pub appendix: Option<String>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct LayoutEntry {
-    pub path: String,
-    #[serde(rename = "desc_markdown")]
-    pub description: String,
-}
-
-#[derive(Debug, Clone, Default, Deserialize)]
-#[serde(deny_unknown_fields)]
 pub struct Env {
     #[serde(default)]
     pub envs: Vec<EnvVar>,
@@ -479,7 +453,6 @@ pub enum Content {
     Procedure(Procedure),
     Words(Words),
     Stack(Stack),
-    Layout(Layout),
     Env(Env),
     Cost(Cost),
     /// Markdown の Slot。YAML front matter を除いた本文。
@@ -498,7 +471,6 @@ impl Content {
             "install" | "setup" | "develop" => Content::Procedure(serde_yaml_ng::from_str(text)?),
             "words" => Content::Words(serde_yaml_ng::from_str(text)?),
             "stack" => Content::Stack(serde_yaml_ng::from_str(text)?),
-            "directory-tree" => Content::Layout(serde_yaml_ng::from_str(text)?),
             "env" => Content::Env(serde_yaml_ng::from_str(text)?),
             "cost" => Content::Cost(serde_yaml_ng::from_str(text)?),
             _ => unreachable!("YAML の Slot の ID は DEFS で確かめてある"),
@@ -537,7 +509,6 @@ impl Content {
             Content::Procedure(c) => c.appendix.as_deref(),
             Content::Words(c) => c.appendix.as_deref(),
             Content::Stack(c) => c.appendix.as_deref(),
-            Content::Layout(c) => c.appendix.as_deref(),
             Content::Env(c) => c.appendix.as_deref(),
             Content::Cost(c) => c.appendix.as_deref(),
             Content::Markdown(_) => None,
@@ -553,11 +524,6 @@ impl Content {
                     if let Some(image) = &g.image {
                         paths.push(("image", image));
                     }
-                }
-            }
-            Content::Layout(c) => {
-                for e in &c.entries {
-                    paths.push(("path", &e.path));
                 }
             }
             Content::Cost(c) => {
@@ -1037,7 +1003,6 @@ pub fn template(id: &str) -> Option<&'static str> {
         "install" => include_str!("../assets/template/install.yaml"),
         "words" => include_str!("../assets/template/words.yaml"),
         "stack" => include_str!("../assets/template/stack.yaml"),
-        "directory-tree" => include_str!("../assets/template/directory-tree.yaml"),
         "setup" => include_str!("../assets/template/setup.yaml"),
         "env" => include_str!("../assets/template/env.yaml"),
         "develop" => include_str!("../assets/template/develop.yaml"),
@@ -1060,7 +1025,6 @@ pub fn schema(id: &str) -> Option<&'static str> {
         "install" => include_str!("../assets/schema/install.schema.json"),
         "words" => include_str!("../assets/schema/words.schema.json"),
         "stack" => include_str!("../assets/schema/stack.schema.json"),
-        "directory-tree" => include_str!("../assets/schema/directory-tree.schema.json"),
         "setup" => include_str!("../assets/schema/setup.schema.json"),
         "env" => include_str!("../assets/schema/env.schema.json"),
         "develop" => include_str!("../assets/schema/develop.schema.json"),
@@ -1083,13 +1047,10 @@ pub fn scalar(value: &Value) -> String {
     }
 }
 
-/// パスがルートの中の、ディレクトリを指すか。
-pub fn is_dir(project: &Project, path: &str) -> bool {
-    path.ends_with('/') || Path::new(&project.root.join(path)).is_dir()
-}
-
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use super::*;
     use crate::workspace::Locate;
 
@@ -1157,8 +1118,8 @@ mod tests {
                 "steps:\n  - id: binary\n    name: a\n    items:\n      - os: macos\n      - body_markdown: m\n",
             ),
             (
-                "docv/slot/guide/directory-tree.yaml",
-                "entries:\n  - path: src/\n    desc_markdown: |\n      d\n",
+                "docv/slot/operation/cost.yaml",
+                "accepted_items:\n  - name: a\n    ref: docs/cost.md\n",
             ),
             ("docv/free/a.md", "# A\n\n## 1. ある\n"),
         ]);
@@ -1170,7 +1131,7 @@ mod tests {
         assert_eq!(
             result,
             [
-                "docv/slot/guide/directory-tree.yaml:2 slot-path-missing",
+                "docv/slot/operation/cost.yaml:3 slot-path-missing",
                 "docv/slot/service/03-words.yaml:1 slot-unknown",
                 "docv/slot/service/install.yaml:2 slot-invalid",
                 "docv/slot/service/words.yaml:2 slot-invalid",

@@ -920,7 +920,6 @@ impl Site<'_> {
             }
             Content::Words(c) => self.words(out, &c.groups),
             Content::Stack(c) => self.stack(out, &c.stack),
-            Content::Layout(c) => self.layout(out, &c.entries),
             Content::Env(c) => self.envs(out, &c.envs),
             Content::Cost(c) => {
                 let _ = writeln!(out, "<h2>使っているもの</h2>");
@@ -1087,83 +1086,6 @@ impl Site<'_> {
                 self.tool_table(out, &group.items);
             }
         }
-    }
-
-    /// ディレクトリの Slot。表は常に 1 段だけを出し、入れ子は表を分けて出す。
-    /// いちばん上の段の表を先に置き、下の段を持つディレクトリごとに、その下の表を h2 とともに後ろへ並べる。
-    /// 下の段を持つディレクトリの名前は、その表へのページ内リンクにする。折りたたまないのは、画像にしても読めるようにするため。
-    fn layout(&self, out: &mut String, entries: &[slot::LayoutEntry]) {
-        if entries.is_empty() {
-            return;
-        }
-        let mut roots: Vec<TreeNode> = Vec::new();
-        for entry in entries {
-            let trimmed = entry.path.trim_end_matches('/');
-            let names: Vec<&str> = trimmed.split('/').collect();
-            let mut nodes = &mut roots;
-            for (i, name) in names.iter().enumerate() {
-                let at = match nodes.iter().position(|n| n.name == *name) {
-                    Some(at) => at,
-                    None => {
-                        nodes.push(TreeNode {
-                            name: name.to_string(),
-                            path: names[..=i].join("/"),
-                            dir: true,
-                            description: None,
-                            children: Vec::new(),
-                        });
-                        nodes.len() - 1
-                    }
-                };
-                if i + 1 == names.len() {
-                    let node = &mut nodes[at];
-                    node.dir = slot::is_dir(self.project, &entry.path);
-                    node.description
-                        .get_or_insert_with(|| entry.description.clone());
-                }
-                nodes = &mut nodes[at].children;
-            }
-        }
-        self.layout_table(out, &roots);
-        let mut dirs = Vec::new();
-        tree_dirs(&roots, &mut dirs);
-        for dir in dirs {
-            let _ = writeln!(
-                out,
-                "<h2 id=\"{}\">{}/</h2>",
-                escape(&tree_anchor(&dir.path)),
-                escape(&dir.path)
-            );
-            self.layout_table(out, &dir.children);
-        }
-    }
-
-    /// ディレクトリの Slot の、1 段の表。
-    fn layout_table(&self, out: &mut String, nodes: &[TreeNode]) {
-        let _ = writeln!(
-            out,
-            "<table class=\"tree\">\n<thead><tr><th>名前</th><th>説明</th></tr></thead>\n<tbody>"
-        );
-        for node in nodes {
-            let name = format!("<code>{}</code>", escape(&node.label()));
-            let name = if node.children.is_empty() {
-                name
-            } else {
-                format!(
-                    "<a href=\"#{}\">{name}</a>",
-                    escape(&tree_anchor(&node.path))
-                )
-            };
-            let _ = writeln!(
-                out,
-                "<tr><td>{name}</td><td>{}</td></tr>",
-                node.description
-                    .as_deref()
-                    .map(|d| self.inline(d))
-                    .unwrap_or_default()
-            );
-        }
-        let _ = writeln!(out, "</tbody>\n</table>");
     }
 
     fn envs(&self, out: &mut String, envs: &[slot::EnvVar]) {
@@ -1643,10 +1565,6 @@ fn icon(id: &str) -> String {
         "db" => {
             r#"<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>"#
         }
-        // フォルダ
-        "directory-tree" => {
-            r#"<path d="M3 6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/>"#
-        }
         // スパナ
         "setup" => {
             r#"<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>"#
@@ -1835,39 +1753,6 @@ fn encode_path(path: &str) -> String {
         }
     }
     out
-}
-
-/// ディレクトリの Slot のツリーの、パス 1 つ。兄弟は書いた順に並べる。
-struct TreeNode {
-    name: String,
-    /// ルートからのパス。末尾の `/` は付けない。
-    path: String,
-    dir: bool,
-    /// 説明。entries に書いていない途中のディレクトリは None。
-    description: Option<String>,
-    children: Vec<TreeNode>,
-}
-
-impl TreeNode {
-    /// 表に出す名前。ディレクトリには末尾に `/` を付ける。
-    fn label(&self) -> String {
-        format!("{}{}", self.name, if self.dir { "/" } else { "" })
-    }
-}
-
-/// 下の段を持つディレクトリを、上から順に（親の次にその子を）集める。
-fn tree_dirs<'a>(nodes: &'a [TreeNode], dirs: &mut Vec<&'a TreeNode>) {
-    for node in nodes {
-        if !node.children.is_empty() {
-            dirs.push(node);
-            tree_dirs(&node.children, dirs);
-        }
-    }
-}
-
-/// ディレクトリの Slot の、下の段の表のアンカー。
-fn tree_anchor(path: &str) -> String {
-    format!("dir-{}", encode_path(path))
 }
 
 /// Free ファイルのツリーの、ディレクトリ 1 つ。
@@ -2762,41 +2647,6 @@ mod tests {
         assert!(
             system.contains("<li><a href=\"../README.html\">README</a></li>"),
             "{system}"
-        );
-    }
-
-    #[test]
-    fn splits_directory_tree_into_one_level_tables() {
-        let (dir, project) = project(&[
-            ("src/main.rs", ""),
-            ("docs/a.md", "---\nmission: q\n---\n# A\n"),
-            (
-                "docv/slot/guide/directory-tree.yaml",
-                "entries:\n  - path: src/\n    desc_markdown: ソース\n  - path: docs/\n    desc_markdown: \"`docv` の文書\"\n  - path: src/main.rs\n    desc_markdown: 入口\n  - path: docs/rule/guide.md\n    desc_markdown: 書き方\n  - path: docs/spec/\n    desc_markdown: 規格\n",
-            ),
-        ]);
-        let out = dir.path().join("out");
-        run(&project, &out, None).unwrap();
-        let page = fs::read_to_string(out.join("開発者向けガイド/ディレクトリ.html")).unwrap();
-        let body: String = page
-            .lines()
-            .filter(|l| l.starts_with("<h2") || l.starts_with("<tr><td>"))
-            .map(|l| format!("{l}\n"))
-            .collect();
-        // 表は 1 段だけ。下の段を持つディレクトリは、親の次にその子の順で、表を分けて後ろに並べ、名前からリンクする。表の名前は code にし、h2 は code にしない。
-        // 書いていない途中のディレクトリ（docs/rule/）は説明なしで出す。兄弟は書いた順
-        assert_eq!(
-            body,
-            "<tr><td><a href=\"#dir-src\"><code>src/</code></a></td><td>ソース</td></tr>
-<tr><td><a href=\"#dir-docs\"><code>docs/</code></a></td><td><code>docv</code> の文書</td></tr>
-<h2 id=\"dir-src\">src/</h2>
-<tr><td><code>main.rs</code></td><td>入口</td></tr>
-<h2 id=\"dir-docs\">docs/</h2>
-<tr><td><a href=\"#dir-docs/rule\"><code>rule/</code></a></td><td></td></tr>
-<tr><td><code>spec/</code></td><td>規格</td></tr>
-<h2 id=\"dir-docs/rule\">docs/rule/</h2>
-<tr><td><code>guide.md</code></td><td>書き方</td></tr>
-"
         );
     }
 
