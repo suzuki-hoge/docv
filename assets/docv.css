@@ -93,8 +93,12 @@ p, li { text-wrap: pretty; }
 main :is(p, ul, ol) { max-width: 46em; }
 
 /* Slot、ADR、PDR、Free ファイルのページの、h1 の上の元のファイルのパス。編集したいときに、元のファイルを見つけられるように。コピーのボタンは JS が動くときだけ出る */
-.source { display: flex; align-items: center; gap: 2px; margin: 0 0 4px; color: var(--fg-muted); font-size: 0.85em; }
+.source { display: flex; align-items: center; gap: 2px; max-width: none; margin: 0 0 4px; color: var(--fg-muted); font-size: 0.85em; }
 .source code { padding: 0; background: none; font-size: 1em; overflow-wrap: anywhere; }
+/* Slot のページでは、同じ行の左に Slot のミッションを、右にパスを置く。ミッションは、パスと同じ大きさ、色、字体にする。収まらなければ、パスを次の行の右に送る */
+.source:has(.mission) { flex-wrap: wrap; }
+.source .mission { margin-right: 16px; font-family: var(--mono); }
+.source .mission + code { margin-left: auto; }
 .copy { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 24px; height: 24px; padding: 0; border: 1px solid transparent; border-radius: 6px; background: none; color: var(--fg-muted); cursor: pointer; }
 .copy[hidden] { display: none; }
 .copy:hover { border-color: var(--border); background: var(--bg-subtle); color: var(--accent); }

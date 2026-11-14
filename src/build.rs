@@ -622,7 +622,7 @@ impl Site<'_> {
         let html = self.markdown_with_ids(&page.body, &base, true, 2);
         let body = format!(
             "{}<section class=\"doc\">\n<h1>{}</h1>\n{html}</section>\n",
-            source(&page.source),
+            source(&page.source, None),
             escape(&page.title)
         );
         self.page(
@@ -690,7 +690,7 @@ impl Site<'_> {
         let path = page_path(slot);
         let dir = Path::new(&path).parent().unwrap_or(Path::new(""));
         *self.dir.borrow_mut() = self.out.join(dir);
-        let mut out = source(&slot.path);
+        let mut out = source(&slot.path, Some(slot.def.mission));
         self.slot(&mut out, slot);
         let title = match &slot.page {
             Some(page) => format!("{} - {}", escape(&page.title), slot.def.label),
@@ -781,7 +781,7 @@ impl Site<'_> {
     /// 決定 1 つのページ。
     fn render_decision(&self, a: &Decision) -> String {
         *self.dir.borrow_mut() = self.out.join(a.kind.label()).join(file_name(a.group()));
-        let mut out = source(&a.path);
+        let mut out = source(&a.path, None);
         let _ = writeln!(out, "<section class=\"slot\">");
         self.decision_detail(&mut out, a);
         let _ = writeln!(out, "</section>");
@@ -1646,10 +1646,15 @@ fn page(title: &str, css: &str, js: &str, nav: &str, body: &str, aside: &str) ->
 
 /// Slot、ADR、PDR、Free ファイルのページの h1 の上に置く、元のファイルのルートからのパスと、それをコピーするボタン。
 /// 編集したいときに、元のファイルを見つけられるように。ボタンは JS が動くときだけ出し、印刷の表示（JPG）には写さない。
-fn source(path: &str) -> String {
+/// Slot のページでは、同じ行の左に、docv が決めたミッション（mission）を置き、パスを右に寄せる。何を書くページかを、ページの中で分かるようにするため。
+/// md の Slot の YAML front matter の mission は、check で同じ文だと確かめるので読まない。YAML の Slot にも出す。
+fn source(path: &str, mission: Option<&str>) -> String {
     let path = escape(path);
+    let mission = mission
+        .map(|m| format!("<span class=\"mission\">{}</span>", escape(m)))
+        .unwrap_or_default();
     format!(
-        "<p class=\"source\"><code>{path}</code><button type=\"button\" class=\"copy\" data-path=\"{path}\" title=\"パスをコピーする\" aria-label=\"パスをコピーする\" hidden>\
+        "<p class=\"source\">{mission}<code>{path}</code><button type=\"button\" class=\"copy\" data-path=\"{path}\" title=\"パスをコピーする\" aria-label=\"パスをコピーする\" hidden>\
 <svg class=\"ready\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"9\" y=\"9\" width=\"11\" height=\"11\" rx=\"2\"/><path d=\"M5 15V6a2 2 0 0 1 2-2h9\"/></svg>\
 <svg class=\"done\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12.5l4.5 4.5L19 7.5\"/></svg>\
 </button></p>\n"
@@ -2263,10 +2268,10 @@ mod tests {
         // Slot は 1 つずつ独立したページ。同じ id の手順は os ごとのタブ、ほかは 1 つの手順
         let read = |path: &str| fs::read_to_string(out.join(path)).unwrap();
         let install = read("サービス/インストール.html");
-        assert!(install.contains("</svg>インストール</h1>"), "{install}");
-        // Slot のページにも、h1 の上に元のファイルのパスを置く
+        // Slot の名前の見出しの下に、docv が決めたミッションを出す。YAML の Slot にも出す
+        // Slot のページにも、h1 の上に元のファイルのパスを置く。同じ行の左に、docv が決めたミッションを置く。YAML の Slot にも出す
         assert!(
-            install.contains("<main>\n<p class=\"source\"><code>docv/slot/service/install.yaml</code><button type=\"button\" class=\"copy\" data-path=\"docv/slot/service/install.yaml\" title=\"パスをコピーする\" aria-label=\"パスをコピーする\" hidden>"),
+            install.contains("<main>\n<p class=\"source\"><span class=\"mission\">利用者がこれを入れる手順</span><code>docv/slot/service/install.yaml</code><button type=\"button\" class=\"copy\" data-path=\"docv/slot/service/install.yaml\" title=\"パスをコピーする\" aria-label=\"パスをコピーする\" hidden>"),
             "{install}"
         );
         // Slot のページのサイドバーは、1 つ上のトップのページを指す
@@ -2732,7 +2737,7 @@ mod tests {
         );
         // 分けたページには、そのページの元のファイルのパスを出す
         assert!(
-            user.contains("<p class=\"source\"><code>docv/slot/service/service/user.md</code><button type=\"button\" class=\"copy\" data-path=\"docv/slot/service/service/user.md\" title=\"パスをコピーする\" aria-label=\"パスをコピーする\" hidden>"),
+            user.contains("<p class=\"source\"><span class=\"mission\">外から見た機能と、それぞれの振る舞いと決まり</span><code>docv/slot/service/service/user.md</code><button type=\"button\" class=\"copy\" data-path=\"docv/slot/service/service/user.md\" title=\"パスをコピーする\" aria-label=\"パスをコピーする\" hidden>"),
             "{user}"
         );
         // ページの h1 は本文に出さない。目次と、ほかのページへのリンクは、ページごとに効く
@@ -2917,7 +2922,7 @@ mod tests {
             "{web}"
         );
         assert!(
-            web.contains("<p class=\"source\"><code>docv/slot/guide/develop/web.yaml</code>"),
+            web.contains("<p class=\"source\"><span class=\"mission\">テストやビルドなど、開発者が実行するコマンド</span><code>docv/slot/guide/develop/web.yaml</code>"),
             "{web}"
         );
     }
