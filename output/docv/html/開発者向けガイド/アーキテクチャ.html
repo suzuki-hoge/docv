@@ -28,17 +28,33 @@
 <p class="source"><span class="mission">システム全体で採る方式と決まり（部品の分け方、通信の方式、非同期処理の実現方法など）</span><code>docv/slot/guide/architecture.md</code><button type="button" class="copy" data-path="docv/slot/guide/architecture.md" title="パスをコピーする" aria-label="パスをコピーする" hidden><svg class="ready" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></p>
 <section class="slot" id="architecture">
 <h1><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-5 9 5z"/><path d="M6 12v6M10 12v6M14 12v6M18 12v6"/><path d="M3 21h18"/></svg>アーキテクチャ</h1>
-<p>docv は、利用者のリポジトリの中で動く 1 つの CLI で、サーバーを持たない。部品とそのつながりは <a href="../%E3%82%B7%E3%82%B9%E3%83%86%E3%83%A0/%E3%82%B7%E3%82%B9%E3%83%86%E3%83%A0%E6%A6%82%E8%A6%81.html">システム概要</a>、部品ごとの振る舞いは <a href="../%E3%82%B7%E3%82%B9%E3%83%86%E3%83%A0/%E3%82%B7%E3%82%B9%E3%83%86%E3%83%A0%E4%BB%95%E6%A7%98.html">システム仕様</a> に書く。</p>
+<p>どんな部品があるかは <a href="../%E3%82%B7%E3%82%B9%E3%83%86%E3%83%A0/%E3%82%B7%E3%82%B9%E3%83%86%E3%83%A0%E6%A6%82%E8%A6%81.html">システム概要</a>、部品ごとの振る舞いと部品の間の流れは <a href="../%E3%82%B7%E3%82%B9%E3%83%86%E3%83%A0/%E3%82%B7%E3%82%B9%E3%83%86%E3%83%A0%E4%BB%95%E6%A7%98.html">システム仕様</a> に書く。ここには、部品をどう分け、どうつなぐかの方式と、全体で守る決まりを書く。</p>
+<h2 id="部品の分け方">部品の分け方</h2>
 <ul>
-<li>1 つのバイナリにまとめ、決まり、雛形、スキーマ、CSS、JS を埋め込む。手元の docv の版と、決まりや雛形の版がずれないようにするため</li>
-<li>処理はローカルで完結させる。サーバーとデータベースは持たず、外のサービスとは通信しない。例外は、npx が textlint を取ってくるときだけ</li>
+<li>docv は 1 つのバイナリにまとめ、実行に要るもの（決まり、雛形、スキーマ、CSS、JS など）を埋め込む。手元の docv の版と、決まりや雛形の版がずれないようにするため。埋め込むものの一覧は、システム仕様の「バイナリに埋め込むもの」</li>
+<li>外の道具（textlint、Chrome）は、docv に入れず、使うと決めたときだけ呼ぶ。使わないプロジェクトに、Node.js や Chrome を求めないため</li>
+<li>サーバーとデータベースは持たない。出力の HTML は静的なファイルにする</li>
+</ul>
+<h2 id="つなぎ方">つなぎ方</h2>
+<ul>
+<li>部品の間は、ファイルと子のプロセスでつなぐ。docv はリポジトリのファイルを読み、外の道具を子のプロセスとして動かし、結果を受け取るまで待つ。非同期の処理やキューは持たない</li>
+<li>外のサービスとは通信しない。例外は、npx が textlint を取ってくるときだけ</li>
+</ul>
+<h2 id="全体で守る決まり">全体で守る決まり</h2>
+<ul>
 <li>コマンドは、呼ばれるたびにリポジトリを読み直し、終わったら止まる。常に動いているプロセスは持たず、前の実行の結果を使わない</li>
-<li>外の道具（textlint、Chrome）は、子のプロセスとして動かし、結果を受け取るまで待つ。非同期の処理やキューは持たない</li>
-<li>HTML は静的なファイルにする。file:// で開いても、ホスティングしても見られる</li>
+<li>リポジトリに書くのは、コマンドごとに決めた範囲だけ（<a href="../%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9/%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E4%BB%95%E6%A7%98/%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89.html">コマンド</a> の「ファイルを書くコマンド」）</li>
 </ul>
 
 </section>
 </main>
-<div class="outline"></div>
+<nav class="outline">
+<p class="outline-title">目次</p>
+<ul>
+<li class="h2"><a href="#部品の分け方">部品の分け方</a></li>
+<li class="h2"><a href="#つなぎ方">つなぎ方</a></li>
+<li class="h2"><a href="#全体で守る決まり">全体で守る決まり</a></li>
+</ul>
+</nav>
 </body>
 </html>

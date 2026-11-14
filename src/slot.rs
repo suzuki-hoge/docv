@@ -120,7 +120,7 @@ pub const DEFS: &[Def] = &[
         id: "system",
         label: "システム仕様",
         group: Group::System,
-        mission: "部品ごとの振る舞いと、部品の間の流れと、部品をまたいで守る決まり",
+        mission: "部品ごとの振る舞いと、部品の間の流れ",
         format: Format::Markdown,
     },
     Def {

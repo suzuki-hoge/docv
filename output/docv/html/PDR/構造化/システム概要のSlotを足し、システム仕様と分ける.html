@@ -28,6 +28,7 @@
 <p class="source"><code>docv/pdr/system-overview-slot.md</code><button type="button" class="copy" data-path="docv/pdr/system-overview-slot.md" title="パスをコピーする" aria-label="パスをコピーする" hidden><svg class="ready" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></p>
 <section class="slot">
 <h1><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22V3"/><path d="M5 5h11l3 3-3 3H5z"/><path d="M19 13H8l-3 3 3 3h11z"/></svg>システム概要の Slot を足し、システム仕様と分ける</h1>
+<p class="status">この決定は打ち消された。新しい決定は <a href="部品をまたいで守る決まりを、システム仕様からアーキテクチャに移す.html">部品をまたいで守る決まりを、システム仕様からアーキテクチャに移す</a></p>
 <h2 id="背景">背景</h2>
 <p>システムのまとまりには、システム仕様、技術スタック、API 仕様書、DB 仕様書があり、システムをざっと理解するための Slot がなかった。システム仕様のミッションは「部品の構成と役割、部品の間の流れと、部品をまたいで守る決まり」で、全体を見せることと、詳しい決まりを書くことの 2 つが入っていた。詳しく書くほど、全体をつかみたいだけの開発者が、システム仕様の中から全体像を探すことになる。サービス仕様では、同じ理由でサービス概要を分けている。</p>
 <h2 id="決めたこと">決めたこと</h2>
@@ -47,7 +48,7 @@
 <tr><td>Slot の ID を <code>architecture</code> にする</td><td>Slot の名前（システム概要）と ID の対応が読み取れない</td></tr>
 </tbody></table></div>
 
-<nav class="decision-nav"><div class="prev"><p class="decision-nav-label">← 過去の決定</p><div class="boxes"><a class="decision-box superseded" href="サービス仕様とシステム仕様を、実装を差し替えても変わらないかで分ける.html">サービス仕様とシステム仕様を、実装を差し替えても変わらないかで分ける</a></div></div><div class="next"></div></nav>
+<nav class="decision-nav"><div class="prev"><p class="decision-nav-label">← 過去の決定</p><div class="boxes"><a class="decision-box superseded" href="サービス仕様とシステム仕様を、実装を差し替えても変わらないかで分ける.html">サービス仕様とシステム仕様を、実装を差し替えても変わらないかで分ける</a></div></div><div class="next"><p class="decision-nav-label">新しい決定 →</p><div class="boxes"><a class="decision-box" href="部品をまたいで守る決まりを、システム仕様からアーキテクチャに移す.html">部品をまたいで守る決まりを、システム仕様からアーキテクチャに移す</a></div></div></nav>
 <p class="note">カーソルキーの ← と → でも移れる。</p>
 </section>
 </main>
