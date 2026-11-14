@@ -9,7 +9,7 @@ tags: [スキーマ]
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "インストール（service/install.yaml）",
-  "description": "利用者がこれを入れる手順",
+  "description": "利用者がこのサービスをインストールする方法",
   "type": "object",
   "additionalProperties": false,
   "properties": {

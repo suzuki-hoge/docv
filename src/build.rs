@@ -2183,7 +2183,7 @@ mod tests {
         for html in [&index, &detail, &config, &adr_index] {
             assert_headings(html);
         }
-        // サービスのまとまりは、サービス概要、サービス仕様、利用マニュアル、インストール、用語集の順
+        // サービスのまとまりは、サービス概要、サービス仕様、インストール、利用マニュアル、用語集の順
         let overview = index.find(">サービス概要<span class=\"state\">").unwrap();
         // ページに分けられるサービス仕様は、1 つのファイルでも 1 tab と書く
         let service = index
@@ -2193,7 +2193,7 @@ mod tests {
         let install = index.find(">インストール</a>").unwrap();
         let words = index.find(">用語集<span class=\"state\">").unwrap();
         assert!(
-            overview < service && service < manual && manual < install && install < words,
+            overview < service && service < install && install < manual && manual < words,
             "{index}"
         );
         // システムのまとまりは、システム概要、システム仕様、技術スタック、API 仕様書、DB 仕様書の順
@@ -2271,7 +2271,7 @@ mod tests {
         // Slot の名前の見出しの下に、docv が決めたミッションを出す。YAML の Slot にも出す
         // Slot のページにも、h1 の上に元のファイルのパスを置く。同じ行の左に、docv が決めたミッションを置く。YAML の Slot にも出す
         assert!(
-            install.contains("<main>\n<p class=\"source\"><span class=\"mission\">利用者がこれを入れる手順</span><code>docv/slot/service/install.yaml</code><button type=\"button\" class=\"copy\" data-path=\"docv/slot/service/install.yaml\" title=\"パスをコピーする\" aria-label=\"パスをコピーする\" hidden>"),
+            install.contains("<main>\n<p class=\"source\"><span class=\"mission\">利用者がこのサービスをインストールする方法</span><code>docv/slot/service/install.yaml</code><button type=\"button\" class=\"copy\" data-path=\"docv/slot/service/install.yaml\" title=\"パスをコピーする\" aria-label=\"パスをコピーする\" hidden>"),
             "{install}"
         );
         // Slot のページのサイドバーは、1 つ上のトップのページを指す

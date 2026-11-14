@@ -9,7 +9,7 @@ tags: [スキーマ]
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "技術スタック（system/stack.yaml）",
-  "description": "作るのに使っている言語、ライブラリ、サービス",
+  "description": "利用している外部サービス、言語、ライブラリなどの名前と用途",
   "type": "object",
   "additionalProperties": false,
   "properties": {

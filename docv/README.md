@@ -16,8 +16,8 @@
   - [設定ファイル](<slot/service/service/config.md>)
   - [コマンド](<slot/service/service/cli.md>)
   - [ビジュアライズ](<slot/service/service/html.md>)
-- [利用マニュアル](<slot/service/manual.md>)
 - [インストール](<../output/docv/image/サービス/インストール.jpg>)
+- [利用マニュアル](<slot/service/manual.md>)
 - [用語集](<../output/docv/image/サービス/用語集.jpg>)
 
 ## システム

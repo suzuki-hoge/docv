@@ -89,18 +89,18 @@ pub const DEFS: &[Def] = &[
         format: Format::Markdown,
     },
     Def {
+        id: "install",
+        label: "インストール",
+        group: Group::Service,
+        mission: "利用者がこのサービスをインストールする方法",
+        format: Format::Yaml,
+    },
+    Def {
         id: "manual",
         label: "利用マニュアル",
         group: Group::Service,
         mission: "利用者の使い方（CLI のコマンド、GUI の操作など）",
         format: Format::Markdown,
-    },
-    Def {
-        id: "install",
-        label: "インストール",
-        group: Group::Service,
-        mission: "利用者がこれを入れる手順",
-        format: Format::Yaml,
     },
     Def {
         id: "words",
@@ -127,7 +127,7 @@ pub const DEFS: &[Def] = &[
         id: "stack",
         label: "技術スタック",
         group: Group::System,
-        mission: "作るのに使っている言語、ライブラリ、サービス",
+        mission: "利用している外部サービス、言語、ライブラリなどの名前と用途",
         format: Format::Yaml,
     },
     Def {
@@ -1516,7 +1516,7 @@ mod tests {
         );
         // ページに分けられる Slot だけ、置ける名前の一覧にそのディレクトリを出す。拡張子は Slot と同じ
         let names = file_names();
-        assert!(names.contains("service/service.md、service/service/*.md、service/manual.md"));
+        assert!(names.contains("service/service.md、service/service/*.md、service/install.yaml"));
         assert!(names.contains("guide/develop.yaml、guide/develop/*.yaml、guide/architecture.md"));
         assert!(names.contains(
             "guide/architecture/*.md、guide/design.md、guide/design/*.md、guide/testing.md、guide/testing/*.md、guide/env.yaml、guide/doc-guide.md"
