@@ -1,6 +1,7 @@
 # docv update-guide が出す、版ごとの変更点と対応。新しい版を先頭に書く
 # 版を上げるときに、その版の変更点を足す。対応のない版も書く
 # change は何が変わったか、action はそれへの対応。対応は、要る（〜する）、選ぶ（〜なら〜できる）、要らない（対応は要らない）のどれかで書く
+# docv update-guide が出す 1 行（「- change: action」）は 100 文字以内にする。収まらなければ、変更を分ける。cargo test で確かめる
 
 - version: 1.8.0
   changes:
@@ -30,7 +31,7 @@
 - version: 1.5.0
   changes:
     - change: 開発コマンドとインフラと環境のページ分けを追加
-      action: 部品ごとにコマンドや環境が違って長いなら、docv desc の「ページ分け」に従って分けられる。開発コマンドのページには order と title を書く
+      action: 長いなら、docv desc の「ページ分け」に従って分けられる。開発コマンドのページには order と title を書く
     - change: HTML の CSS と JS を、出力先の docv.css と docv.js に分けるように変更
       action: 出力を git で管理しているなら、増えた 2 つのファイルもコミットする
     - change: インストールと環境構築の手順を、h3 の見出しで出すように変更
@@ -50,7 +51,7 @@
 - version: 1.3.0
   changes:
     - change: docv.yaml に dir.index を追加
-      action: clone せずに GitHub で Slot ファイルを読ませたいなら、dir.index に . を書く。YAML の Slot は JPG にリンクするので、dir.image も書く
+      action: GitHub で Slot ファイルを読ませたいなら . を書く。YAML の Slot には dir.image も要る
     - change: ルートの README.md を、HTML のサイドバーの先頭に置くように変更
       action: 対応は要らない
 
@@ -59,14 +60,16 @@
     - change: docv desc のコマンドとスキーマの章を、確かめ方の案内だけに変更
       action: 対応は要らない
     - change: Doc ガイドの雛形に、Slot に当たる内容を Free ファイルに置かない案内を追加
-      action: docv slot gen doc-guide --print と今の Doc ガイドを見比べ、取り入れるものを選ぶ
+      action: docv slot gen doc-guide --print と見比べ、取り入れるものを選ぶ
 
 - version: 1.2.0
   changes:
     - change: Slot のまとまりの名前を、サービスとシステムに変更
       action: HTML と JPG のパスが変わる（サービス仕様/ がサービス/ に）。README などから出力にリンクしていれば直す
-    - change: システム概要の Slot（system-overview）を追加し、システム仕様のミッションを変更
-      action: docv check の slot-mission の指摘に従い、システム仕様の mission を直す。システム仕様に全体像を書いていれば、docv slot gen system-overview で作って移す
+    - change: システム概要の Slot（system-overview）を追加
+      action: システム仕様に全体像を書いていれば、docv slot gen system-overview で作って移す
+    - change: システム仕様のミッションを変更
+      action: docv check の slot-mission の指摘に従い、システム仕様の mission を直す
     - change: システム仕様のページ分けを追加
       action: システム仕様が長いなら、docv desc の「ページ分け」に従って分けられる
     - change: Doc ガイドの雛形に、サービス説明の言葉とページの分け方を追加
@@ -97,13 +100,13 @@
     - change: docv.yaml の dir.slots を dir.slot に変更
       action: dir.slots を書いていれば、dir.slot に直す
     - change: dir.html の既定を output/docv/html に変更
-      action: dir.html を書いていなければ、出力先が docv/build から変わる。古い docv/build を消し、.gitignore を直す
+      action: 書いていなければ出力先が変わる。古い docv/build を消し、.gitignore を直す
     - change: dir の 4 つのディレクトリを、互いに重ねられないように変更
       action: docv.yaml のエラーになったら、ディレクトリを互いに離す
     - change: YAML の Slot の body と include を削除
       action: 書いていれば、短い補足は appendix_markdown に移し、長い文章は Free ファイルに移してリンクする
-    - change: YAML の Slot の Markdown の項目を、_markdown で終わる名前に変更（desc を desc_markdown になど）
-      action: docv check の指摘に従い、項目の名前を直し、値を | のブロックで書く
+    - change: YAML の Slot の Markdown の項目を、_markdown で終わる名前に変更（desc を desc_markdown に）
+      action: 名前を直し、値を | のブロックで書く
     - change: YAML の Slot に appendix_markdown を追加
       action: 項目に収まらない短い補足を、Slot の中に書ける
     - change: md の Slot と ADR にも、Free ファイルと同じ検査をかけるように変更

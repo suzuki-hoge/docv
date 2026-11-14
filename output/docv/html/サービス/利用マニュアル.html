@@ -60,6 +60,7 @@
 <ul>
 <li><code>--from</code> の版より後の版から、今の docv の版までを、古い版から順に出す。対応のない版も出す</li>
 <li>変更 1 つを 1 行にし、何が変わったかと、それへの対応を書く。対応は、要るもの、選ぶもの、要らないものがある</li>
+<li>どの行も 100 文字以内にする。横に長いと読みにくいため</li>
 <li>最後に、<code>docv_version</code> と、<code>docv.yaml</code> と YAML の Slot の 1 行目にあるスキーマの URL の版を上げるよう案内する</li>
 <li><code>--from</code> には <code>1.4.0</code> の形のほか、<code>v1.4.0</code> の形も書ける。最初の版（1.0.0）より前か、今の docv の版より新しければ、終了コード 2 で終わる</li>
 <li>docv を更新した後は、<code>docv check</code> が <code>docv_version</code> の違いを指摘し、<code>--from</code> に渡す版を案内する（<a href="%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E4%BB%95%E6%A7%98/%E8%A8%AD%E5%AE%9A%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB.html">設定ファイル</a> の「docv の版」の章）</li>
@@ -68,10 +69,12 @@
 </span></code></pre>
 <p>docv 1.5.0 で実行したときの出力は次のとおり（変更の一部を省いた）。</p>
 <pre><code>1.5.0 変更点
-- 開発コマンドとインフラと環境のページ分けを追加: 部品ごとにコマンドや環境が違って長いなら、docv desc の「ページ分け」に従って分けられる。開発コマンドのページには order と title を書く
+- 開発コマンドとインフラと環境のページ分けを追加: 長いなら、docv desc の「ページ分け」に従って分けられる。開発コマンドのページには order と title を書く
 - インストールと環境構築の手順を、h3 の見出しで出すように変更: 対応は要らない
 
-対応が終わったら、docv.yaml の docv_version を 1.5.0 にし、docv.yaml と YAML の Slot の 1 行目にあるスキーマの URL の版を v1.5.0 にする。最後に docv check で、残りがないかを確かめる
+対応が終わったら、docv.yaml の docv_version を 1.5.0 にする
+docv.yaml と YAML の Slot の 1 行目にあるスキーマの URL の版も、v1.5.0 にする
+最後に docv check で、残りがないかを確かめる
 </code></pre>
 <h3 id="docv-check">docv check</h3>
 <p>ドキュメントファイルを検査する。</p>

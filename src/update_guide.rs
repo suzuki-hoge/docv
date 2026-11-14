@@ -6,6 +6,7 @@ use serde::Deserialize;
 use crate::version::{self, Version};
 
 /// 版ごとの変更点と対応。新しい版を先頭に書き、版を上げるときに足す（docv/slot/operation/release.md）。
+/// 出す 1 行は 100 文字以内にする。横に長いと読みにくいため（テストの MAX_LINE）。
 /// バイナリに埋め込むので、CLI の版と内容が一致する。
 const SOURCE: &str = include_str!("../assets/update-guide.yaml");
 
@@ -67,7 +68,9 @@ pub fn text(from: &str) -> Result<String> {
         out.push('\n');
     }
     out.push_str(&format!(
-        "対応が終わったら、docv.yaml の docv_version を {current} にし、docv.yaml と YAML の Slot の 1 行目にあるスキーマの URL の版を v{current} にする。最後に docv check で、残りがないかを確かめる\n"
+        "対応が終わったら、docv.yaml の docv_version を {current} にする\n\
+         docv.yaml と YAML の Slot の 1 行目にあるスキーマの URL の版も、v{current} にする\n\
+         最後に docv check で、残りがないかを確かめる\n"
     ));
     Ok(out)
 }
@@ -75,6 +78,9 @@ pub fn text(from: &str) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// docv update-guide が出す 1 行の文字数の上限。
+    const MAX_LINE: usize = 100;
 
     #[test]
     fn the_newest_release_is_this_version() {
@@ -112,10 +118,18 @@ mod tests {
         assert!(all.contains("\n- "), "{all}");
         assert!(
             all.ends_with(&format!(
-                "対応が終わったら、docv.yaml の docv_version を {current} にし、docv.yaml と YAML の Slot の 1 行目にあるスキーマの URL の版を v{current} にする。最後に docv check で、残りがないかを確かめる\n"
+                "\n\n対応が終わったら、docv.yaml の docv_version を {current} にする\ndocv.yaml と YAML の Slot の 1 行目にあるスキーマの URL の版も、v{current} にする\n最後に docv check で、残りがないかを確かめる\n"
             )),
             "{all}"
         );
+        // 横に長いと読みにくいので、どの行も MAX_LINE 文字以内にする。収まらない変更は分ける
+        for line in all.lines() {
+            assert!(
+                line.chars().count() <= MAX_LINE,
+                "{} 文字: {line}",
+                line.chars().count()
+            );
+        }
         // from の版は含めない。間の版（出していないパッチの版など）も受け付ける
         let some = text("v1.0.1").unwrap();
         assert!(!some.contains("1.0.1 変更点"), "{some}");

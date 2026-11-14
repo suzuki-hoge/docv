@@ -9,7 +9,7 @@ mission: 版の決め方と、利用者への届け方
 ## 手順
 
 1. `Cargo.toml` の `version` を上げ、次の 2 つと一緒にコミットする
-   - `assets/update-guide.yaml` の先頭に、その版の変更点と対応を足す。対応のない版も書く。足していないと cargo test が落ちる
+   - `assets/update-guide.yaml` の先頭に、その版の変更点と対応を足す。対応のない版も書く。docv update-guide が出す 1 行は 100 文字以内にし、収まらない変更は分ける。足していないときと、長すぎるときは cargo test が落ちる
    - このリポジトリの `docv.yaml` の `docv_version` を、その版にする
 2. v で始まるタグを push する（人間が行う）
 
