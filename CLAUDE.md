@@ -23,6 +23,9 @@
 - ファイルを書くコマンドは、[`docv/slot/service/service/cli.md`](docv/slot/service/service/cli.md) の「ファイルを書くコマンド」に書いた範囲の外に書かない
 - `assets/` は製品の一部（バイナリへの埋め込みと公開の対象）。実装から参照して出力するものは、すべて `assets/` に置く。変えるときは Slot と spec と揃える
 - `assets/schema/` のスキーマを変えたら、`docv/free/schema/` の写しも直す。揃っていないと cargo test が落ちる
+- 版は変えない。`Cargo.toml` の `version`、`docv.yaml` の `docv_version`、設定ファイルのページの例の版、タグには触らない。版上げは、人間が `make new-version` で行う（[`docv/slot/operation/release.md`](docv/slot/operation/release.md)）
+  - 頼まれたら、`assets/update-guide.yaml` の先頭にその版の変更点と対応を書くところまでを行う。コミットはしない
+  - `make new-version` は実行しない
 
 ---
 
@@ -45,5 +48,5 @@
 
 ## 5. 人間が行うこと
 
-- リリースのタグの push
+- 版上げ（`make new-version V=x.y.z`。コミット、タグ、push までを行う）
 - リポジトリの公開設定の変更

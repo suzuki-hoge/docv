@@ -32,6 +32,7 @@
 <li><a href="#fix">変えたら整えて確かめる</a></li>
 <li><a href="#check-doc-guide">Doc ガイドの雛形を整えて確かめる</a></li>
 <li><a href="#install">手元の docv を新しくする</a></li>
+<li><a href="#new-version">版を上げる</a></li>
 <li><a href="#install-tag">任意の版の docv を入れる</a></li>
 </ul>
 <h2 id="fix">変えたら整えて確かめる</h2>
@@ -52,6 +53,11 @@
 <h2 id="install">手元の docv を新しくする</h2>
 <pre><code class="language-sh"><span style="color:#323232;">make install
 </span></code></pre>
+<h2 id="new-version">版を上げる</h2>
+<p>人間が実行する。前もって、<code>assets/update-guide.yaml</code> の先頭にその版の変更点と対応を書いておく。</p>
+<pre><code class="language-sh"><span style="color:#323232;">make new-version V=2.2.0
+</span></code></pre>
+<p>版を書き換えて <code>make fix</code> を通し、「版を x.y.z にする」のコミット、タグ、push までを行う。行うことと、止まったときの直し方は <a href="../operation/release.md">リリース</a>。</p>
 <h2 id="install-tag">任意の版の docv を入れる</h2>
 <p>版のタグを指定して、GitHub のソースから入れる。前の版の動きを確かめるときに使う。</p>
 <pre><code class="language-sh"><span style="color:#323232;">cargo install --git https://github.com/suzuki-hoge/docv --tag v1.7.0
@@ -65,6 +71,7 @@
 <li class="h2"><a href="#fix">変えたら整えて確かめる</a></li>
 <li class="h2"><a href="#check-doc-guide">Doc ガイドの雛形を整えて確かめる</a></li>
 <li class="h2"><a href="#install">手元の docv を新しくする</a></li>
+<li class="h2"><a href="#new-version">版を上げる</a></li>
 <li class="h2"><a href="#install-tag">任意の版の docv を入れる</a></li>
 </ul>
 </nav>

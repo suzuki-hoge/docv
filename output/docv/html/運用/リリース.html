@@ -32,19 +32,41 @@
 <h2 id="手順">手順</h2>
 <ol>
 <li>
-<p><code>Cargo.toml</code> の <code>version</code> を上げ、次の 2 つと一緒にコミットする</p>
+<p><code>assets/update-guide.yaml</code> の先頭に、その版の変更点と対応を足す。コミットはしない</p>
 <ul>
-<li><code>assets/update-guide.yaml</code> の先頭に、その版の変更点と対応を足す。対応のない版も書く。docv update-guide が出す 1 行は 100 文字以内にし、収まらない変更は分ける。足していないときと、長すぎるときは cargo test が落ちる</li>
-<li>このリポジトリの <code>docv.yaml</code> の <code>docv_version</code> を、その版にする</li>
+<li>対応のない版も書く</li>
+<li>docv update-guide が出す 1 行は 100 文字以内にし、収まらない変更は分ける。長すぎると、次の手順の途中の cargo test が落ちる</li>
 </ul>
 </li>
 <li>
-<p>v で始まるタグを push する（人間が行う）</p>
-<pre><code class="language-sh"><span style="color:#323232;">git tag v1.0.0
-</span><span style="color:#323232;">git push origin v1.0.0
+<p>人間が <code>make new-version</code> を実行する</p>
+<pre><code class="language-sh"><span style="color:#323232;">make new-version V=2.2.0
 </span></code></pre>
 </li>
 </ol>
+<p>版を手で書き換えない。版上げのコミットとタグを、毎回同じ形にするため。</p>
+<p><code>make new-version</code> は、次を順に行う。</p>
+<ol>
+<li>始める前に、次を確かめる
+<ul>
+<li>main にいて、origin の main を取り込んである</li>
+<li>手元の変更が <code>assets/update-guide.yaml</code> だけで、その先頭が渡した版になっている</li>
+<li>渡した版が今の版より新しく、その版のタグがまだない</li>
+</ul>
+</li>
+<li>版を書く場所（<code>Cargo.toml</code>、<code>Cargo.lock</code>、<code>docv.yaml</code> の <code>docv_version</code>、設定ファイルのページの例）を、新しい版に書き換える</li>
+<li>古い版が、決まった場所（版ごとの変更点、ADR、PDR、作り直す出力など）の外に残っていないかを探す</li>
+<li><code>make fix</code> で確かめ、HTML とインデックスを新しい版で作り直す</li>
+<li>「版を x.y.z にする」でコミットし、v で始まるタグを打ち、main とタグを push する</li>
+</ol>
+<h3 id="止まったとき">止まったとき</h3>
+<div class="table-scroll"><table><thead><tr><th>止まったところ</th><th>直し方</th></tr></thead><tbody>
+<tr><td>始める前の確かめ</td><td>表示に従って直す。何も書き換えていない</td></tr>
+<tr><td>版の書き換えか、古い版の探し</td><td>版を書く場所が増えたか、書き方が変わった。<code>scripts/new-version.sh</code> の書き換える場所か、残してよい場所を直す</td></tr>
+<tr><td><code>make fix</code></td><td>指摘を直す。書き換えは元に戻してあり、<code>assets/update-guide.yaml</code> はそのまま残る</td></tr>
+<tr><td>push</td><td>コミットとタグは手元に残っている。表示されたコマンドで push し直す</td></tr>
+</tbody></table></div>
+<p>途中で止まったら、直してからもう一度 <code>make new-version</code> を実行する。</p>
 <p>タグは、<code>docv init</code> と <code>docv slot gen</code> がファイルの 1 行目に書くスキーマの URL の参照先になる。タグを push するまで、その版の URL は開けない。</p>
 
 </section>
@@ -53,6 +75,7 @@
 <p class="outline-title">目次</p>
 <ul>
 <li class="h2"><a href="#手順">手順</a></li>
+<li class="h3"><a href="#止まったとき">止まったとき</a></li>
 </ul>
 </nav>
 </body>
