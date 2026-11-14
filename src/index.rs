@@ -1,7 +1,7 @@
 //! docv build が document_root の直下に書くインデックス（README.md）。docv/slot/service/service/html.md の「インデックス」。
 //!
 //! GitHub でリポジトリを開いた人が、clone しなくても Slot ファイルを読めるように、
-//! HTML のプロジェクト概要と同じ順に、元のファイルへのリンクを並べる。
+//! HTML の Slot のページ（index.html）と同じ順に、元のファイルへのリンクを並べる。
 //! GitHub はシンボリックリンクの先を表示しないので、エイリアスやコピーは置かず、Markdown のリンクで辿らせる。
 
 use std::fmt::Write as _;
@@ -45,8 +45,51 @@ pub fn ensure_writable(path: &Path) -> Result<()> {
     Ok(())
 }
 
+/// インデックスに並べる Slot の 1 行。分けた Slot は、Slot の名前の下に、ページを order の順に並べる。
+pub enum Item<'a> {
+    Single(&'static str, &'a Slot),
+    Split(&'static str, Vec<(&'a str, &'a Slot)>),
+}
+
+/// インデックスに並べる Slot を、まとまりごとに DEFS の順で返す。置いていない Slot と、include に当てはまらない Slot は出さない。
+/// Slot がなくなったまとまりは出さない。GitHub で見るインデックスと、HTML の Index のページで、同じ並びにする。
+pub fn outline<'a>(
+    slots: &'a [Slot],
+    include: impl Fn(&Slot) -> bool,
+) -> Vec<(Group, Vec<Item<'a>>)> {
+    let mut groups = Vec::new();
+    for group in Group::ALL {
+        let mut items = Vec::new();
+        for def in DEFS.iter().filter(|d| d.group == group) {
+            let members: Vec<&Slot> = slots
+                .iter()
+                .filter(|s| s.def.id == def.id && include(s))
+                .collect();
+            let Some(first) = members.first() else {
+                continue;
+            };
+            if first.page.is_some() {
+                let pages = members
+                    .iter()
+                    .map(|slot| {
+                        let title = slot.page.as_ref().map_or(def.label, |p| p.title.as_str());
+                        (title, *slot)
+                    })
+                    .collect();
+                items.push(Item::Split(def.label, pages));
+            } else {
+                items.push(Item::Single(def.label, first));
+            }
+        }
+        if !items.is_empty() {
+            groups.push((group, items));
+        }
+    }
+    groups
+}
+
 /// インデックスの中身。index は書く先のパスで、リンクはそのディレクトリからの相対パスにする。
-/// Slot は、HTML のプロジェクト概要と同じく、まとまりごとに DEFS の順で並べる。置いていない Slot は出さない。
+/// Slot は、HTML の Slot のページ（index.html）と同じく、まとまりごとに DEFS の順で並べる。置いていない Slot は出さない。
 /// md の Slot は元のファイルへ、YAML の Slot は generate.image が true なら JPG へリンクし、false なら出さない。分けた Slot のページも同じ。
 /// JPG を出すかは、generate.image で決める。--no-image で build しても、同じインデックスになる。
 /// Free ファイル、ADR、PDR は、置いているディレクトリと、HTML で見るときのページを示す。
@@ -84,33 +127,26 @@ pub fn render(
                 .map(|dir| dir.join(build::jpg_path(slot)))
         }
     };
-    for group in Group::ALL {
+    for (group, items) in outline(slots, |slot| target(slot).is_some()) {
         let mut lines = Vec::new();
-        for def in DEFS.iter().filter(|d| d.group == group) {
-            let members: Vec<&Slot> = slots.iter().filter(|s| s.def.id == def.id).collect();
-            let Some(first) = members.first() else {
-                continue;
-            };
-            if first.page.is_some() {
-                // 分けた Slot は、Slot の名前の下に、ページを order の順に入れ子で並べる。
-                let pages: Vec<String> = members
-                    .iter()
-                    .filter_map(|slot| {
-                        let title = slot.page.as_ref().map_or(def.label, |p| p.title.as_str());
-                        target(slot).map(|to| format!("  - {}", link(title, &to)))
-                    })
-                    .collect();
-                if !pages.is_empty() {
-                    lines.push(format!("- {}", def.label));
-                    lines.extend(pages);
+        for item in items {
+            match item {
+                Item::Single(label, slot) => {
+                    if let Some(to) = target(slot) {
+                        lines.push(format!("- {}", link(label, &to)));
+                    }
                 }
-            } else if let Some(to) = target(first) {
-                lines.push(format!("- {}", link(def.label, &to)));
+                Item::Split(label, pages) => {
+                    lines.push(format!("- {label}"));
+                    for (title, slot) in pages {
+                        if let Some(to) = target(slot) {
+                            lines.push(format!("  - {}", link(title, &to)));
+                        }
+                    }
+                }
             }
         }
-        if !lines.is_empty() {
-            let _ = write!(out, "\n## {}\n\n{}\n", group.label(), lines.join("\n"));
-        }
+        let _ = write!(out, "\n## {}\n\n{}\n", group.label(), lines.join("\n"));
     }
     // Free ファイル、ADR、PDR は、ディレクトリへのリンクと、HTML で見るときのページを案内する。
     // ページのパスは、docv open と同じく、ルートで開く前提のルートからのパスで示す。

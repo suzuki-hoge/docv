@@ -71,7 +71,7 @@ enum Command {
         #[arg(long)]
         no_image: bool,
     },
-    /// docv build が作った HTML（プロジェクト概要）を、既定のブラウザで開く
+    /// docv build が作った HTML（Slot のページ）を、既定のブラウザで開く
     Open,
     /// Slot の一覧を出し、Slot ファイルを作り、YAML の Slot のスキーマを出す
     #[command(subcommand)]

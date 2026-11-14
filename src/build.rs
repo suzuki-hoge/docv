@@ -1,9 +1,10 @@
 //! docv build。人間向けの HTML と、設定で有効なら Slot のページの JPG を生成する。docv/slot/service/service/html.md。
 //!
-//! トップは 6 ページに分け、サイドバーで行き来する。ルートに README.md があれば、README のページをサイドバーの先頭に足す。
-//! index.html（プロジェクト概要）に Slot ファイルのページへのカード、ADR.html と PDR.html に決定のつながりの図、
-//! プロジェクト詳細.html に Free ファイルのツリー、現在の設定.html に docv.yaml のすべての項目と今の値、
-//! 検索.html に Slot ファイル、ADR、PDR、Free ファイルの中身を探す入力欄を置く。ADR と PDR のページは、決定があるときだけ作る。
+//! トップは 7 ページに分け、サイドバーで行き来する。ルートに README.md があれば、README のページをサイドバーの先頭に足す。
+//! index.html（Slot）に Slot ファイルのページへのカード、プロジェクト詳細.html（Free）に Free ファイルのツリー、
+//! ADR.html と PDR.html に決定のつながりの図、インデックス.html（Index）にインデックス（README.md）と同じ並びのページへのリンク、
+//! 現在の設定.html（Config）に docv.yaml のすべての項目と今の値、検索.html（Search）に Slot ファイル、ADR、PDR、Free ファイルの中身を探す入力欄を置く。
+//! ADR と PDR のページは、決定があるときだけ作る。
 //! Slot は 1 つずつ独立したページにし、`<まとまり>/<Slot>.html` に置く。
 //! ページに分けた Slot は、ページごとに `<まとまり>/<Slot>/<ページの名前>.html` に置き、ページへのリンクをタブにして並べる。
 //! Slot、ADR、PDR、Free ファイルのページには、h1 の上に元のファイルのパスと、それをコピーするボタンを置く。表は、横にスクロールできる包みに入れる。
@@ -55,8 +56,9 @@ const MARKER_TEXT: &str = "docv build の出力。このディレクトリは do
 const README_SOURCE: &str = "README.md";
 const README_PAGE: &str = "README.html";
 
-/// トップの 6 ページ。サイドバーに、README のページに続けて、この順で並べる。
+/// トップの 7 ページ。サイドバーの並びは Nav::SIDEBAR。
 pub const PAGE: &str = "index.html";
+const INDEX_PAGE: &str = "インデックス.html";
 const ADR_PAGE: &str = "ADR.html";
 const PDR_PAGE: &str = "PDR.html";
 pub(crate) const DETAIL_PAGE: &str = "プロジェクト詳細.html";
@@ -71,20 +73,38 @@ enum Nav {
     Adr,
     Pdr,
     Detail,
+    Index,
     Config,
     Search,
 }
 
+/// サイドバーの段。ドキュメント、docv が作るもの、検索に分け、間に横線を引く。
+const SIDEBAR: [&[Nav]; 3] = [
+    &[Nav::Readme, Nav::Overview, Nav::Detail, Nav::Adr, Nav::Pdr],
+    &[Nav::Index, Nav::Config],
+    &[Nav::Search],
+];
+
 impl Nav {
+    /// ページの h1。ADR と PDR は、サイドバーでは略し、h1 では略さずに書く。ほかはサイドバーと同じ。
+    fn heading(self) -> &'static str {
+        match self {
+            Nav::Adr => "Architecture Decision Record",
+            Nav::Pdr => "Product Decision Record",
+            other => other.label(),
+        }
+    }
+
     fn label(self) -> &'static str {
         match self {
             Nav::Readme => "README",
-            Nav::Overview => "プロジェクト概要",
+            Nav::Overview => "Slot",
             Nav::Adr => "ADR",
             Nav::Pdr => "PDR",
-            Nav::Detail => "プロジェクト詳細",
-            Nav::Config => "現在の設定",
-            Nav::Search => "検索",
+            Nav::Detail => "Free",
+            Nav::Index => "Index",
+            Nav::Config => "Config",
+            Nav::Search => "Search",
         }
     }
 
@@ -103,6 +123,7 @@ impl Nav {
             Nav::Adr => ADR_PAGE,
             Nav::Pdr => PDR_PAGE,
             Nav::Detail => DETAIL_PAGE,
+            Nav::Index => INDEX_PAGE,
             Nav::Config => CONFIG_PAGE,
             Nav::Search => SEARCH_PAGE,
         }
@@ -205,6 +226,10 @@ fn render(project: &Project, out: &Path, index: &Path) -> Result<Vec<Slot>> {
         )?;
     }
     write(&out.join(DETAIL_PAGE), &site.render_detail())?;
+    write(
+        &out.join(INDEX_PAGE),
+        &site.render_index_page(!pages.is_empty(), &kinds),
+    )?;
     write(&out.join(CONFIG_PAGE), &site.render_config())?;
     write(&out.join(SEARCH_PAGE), &site.render_search()?)?;
     for slot in &slots {
@@ -356,12 +381,63 @@ impl Site<'_> {
         )
     }
 
-    /// index.html（プロジェクト概要）。Slot のページへのカード。
+    /// index.html（Slot）。Slot のページへのカード。
     fn render_index(&self) -> String {
         *self.dir.borrow_mut() = self.out.to_path_buf();
         let mut out = String::new();
         self.index(&mut out);
         self.page(&escape(&self.project.title()), Nav::Overview, &out)
+    }
+
+    /// インデックス.html。インデックス（README.md）と同じ並びで、md や JPG ではなく HTML のページへリンクする。
+    /// YAML の Slot は generate.image によらずすべて並べ、Free ファイル、ADR、PDR はそれぞれの一覧のページへリンクする。
+    fn render_index_page(&self, has_free: bool, kinds: &[Kind]) -> String {
+        *self.dir.borrow_mut() = self.out.to_path_buf();
+        let mut out = format!("<h1>{}</h1>\n", Nav::Index.heading());
+        let link = |label: &str, page: &str| {
+            format!(
+                "<a href=\"{}\">{}</a>",
+                escape(&encode_path(page)),
+                escape(label)
+            )
+        };
+        for (group, items) in index::outline(self.slots, |_| true) {
+            let _ = writeln!(out, "<h2>{}</h2>\n<ul>", group.label());
+            for item in items {
+                match item {
+                    index::Item::Single(label, slot) => {
+                        let _ = writeln!(out, "<li>{}</li>", link(label, &page_path(slot)));
+                    }
+                    index::Item::Split(label, pages) => {
+                        let _ = writeln!(out, "<li>{}\n<ul>", escape(label));
+                        for (title, slot) in pages {
+                            let _ = writeln!(out, "<li>{}</li>", link(title, &page_path(slot)));
+                        }
+                        let _ = writeln!(out, "</ul>\n</li>");
+                    }
+                }
+            }
+            let _ = writeln!(out, "</ul>");
+        }
+        let mut lists: Vec<(&str, Nav)> = Vec::new();
+        if has_free {
+            lists.push(("Free ファイル", Nav::Detail));
+        }
+        for kind in kinds {
+            lists.push((kind.label(), Nav::of(*kind)));
+        }
+        for (heading, nav) in lists {
+            let _ = writeln!(
+                out,
+                "<h2>{heading}</h2>\n<ul>\n<li>{}</li>\n</ul>",
+                link(nav.label(), nav.path())
+            );
+        }
+        self.page(
+            &format!("{} - {}", Nav::Index.label(), escape(&self.project.title())),
+            Nav::Index,
+            &out,
+        )
     }
 
     /// ADR.html と PDR.html。決定のつながりの図。
@@ -376,7 +452,7 @@ impl Site<'_> {
         )
     }
 
-    /// プロジェクト詳細.html。Free ファイルのツリー。
+    /// プロジェクト詳細.html（Free）。Free ファイルのツリー。
     fn render_detail(&self) -> String {
         *self.dir.borrow_mut() = self.out.to_path_buf();
         let mut out = String::new();
@@ -425,7 +501,8 @@ impl Site<'_> {
         // <script> の中に置くので、</script> などで閉じないように < を書き換える。
         let index = serde_json::to_string(&entries)?.replace('<', "\\u003c");
         let body = format!(
-            "<h1>検索</h1>\n<form class=\"search\" role=\"search\" hidden><input type=\"search\" placeholder=\"入力した文字列をそのまま含む行を探す\" aria-label=\"検索\" autofocus></form>\n<noscript><p class=\"note\">検索には JavaScript が要る。</p></noscript>\n<p class=\"note\" id=\"search-count\"></p>\n<div id=\"search-results\"></div>\n<script>var DOCV_SEARCH={index};</script>\n"
+            "<h1>{}</h1>\n<form class=\"search\" role=\"search\" hidden><input type=\"search\" placeholder=\"入力した文字列をそのまま含む行を探す\" aria-label=\"検索\" autofocus></form>\n<noscript><p class=\"note\">検索には JavaScript が要る。</p></noscript>\n<p class=\"note\" id=\"search-count\"></p>\n<div id=\"search-results\"></div>\n<script>var DOCV_SEARCH={index};</script>\n",
+            Nav::Search.label(),
         );
         Ok(self.page(
             &format!(
@@ -560,22 +637,23 @@ impl Site<'_> {
         )
     }
 
-    /// HTML の全体。左に README とトップの 6 ページへのサイドバーを、右に h2 と h3 の目次を置く。印刷の表示（JPG）では、どちらも出さない。
+    /// HTML の全体。左に README とトップの 7 ページへのサイドバーを、右に h2 と h3 の目次を置く。印刷の表示（JPG）では、どちらも出さない。
+    /// サイドバーは SIDEBAR の段ごとに並べ、段の間に横線を引く。
     /// README、ADR、PDR は、そのページがあるときだけ出す。サイドバーの一番下に、作った docv の版を出す。
     fn page(&self, title: &str, current: Nav, body: &str) -> String {
         let mut nav = format!(
             "<nav class=\"sidebar\">\n<p class=\"project\">{}</p>\n<ul>\n",
             escape(&self.project.title())
         );
-        for item in [
-            Nav::Readme,
-            Nav::Overview,
-            Nav::Adr,
-            Nav::Pdr,
-            Nav::Detail,
-            Nav::Config,
-            Nav::Search,
-        ] {
+        for (i, item) in SIDEBAR
+            .iter()
+            .enumerate()
+            .flat_map(|(i, items)| items.iter().map(move |item| (i, *item)))
+        {
+            // 段の先頭の項目の前に、横線を引く。
+            if i > 0 && SIDEBAR[i].first() == Some(&item) {
+                nav.push_str("<li class=\"separator\" role=\"separator\"></li>\n");
+            }
             if (item == Nav::Readme && self.readme.is_none())
                 || (item == Nav::Adr && self.adrs.is_empty())
                 || (item == Nav::Pdr && self.pdrs.is_empty())
@@ -668,13 +746,7 @@ impl Site<'_> {
     /// つながりのない決定は、1 行に 1 つずつ並べず、つながりの後ろに箱を折り返して並べる。箱は、その決定のページへのリンク。
     fn decision_lanes(&self, out: &mut String, kind: Kind) {
         let decisions = self.decisions(kind);
-        let _ = writeln!(out, "<h1>{}</h1>", kind.label());
-        if decisions.iter().any(|a| !a.superseded_by.is_empty()) {
-            let _ = writeln!(
-                out,
-                "<p class=\"note\">破線の箱は、新しい決定に打ち消された決定。</p>"
-            );
-        }
+        let _ = writeln!(out, "<h1>{}</h1>", Nav::of(kind).heading());
         for group in decision::groups(decisions) {
             let members: Vec<&Decision> = decisions.iter().filter(|a| a.group() == group).collect();
             let _ = writeln!(out, "<h2 class=\"group\">{}</h2>", escape(group));
@@ -2107,20 +2179,34 @@ mod tests {
         let out = dir.path().join("out");
         run(&project, &out, None).unwrap();
 
-        // トップは 5 ページ。index.html（プロジェクト概要）には、Slot のページへのカードだけを置く
+        // index.html（Slot）には、Slot のページへのカードだけを置く
         let index = fs::read_to_string(out.join(PAGE)).unwrap();
         let detail = fs::read_to_string(out.join(DETAIL_PAGE)).unwrap();
         let adr_index = fs::read_to_string(out.join(ADR_PAGE)).unwrap();
         let config = fs::read_to_string(out.join(CONFIG_PAGE)).unwrap();
-        // サイドバーで README と 5 ページを行き来する。描いているページの項目に印を付ける
+        // サイドバーで README とトップのページを行き来する。描いているページの項目に印を付ける。段の間に横線を引く
         assert!(
-            index.contains("<li><a href=\"README.html\">README</a></li>\n<li><a href=\"index.html\" aria-current=\"page\">プロジェクト概要</a></li>\n<li><a href=\"ADR.html\">ADR</a></li>\n<li><a href=\"プロジェクト詳細.html\">プロジェクト詳細</a></li>\n<li><a href=\"現在の設定.html\">現在の設定</a></li>\n<li><a href=\"検索.html\">検索</a></li>"),
+            index.contains("<li><a href=\"README.html\">README</a></li>\n<li><a href=\"index.html\" aria-current=\"page\">Slot</a></li>\n<li><a href=\"プロジェクト詳細.html\">Free</a></li>\n<li><a href=\"ADR.html\">ADR</a></li>\n<li class=\"separator\" role=\"separator\"></li>\n<li><a href=\"インデックス.html\">Index</a></li>\n<li><a href=\"現在の設定.html\">Config</a></li>\n<li class=\"separator\" role=\"separator\"></li>\n<li><a href=\"検索.html\">Search</a></li>"),
             "{index}"
+        );
+        // インデックス.html に、インデックスと同じ並びで、md や JPG ではなく HTML のページへのリンクを並べる
+        let index_page = fs::read_to_string(out.join(INDEX_PAGE)).unwrap();
+        assert!(
+            index_page.contains("<main>\n<h1>Index</h1>\n<h2 id=\"サービス\">サービス</h2>"),
+            "{index_page}"
+        );
+        assert!(
+            index_page.contains("<li><a href=\"サービス/インストール.html\">インストール</a></li>"),
+            "{index_page}"
+        );
+        assert!(
+            index_page.contains("<h2 id=\"free-ファイル\">Free ファイル</h2>\n<ul>\n<li><a href=\"プロジェクト詳細.html\">Free</a></li>\n</ul>\n<h2 id=\"adr\">ADR</h2>\n<ul>\n<li><a href=\"ADR.html\">ADR</a></li>"),
+            "{index_page}"
         );
         // 検索.html に、Slot ファイル、ADR、Free ファイルの順で、中身を行ごとに索引にして書く。< は書き換え、</script> で閉じない
         let search = fs::read_to_string(out.join(SEARCH_PAGE)).unwrap();
         assert!(
-            search.contains("<a href=\"検索.html\" aria-current=\"page\">検索</a>"),
+            search.contains("<a href=\"検索.html\" aria-current=\"page\">Search</a>"),
             "{search}"
         );
         assert!(
@@ -2180,17 +2266,11 @@ mod tests {
         assert!(!index.contains("class=\"decision-box"), "{index}");
         assert!(!index.contains(">spec/</td>"), "{index}");
         // トップのページにも、ページの名前の h1 を置く。現在の設定の項目の表の見出しは、h1 と重ならないように docv.yaml にする
-        assert!(
-            index.contains("<main>\n<h1>プロジェクト概要</h1>\n"),
-            "{index}"
-        );
-        assert!(
-            detail.contains("<main>\n<h1>プロジェクト詳細</h1>\n"),
-            "{detail}"
-        );
+        assert!(index.contains("<main>\n<h1>Slot</h1>\n"), "{index}");
+        assert!(detail.contains("<main>\n<h1>Free</h1>\n"), "{detail}");
         assert!(
             config.contains(
-                "<main>\n<h1>現在の設定</h1>\n<h2 id=\"docvyaml\" class=\"group\">docv.yaml</h2>"
+                "<main>\n<h1>Config</h1>\n<h2 id=\"docvyaml\" class=\"group\">docv.yaml</h2>"
             ),
             "{config}"
         );
@@ -2285,8 +2365,7 @@ mod tests {
         );
         // Slot のページのサイドバーは、1 つ上のトップのページを指す
         assert!(
-            install
-                .contains("<a href=\"../index.html\" aria-current=\"page\">プロジェクト概要</a>"),
+            install.contains("<a href=\"../index.html\" aria-current=\"page\">Slot</a>"),
             "{install}"
         );
         assert!(
@@ -2356,10 +2435,10 @@ mod tests {
             "{cost}"
         );
 
-        // ADR は、ADR.html に、まとまりごとの h2 と決定のつながりの図を置く。破線の箱が何かを、h1 の下に書く。
+        // ADR は、ADR.html に、まとまりごとの h2 と決定のつながりの図を置く。
         // 箱をクリックすると、決定 1 つのページを開く
         assert!(
-            adr_index.contains("<main>\n<h1>ADR</h1>\n<p class=\"note\">破線の箱は、新しい決定に打ち消された決定。</p>\n<h2 id=\"言語\" class=\"group\">言語</h2>\n<div class=\"lanes\">"),
+            adr_index.contains("<main>\n<h1>Architecture Decision Record</h1>\n<h2 id=\"言語\" class=\"group\">言語</h2>\n<div class=\"lanes\">"),
             "{adr_index}"
         );
         assert!(
@@ -2474,7 +2553,7 @@ mod tests {
         // サイドバーの ADR の下に PDR を置く
         let index = read(PAGE);
         assert!(
-            index.contains("<li><a href=\"ADR.html\">ADR</a></li>\n<li><a href=\"PDR.html\">PDR</a></li>\n<li><a href=\"プロジェクト詳細.html\">"),
+            index.contains("<li><a href=\"ADR.html\">ADR</a></li>\n<li><a href=\"PDR.html\">PDR</a></li>\n<li class=\"separator\""),
             "{index}"
         );
         // PDR.html も、まとまりごとに決定のつながりの図を置く
@@ -2484,7 +2563,7 @@ mod tests {
             "{pdr_index}"
         );
         assert!(
-            pdr_index.contains("<main>\n<h1>PDR</h1>\n<p class=\"note\">破線の箱は、新しい決定に打ち消された決定。</p>\n<h2 id=\"料金\" class=\"group\">料金</h2>"),
+            pdr_index.contains("<main>\n<h1>Product Decision Record</h1>\n<h2 id=\"料金\" class=\"group\">料金</h2>"),
             "{pdr_index}"
         );
         assert!(
@@ -2550,9 +2629,8 @@ mod tests {
         ]);
         let out = dir.path().join("out");
         run(&project, &out, None).unwrap();
-        // 打ち消された決定がなければ、破線の箱の説明を出さない。つながりのない決定だけなら、レーンを作らない
+        // つながりのない決定だけなら、レーンを作らない
         let adr_index = fs::read_to_string(out.join(ADR_PAGE)).unwrap();
-        assert!(!adr_index.contains("破線の箱"), "{adr_index}");
         assert!(!adr_index.contains("class=\"lanes\""), "{adr_index}");
         assert!(
             adr_index.contains("<div class=\"decision-grid\"><a class=\"decision-box\""),
@@ -2657,7 +2735,7 @@ mod tests {
             "{readme}"
         );
         assert!(
-            readme.contains("<li><a href=\"README.html\" aria-current=\"page\">README</a></li>\n<li><a href=\"index.html\">プロジェクト概要</a></li>"),
+            readme.contains("<li><a href=\"README.html\" aria-current=\"page\">README</a></li>\n<li><a href=\"index.html\">Slot</a></li>"),
             "{readme}"
         );
         // サイドバーの一番下に、作った docv の版を出す
@@ -2773,9 +2851,7 @@ mod tests {
             "{user}"
         );
         assert!(
-            user.contains(
-                "<a href=\"../../index.html\" aria-current=\"page\">プロジェクト概要</a>"
-            ),
+            user.contains("<a href=\"../../index.html\" aria-current=\"page\">Slot</a>"),
             "{user}"
         );
         // 分けたページには、そのページの元のファイルのパスを出す

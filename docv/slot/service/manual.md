@@ -128,7 +128,7 @@ Slot ( yaml ) の markdown 部は、名前が `_markdown` で終わる項目。�
 
 ### docv open
 
-`docv build` が `dir.output` の下の `html/` に作ったプロジェクト概要（`index.html`）を、既定のブラウザで開く。
+`docv build` が `dir.output` の下の `html/` に作った Slot のページ（`index.html`）を、既定のブラウザで開く。
 
 - macOS は `open`、Windows は `explorer` で開く
 - ほかの OS には対応しない。対応していないと表示し、終了コード 1 で終わる

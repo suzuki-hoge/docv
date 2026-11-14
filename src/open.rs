@@ -1,4 +1,4 @@
-//! docv open。docv build が作った index.html（プロジェクト概要）を、OS の既定のブラウザで開く。
+//! docv open。docv build が作った index.html（Slot）を、OS の既定のブラウザで開く。
 //! docv/slot/service/manual.md の「docv open」。
 
 use std::path::{Path, PathBuf};

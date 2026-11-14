@@ -29,6 +29,7 @@ main { flex: 1 1 auto; min-width: 0; max-width: 1040px; margin: 0 0 0 auto; padd
 .sidebar a { display: block; padding: 4px 10px; border-radius: 6px; color: var(--fg); }
 .sidebar a:hover { color: var(--accent); }
 .sidebar a[aria-current="page"] { background: var(--bg); color: var(--accent); font-weight: 600; }
+.sidebar li.separator { margin: 8px 10px; border-top: 1px solid var(--border); }
 .sidebar .generated { margin: auto 0 0; padding: 16px 10px 0; font-size: 12px; color: var(--fg-muted); }
 /* 右の目次。見出しのないページにも同じ幅の空の枠を置き、ページを移っても本文の位置を変えない。幅が足りないときと、印刷の表示では出さない */
 .outline { position: sticky; top: 0; flex: none; width: 220px; max-height: 100vh; overflow-y: auto; box-sizing: border-box; margin-right: auto; padding: 32px 16px; font-size: 0.85em; }
@@ -51,6 +52,7 @@ main { flex: 1 1 auto; min-width: 0; max-width: 1040px; margin: 0 0 0 auto; padd
   .sidebar ul { display: flex; flex-wrap: wrap; gap: 2px 4px; }
   .sidebar a { white-space: nowrap; }
   .sidebar .generated { padding: 4px 0 0; }
+  .sidebar li.separator { margin: 4px 2px; border-top: none; border-left: 1px solid var(--border); }
 }
 a { color: var(--accent); text-decoration: none; }
 /* 本文の中のリンクは、色だけに頼らず、薄い下線でも示す。ナビ、カード、目次、タブは下線を付けない */
