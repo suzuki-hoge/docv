@@ -59,7 +59,8 @@
 <li><code>make fix</code> で確かめ、HTML とインデックスを新しい版で作り直す</li>
 <li>「版を x.y.z にする」でコミットし、v で始まるタグを打ち、main とタグを push する</li>
 </ol>
-<h3 id="止まったとき">止まったとき</h3>
+<details>
+<summary>止まったとき</summary>
 <div class="table-scroll"><table><thead><tr><th>止まったところ</th><th>直し方</th></tr></thead><tbody>
 <tr><td>始める前の確かめ</td><td>表示に従って直す。何も書き換えていない</td></tr>
 <tr><td>版の書き換えか、古い版の探し</td><td>版を書く場所が増えたか、書き方が変わった。<code>scripts/new-version.sh</code> の書き換える場所か、残してよい場所を直す</td></tr>
@@ -67,6 +68,7 @@
 <tr><td>push</td><td>コミットとタグは手元に残っている。表示されたコマンドで push し直す</td></tr>
 </tbody></table></div>
 <p>途中で止まったら、直してからもう一度 <code>make new-version</code> を実行する。</p>
+</details>
 <p>タグは、<code>docv init</code> と <code>docv slot gen</code> がファイルの 1 行目に書くスキーマの URL の参照先になる。タグを push するまで、その版の URL は開けない。</p>
 
 </section>
@@ -75,7 +77,6 @@
 <p class="outline-title">目次</p>
 <ul>
 <li class="h2"><a href="#手順">手順</a></li>
-<li class="h3"><a href="#止まったとき">止まったとき</a></li>
 </ul>
 </nav>
 </body>

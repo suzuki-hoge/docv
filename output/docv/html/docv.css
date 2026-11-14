@@ -189,6 +189,21 @@ mark { background: #fff8c5; color: inherit; }
   .tabs > .panel { display: block; margin-bottom: 8px; }
   .panel-os { display: block; margin: 0 0 4px; font-weight: 600; color: var(--fg-muted); }
 }
+/* Markdown の中の <details>。閉じたまま出す。枠で囲み、見出し（summary）と中身を線で分け、見出しを押せると分かるようにする */
+details { margin: 8px 0 16px; padding: 0 12px; border: 1px solid var(--border); border-radius: 6px; }
+details > summary { position: relative; margin: 0 -12px; padding: 6px 12px 6px 28px; cursor: pointer; list-style: none; }
+details > summary::-webkit-details-marker { display: none; }
+/* 開閉の印（三角）。文字の印はベースラインに揃って下に寄るので、図形で描き、1 行目の縦の真ん中（上の余白と、行の高さ 1.7 の半分）に置く。開いたら下に向ける */
+details > summary::before { content: ""; position: absolute; left: 12px; top: calc(6px + 0.85em); width: 0.45em; height: 0.55em; background: currentColor; clip-path: polygon(0 0, 100% 50%, 0 100%); transform: translateY(-50%); }
+details[open] > summary::before { transform: translateY(-50%) rotate(90deg); }
+/* 開いているときだけ、見出しの背景を左のサイドバーと同じ色にする。角は枠の内側に合わせて丸める */
+details[open] > summary { border-bottom: 1px solid var(--border); border-radius: 5px 5px 0 0; background: var(--bg-subtle); }
+/* 印刷の表示（JPG）では、画像では開けないので、開いたときと同じ見た目で中身を写す */
+@media print {
+  details::details-content { content-visibility: visible; }
+  details > summary { border-bottom: 1px solid var(--border); border-radius: 5px 5px 0 0; background: var(--bg-subtle); }
+  details > summary::before { transform: translateY(-50%) rotate(90deg); }
+}
 
 /* ADR と PDR。まとまりごとに、決定のつながりを過去から未来へ左から右に並べる。カードの幅は固定して題を折り返し、並びきらなければ横にスクロールする */
 .lanes { display: flex; flex-direction: column; gap: 8px; margin: 12px 0 8px; }

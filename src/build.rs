@@ -8,7 +8,7 @@
 //! Slot は 1 つずつ独立したページにし、`<まとまり>/<Slot>.html` に置く。
 //! ページに分けた Slot は、ページごとに `<まとまり>/<Slot>/<ページの名前>.html` に置き、ページへのリンクをタブにして並べる。
 //! Slot、ADR、PDR、Free ファイルのページには、h1 の上に元のファイルのパスと、それをコピーするボタンを置く。表は、横にスクロールできる包みに入れる。
-//! 画像にしても読めるように、折りたたみは使わない。OS ごとの手順のタブは、印刷の表示（JPG）ではすべて並べる。
+//! Markdown の中の `<details>` は閉じたまま出し、印刷の表示（JPG）では CSS で開く。OS ごとの手順のタブは、印刷の表示ではすべて並べる。
 //! document_root の直下に、Slot ファイルへのリンクを並べたインデックス（README.md）も書く（index.rs）。
 //! 左のサイドバーの一番下に、作った docv の版を出す。
 
@@ -1308,7 +1308,6 @@ impl Site<'_> {
     /// Markdown を HTML にする。base はリンクの起点（ルートからの相対パス）。
     /// drop_h1 なら、最初の h1 を除く（Markdown の Slot。ページの h1 と重なるため）。
     /// 見出しは、いちばん浅いものが top の段になるように付け直す。ページの中で h1 から h2、h3 と段を飛ばさないため。
-    /// `<details>` は開いた状態にする。画像にしても中身が読めるように。
     fn markdown(&self, text: &str, base: &Path, drop_h1: bool, top: usize) -> String {
         self.render_markdown(text, base, drop_h1, top, false)
     }
@@ -1448,12 +1447,6 @@ impl Site<'_> {
                     title,
                     id,
                 }),
-                Event::Html(html) if html.contains("<details>") => {
-                    Event::Html(CowStr::from(open_details(&html)))
-                }
-                Event::InlineHtml(html) if html.contains("<details>") => {
-                    Event::InlineHtml(CowStr::from(open_details(&html)))
-                }
                 other => other,
             };
             events.push(event);
@@ -1982,11 +1975,6 @@ fn bare_urls(text: &str) -> Vec<(usize, usize)> {
     found
 }
 
-/// `<details>` を開いた状態にする。
-fn open_details(html: &str) -> String {
-    html.replace("<details>", "<details open>")
-}
-
 fn strip_paragraph(html: &str) -> String {
     let trimmed = html.trim();
     match trimmed
@@ -2312,7 +2300,7 @@ mod tests {
             install.find("cargo install").unwrap() < appendix,
             "{install}"
         );
-        // Markdown の Slot は、h1 を除き、見出しを下げて、そのまま出す。見出しには id を付ける。details は開く
+        // Markdown の Slot は、h1 を除き、見出しを下げて、そのまま出す。見出しには id を付ける。details は閉じたまま出す
         let service = read("サービス/サービス仕様.html");
         assert!(service.contains("<h2 id=\"部品\">部品</h2>"), "{service}");
         assert!(
@@ -2320,7 +2308,8 @@ mod tests {
             service.contains("href=\"../%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E8%A9%B3%E7%B4%B0/docv/free/spec/a.html\">a</a>"),
             "{service}"
         );
-        assert!(service.contains("<details open>"), "{service}");
+        assert!(service.contains("<details>"), "{service}");
+        assert!(!service.contains("<details open>"), "{service}");
         // md の Slot の見出しには id が付き、ページ内リンクで飛べる
         let manual = read("サービス/利用マニュアル.html");
         assert!(
