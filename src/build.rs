@@ -705,6 +705,7 @@ impl Site<'_> {
 
     /// Slot のページへのカード。まとまりごとに、すべての Slot をカードで横に並べる。
     /// ファイルのない Slot は、リンクにせずグレーで出し、「未作成」と書く。
+    /// ページに分けられる Slot は、「未作成」と同じ位置に、ページの数を「3 tabs」の形で書く。分けていなければ「1 tab」。
     fn index(&self, out: &mut String) {
         let _ = writeln!(out, "<h1>{}</h1>", Nav::Overview.label());
         if self.slots.is_empty() {
@@ -731,9 +732,14 @@ impl Site<'_> {
                     continue;
                 };
                 let href = encode_path(&page_path(slot));
+                let tabs = match self.slots.iter().filter(|s| s.def.id == def.id).count() {
+                    _ if def.pages_dir().is_none() => String::new(),
+                    1 => "<span class=\"state\">1 tab</span>".to_string(),
+                    n => format!("<span class=\"state\">{n} tabs</span>"),
+                };
                 let _ = writeln!(
                     out,
-                    "<a class=\"card\" href=\"{href}\">{}{}</a>",
+                    "<a class=\"card\" href=\"{href}\">{}{}{tabs}</a>",
                     icon(def.id),
                     def.label
                 );
@@ -2174,7 +2180,10 @@ mod tests {
         }
         // サービスのまとまりは、サービス概要、サービス仕様、利用マニュアル、インストール、用語集の順
         let overview = index.find(">サービス概要<span class=\"state\">").unwrap();
-        let service = index.find(">サービス仕様</a>").unwrap();
+        // ページに分けられるサービス仕様は、1 つのファイルでも 1 tab と書く
+        let service = index
+            .find(">サービス仕様<span class=\"state\">1 tab</span></a>")
+            .unwrap();
         let manual = index.find(">利用マニュアル</a>").unwrap();
         let install = index.find(">インストール</a>").unwrap();
         let words = index.find(">用語集<span class=\"state\">").unwrap();
@@ -2199,6 +2208,8 @@ mod tests {
             ),
             "{index}"
         );
+        // ページに分けていない Slot のカードには、ページの数を書かない
+        assert!(index.contains("</svg>利用マニュアル</a>"), "{index}");
         // ファイルのない Slot も、リンクにせずグレーで並べ、色だけに頼らず「未作成」と書く
         assert!(
             index.contains("<span class=\"card missing\"><svg class=\"icon\""),
@@ -2700,6 +2711,11 @@ mod tests {
             index.contains("<a class=\"card\" href=\"サービス/サービス仕様/利用者向け機能.html\">"),
             "{index}"
         );
+        // ページに分けた Slot のカードには、「未作成」と同じ位置に、ページの数を書く
+        assert!(
+            index.contains("</svg>サービス仕様<span class=\"state\">2 tabs</span></a>"),
+            "{index}"
+        );
         let user = read("サービス/サービス仕様/利用者向け機能.html");
         assert!(
             user.contains("<title>利用者向け機能 - サービス仕様 - demo</title>"),
@@ -2833,6 +2849,37 @@ mod tests {
             }),
         };
         assert_eq!(jpg_path(&page), "開発者向けガイド/開発コマンド/Web画面.jpg");
+    }
+
+    #[test]
+    fn writes_one_tab_on_the_card_of_a_slot_with_one_page() {
+        let mission = slot::def("architecture").unwrap().mission;
+        let (dir, project) = project(&[
+            (
+                "docv/slot/guide/architecture/web.md",
+                &format!("---\norder: 1\nmission: {mission}\n---\n\n# Web\n"),
+            ),
+            // ページに分けられる Slot は、分けていなくても 1 tab と書く
+            ("docv/slot/guide/design.md", "# 設計・実装\n"),
+            // ページに分けられない Slot には書かない
+            ("docv/slot/guide/doc-guide.md", "# Doc ガイド\n"),
+        ]);
+        let out = dir.path().join("out");
+        run(&project, &out, None).unwrap();
+        let index = fs::read_to_string(out.join(PAGE)).unwrap();
+        assert!(
+            index.contains("<a class=\"card\" href=\"開発者向けガイド/アーキテクチャ/Web.html\">"),
+            "{index}"
+        );
+        assert!(
+            index.contains("</svg>アーキテクチャ<span class=\"state\">1 tab</span></a>"),
+            "{index}"
+        );
+        assert!(
+            index.contains("</svg>設計・実装<span class=\"state\">1 tab</span></a>"),
+            "{index}"
+        );
+        assert!(index.contains("</svg>Doc ガイド</a>"), "{index}");
     }
 
     #[test]
