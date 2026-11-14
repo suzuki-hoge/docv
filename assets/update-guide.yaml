@@ -3,6 +3,25 @@
 # change は何が変わったか、action はそれへの対応。対応は、要る（〜する）、選ぶ（〜なら〜できる）、要らない（対応は要らない）のどれかで書く
 # docv update-guide が出す 1 行（「- change: action」）は 100 文字以内にする。収まらなければ、変更を分ける。cargo test で確かめる
 
+- version: 2.1.0
+  changes:
+    - change: ディレクトリの Slot（guide/directory-tree.yaml）を廃止
+      action: 残したい決まりは設計・実装（guide/design.md）に移し、ファイルを消す
+    - change: 開発者向けガイドに、アーキテクチャ、設計・実装、テスト方針の Slot を追加
+      action: ミッションに当たる Free ファイルがあるなら、Slot に移せる
+    - change: サービスと開発者向けガイドの Slot の並びを変更
+      action: 対応は要らない
+    - change: システム仕様のミッションを変更（部品をまたいで守る決まりは、アーキテクチャへ）
+      action: docv check の slot-mission に従い、mission を書き換える
+    - change: インストールと技術スタックのミッションの文を変更
+      action: 対応は要らない
+    - change: ページに分けられる Slot のカードに、ページの数を出すように変更
+      action: 対応は要らない
+    - change: Slot のページに、Slot のミッションを出すように変更
+      action: 対応は要らない
+    - change: Doc ガイドの雛形の言葉の使い分けに、アーキテクチャと実装の決まりを追加
+      action: docv slot gen doc-guide --print と今の Doc ガイドを見比べ、取り入れるものを選ぶ
+
 - version: 2.0.0
   changes:
     - change: dir の項目を、dir.document_root（既定 docv）と dir.output（既定 output/docv）に変更
