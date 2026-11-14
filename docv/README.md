@@ -30,6 +30,9 @@
 
 - [環境構築](<../output/docv/image/開発者向けガイド/環境構築.jpg>)
 - [開発コマンド](<../output/docv/image/開発者向けガイド/開発コマンド.jpg>)
+- [アーキテクチャ](<slot/guide/architecture.md>)
+- [設計・実装](<slot/guide/design.md>)
+- [テスト方針](<slot/guide/testing.md>)
 - [環境変数](<../output/docv/image/開発者向けガイド/環境変数.jpg>)
 - [Doc ガイド](<slot/guide/doc-guide.md>)
 
