@@ -1,4 +1,4 @@
-//! コマンドラインの入口。コマンドの一覧は docv/service/manual.md。
+//! コマンドラインの入口。コマンドの一覧は docv/slot/service/manual.md。
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -10,7 +10,7 @@ use crate::check::Options;
 use crate::workspace::{Locate, Project};
 use crate::{build, check, desc, fix, generate, init, open, schema, update_guide};
 
-/// 終了コード。docv/service/service/cli.md の「終了コード」。
+/// 終了コード。docv/slot/service/service/cli.md の「終了コード」。
 pub const EXIT_FAILURE: u8 = 1;
 pub const EXIT_UNRUNNABLE: u8 = 2;
 
@@ -65,9 +65,9 @@ enum Command {
         #[arg(long)]
         no_textlint: bool,
     },
-    /// 人間向けの HTML を作る。dir.image を書いていれば、Slot のページを JPG にする
+    /// 人間向けの HTML とインデックスを作る。generate.image が true なら、YAML の Slot のページを JPG にする
     Build {
-        /// dir.image を書いていても JPG を作らない。dir.image の中には触れない
+        /// generate.image が true でも JPG を作らない。JPG の出力先には触れない
         #[arg(long)]
         no_image: bool,
     },
@@ -203,9 +203,7 @@ fn execute_in_project(project: &Project, command: Command) -> Result<ExitCode> {
             let image = project.image_dir().filter(|_| !no_image);
             build::run(project, &out, image.as_deref())?;
             println!("{} に出力した", out.display());
-            if let Some(index) = crate::index::path(project) {
-                println!("{} を書いた", index.display());
-            }
+            println!("{} を書いた", crate::index::path(project).display());
             Ok(ExitCode::SUCCESS)
         }
         Command::Open => {

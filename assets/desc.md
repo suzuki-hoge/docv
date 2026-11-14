@@ -13,7 +13,7 @@ docv の解決したいこと
 docv の提供するもの
 
 - およそ普遍的に必要になるドキュメントのテンプレート
-- Free ファイル（`docs/` の Markdown）の YAML front matter
+- Free ファイル（`docv/free/` の Markdown）の YAML front matter
 - それらのビジュアライズ HTML 生成
 - AI Agent に伝えるドキュメント管理のガイドラインの雛形
 
@@ -21,29 +21,56 @@ docv の提供するもの
 
 ## 1. コンセプト
 
-### `docv/`
+docv が扱うドキュメントは、すべて `docv/` の下に置く
 
-`docv/` 配下のファイルを Slot ファイルと呼ぶ
+```
+docv/
+  README.md   # docv build が作るインデックス。手で書き換えない
+  free/       # Free ファイル
+  slot/       # Slot ファイル
+  adr/        # ADR
+  pdr/        # PDR
+```
 
-- プロジェクトの `docv/` ディレクトリに docv 指定のファイルを配置するとビジュアライズされ HTML で閲覧できる
+- 配置は docv が決める。`docv.yaml` で変えられるのは、`docv/` の名前 ( `dir.document_root` ) だけ
+- `docv/` の直下には、これ以外のものを置けない ( `docv check` が error にする )
+- docv build の出力 ( HTML と JPG ) は `output/docv/` ( `dir.output` ) に出す。`docv/` の中には置けない。AI Agent が `docv/` を読むときに、同じ内容が倍入らないようにするため
+- メモや下書きなど、docv に読ませないファイルは、`docv.yaml` の `docv_exclude` に glob で書く ( 例: `docv/free/tmp/**` )
+
+### `docv/slot/`
+
+`docv/slot/` 配下のファイルを Slot ファイルと呼ぶ
+
+- プロジェクトの `docv/slot/` ディレクトリに docv 指定のファイルを配置するとビジュアライズされ HTML で閲覧できる
 - 環境構築や用語集などそれぞれのページを Slot といい、Slot ごとに所定の書式がある
 - 設定すれば、HTML に加え JPG 画像も出力する
     - GitHub で直接ドキュメントを閲覧できるようにするため
-- `docv/` は `docv.yaml` で変更可能
 - Slot ファイルは複数プロジェクトのドキュメントルールや閲覧方法を統一する目的のために存在するため、強制力が強い
     - ミッションの変更やファイル名の変更は不可能
 
-### `docs/`
+### `docv/free/`
 
-`docs/` 配下のファイルを Free ファイルと呼ぶ
+`docv/free/` 配下の Markdown を Free ファイルと呼ぶ
 
-- `docv/` 以外のドキュメントは、Free ファイルとして `docs/` に Markdown で置く
+- Slot ファイル以外のドキュメントは、Free ファイルとして `docv/free/` に Markdown で置く
 - ビジュアライズ時は、ファイルは通常の Markdown → HTML 変換のほか、リンク切れチェックや textlint / format ( 設定次第 ) も行われる
 - YAML front matter でタグなどをつけ管理する
-- `docs/` は `docv.yaml` で変更可能
 - Free ファイルは docv でサポートしないプロジェクト固有の情報を任意の構造で管理するためのもので、強制力は低い
     - ミッションの決定は利用者側に委ねられている
     - docv はタグ付けとビジュアライズ HTML への組み込み程度を提供する
+
+### 画像
+
+Free ファイル、Slot ファイル、ADR、PDR で使う画像の置き方
+
+- 画像は、使うファイルと同じディレクトリに、`{使うファイルの名前}_{画像の名前}.{拡張子}` の名前で置く
+    - 例: `docv/free/order.md` で使う流れの図は `docv/free/order_flow.svg`
+    - 例: `docv/slot/system/system-overview.md` で使う構成図は `docv/slot/system/system-overview_parts.svg`
+- 共通の画像のディレクトリは作らない。複数のページで使う画像は、主になるページの隣に置き、ほかのページからはそのパスを参照する
+- ADR と PDR は、それぞれのディレクトリの中の画像だけを使う。ほかの画像を使いたいときは、写しを置く
+    - ADR と PDR は、それ単体で完結することに価値があるため。ほかのドキュメントの画像を参照すると、最新のドキュメントの内容に過去の決定が左右されてしまう
+- 持ち主 ( 名前の `_` より前と同じ名前の Markdown か YAML のファイル ) のない画像は、`docv check` が error にする
+- 画像として扱うのは、拡張子が png、jpg、jpeg、gif、svg、webp のファイル
 
 ## 2. Slot
 
@@ -67,10 +94,10 @@ mission: 利用者の使い方（CLI のコマンド、GUI の操作など）
 サービス仕様、システム仕様、開発コマンド、インフラと環境は、ページに分けられる
 
 - 分けるときは、1 つのファイルの代わりに、次のディレクトリの直下に 1 ページ 1 ファイルで置く。拡張子は、分けないときと同じ
-    - サービス仕様: `docv/service/service.md` の代わりに `docv/service/service/`
-    - システム仕様: `docv/system/system.md` の代わりに `docv/system/system/`
-    - 開発コマンド: `docv/guide/develop.yaml` の代わりに `docv/guide/develop/`
-    - インフラと環境: `docv/operation/infrastructure.md` の代わりに `docv/operation/infrastructure/`
+    - サービス仕様: `docv/slot/service/service.md` の代わりに `docv/slot/service/service/`
+    - システム仕様: `docv/slot/system/system.md` の代わりに `docv/slot/system/system/`
+    - 開発コマンド: `docv/slot/guide/develop.yaml` の代わりに `docv/slot/guide/develop/`
+    - インフラと環境: `docv/slot/operation/infrastructure.md` の代わりに `docv/slot/operation/infrastructure/`
 - ページは `order`（整数）の順に並ぶ。ページの名前は、HTML でページを切り替えるタブの名前になる。`order` もページの名前も、同じ Slot のページどうしで重ねない
 - 分けないときは 1 つのファイルに書く
 
@@ -100,7 +127,7 @@ steps:
 
 ## 3. YAML front matter
 
-`docs/` の Markdown ファイルを管理するための YAML front matter
+Free ファイル ( `docv/free/` の Markdown ) を管理するための YAML front matter
 
 ```yaml
 ---
@@ -129,6 +156,7 @@ ADR（Architecture Decision Record）は、技術の決定 1 つを、背景や�
 プロダクトやサービスの仕様の変更は、ADR ではなく PDR に残す
 
 - `docv/adr/<id>.md` に、決定 1 つを 1 ファイルで置く ( ファイル名から `.md` を除いたものが id )
+- 画像は `docv/adr/<id>_<画像の名前>.<拡張子>` に置き、`docv/adr/` の中の画像だけを使う ( 外の画像や URL の画像は `docv check` が error にする )
 - ファイルは手で作る
 - 本文は、h1 に題を書き、次の章をこの順に h2 で書く。任意の章は、書くことがなければ置かない
     - `## 背景`: 決める必要が生じた課題と、そのときの制約や前提
@@ -203,6 +231,7 @@ CLI は Rust で書き、単一のバイナリにして配る。CLI の外で動
 PDR（Product Decision Record）は、プロダクトやサービスの仕様の変更 1 つを、その理由や見直す条件と一緒に残す記録。料金、プラン、提供する機能の範囲、対象とする利用者などを足す・変える・やめるときに書く。なぜ今の仕様になったのかを将来も分かるようにするための履歴なので、案を比べて選んだ決定に限らない
 
 - `docv/pdr/<id>.md` に、変更 1 つを 1 ファイルで置く
+- 画像は `docv/pdr/<id>_<画像の名前>.<拡張子>` に置き、`docv/pdr/` の中の画像だけを使う
 - ファイルの作り方、YAML front matter の項目、書き換えないこと、HTML の図は ADR と同じ
 - `supersedes` は PDR だけを指す。ADR と PDR は、同じ id でも別の決定
 - 本文の章は、ADR の章の `## 結果` の後に `## 見直す条件` を足し、`## 選ばなかった案` を任意にしたもの
@@ -269,7 +298,7 @@ YAML の Slot は `docv slot list` で確認し、そのスキーマは `docv sl
 docv の決まりは、次の 3 つに分かれる
 
 - ルール: docv の仕組みが決める決まり。Slot と `docv.yaml` のスキーマ、YAML front matter の key、check が確かめることなど。利用側は変えられない。この概要と `docv slot schema <slot>` で確認する
-- ガイドライン: ドキュメントを書くときの方針。`docv slot gen doc-guide` で Doc ガイド（`docv/guide/doc-guide.md`）に雛形を作り、プロジェクトに合わせて自由に直す
+- ガイドライン: ドキュメントを書くときの方針。`docv slot gen doc-guide` で Doc ガイド（`docv/slot/guide/doc-guide.md`）に雛形を作り、プロジェクトに合わせて自由に直す
 - 設定: `docv.yaml` で切り替えること。check のルールや textlint を使うか、出力を git で管理するかなど。`docv init --print` で確認する
 
 ## 10. docv の更新

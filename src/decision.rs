@@ -1,8 +1,9 @@
-//! 決定の記録（ADR と PDR）。docv/service/service/adr.md と docv/service/service/pdr.md。
+//! 決定の記録（ADR と PDR）。docv/slot/service/service/adr.md と docv/slot/service/service/pdr.md。
 //!
 //! ADR（Architecture Decision Record）は技術の決定を、PDR（Product Decision Record）はプロダクトやサービスの決定を残す。
 //! 2 つは、置き場所、check のルールの ID、HTML のページだけが違い、形と扱いは同じ。
-//! dir.slot の下の adr/ か pdr/ に、決定 1 つを 1 つの Markdown で置く。ファイル名（.md を除く）が id。
+//! dir.document_root の下の adr/ か pdr/ に、決定 1 つを 1 つの Markdown で置く。ファイル名（.md を除く）が id。
+//! 決定は、それだけで完結させる。本文の画像は、同じディレクトリの中のものだけを参照できる。
 //! システムが使う項目は YAML front matter に、決定の中身（背景、決めたこと、選ばなかった案など）は本文に書く。題は本文の h1。
 //! 状態は持たない。打ち消されたかどうかは、つながりからわかる。
 //! 過去の決定を打ち消すときは、新しい決定の supersedes から、同じ種類の過去の決定の id を指す（未来から過去を参照する）。
@@ -39,7 +40,7 @@ impl Kind {
         }
     }
 
-    /// 置くディレクトリの名前（dir.slot からの相対パス）。check のルールの ID の頭と、アイコンの名前にも使う。
+    /// 置くディレクトリの名前（dir.document_root からの相対パス）。check のルールの ID の頭と、アイコンの名前にも使う。
     pub fn dir(self) -> &'static str {
         match self {
             Kind::Adr => "adr",
@@ -128,7 +129,7 @@ impl Decision {
 
 /// 決定を置くディレクトリ（ルートからの相対パス）。
 pub fn dir(project: &Project, kind: Kind) -> String {
-    format!("{}/{}", project.slot_dir(), kind.dir())
+    format!("{}/{}", project.config.document_root(), kind.dir())
 }
 
 /// 決定のパス（ルートからの相対パス）から id を取る。
@@ -138,11 +139,11 @@ fn id_of(path: &str) -> &str {
 }
 
 /// adr/ か pdr/ の直下の .md のパス（ルートからの相対パス）を、名前の順に返す。
-/// 除外するファイルと、名前がドットで始まるファイルは含まない（Project::slot_markdown）。
+/// 除外するファイルと、名前がドットで始まるファイルは含まない（Project::docv_markdown）。
 fn files(project: &Project, kind: Kind) -> Result<Vec<String>> {
     let prefix = format!("{}/", dir(project, kind));
     Ok(project
-        .slot_markdown()?
+        .docv_markdown()?
         .into_iter()
         .filter(|path| {
             path.strip_prefix(&prefix)
@@ -246,9 +247,21 @@ fn check_kind(project: &Project, kind: Kind) -> Result<Vec<Diagnostic>> {
         });
     };
     let mut records: Vec<(String, String, Record)> = Vec::new();
+    let own = dir(project, kind);
     for path in files(project, kind)? {
         let text = fs::read_to_string(project.root.join(&path))
             .with_context(|| format!("{path} を読めない"))?;
+        for (line, dest) in outside_images(&own, &text) {
+            push(
+                &path,
+                line,
+                &kind.rule("image"),
+                format!(
+                    "画像 {dest} は {own}/ の外にある。{} は、それだけで完結させるので、{own}/ に写しを置いて参照する",
+                    kind.label()
+                ),
+            );
+        }
         match parse(kind, id_of(&path), &text) {
             Ok(record) => records.push((path, text, record)),
             Err((line, message)) => push(&path, line, &kind.rule("invalid"), message),
@@ -291,6 +304,39 @@ fn check_kind(project: &Project, kind: Kind) -> Result<Vec<Diagnostic>> {
         }
     }
     Ok(diagnostics)
+}
+
+/// 本文の画像のうち、dir（ルートからの相対パス）の外のファイルか URL を指すものの、行とリンク先。
+/// 決定のファイルは dir の直下にあるので、相対パスは dir から解く。
+fn outside_images(dir: &str, text: &str) -> Vec<(usize, String)> {
+    let document = markdown::split(text);
+    markdown::outline(&document)
+        .links
+        .into_iter()
+        .filter(|link| link.image)
+        .filter(|link| {
+            let inside = !link.dest.starts_with("//")
+                && !has_scheme(&link.dest)
+                && markdown::resolve_link(std::path::Path::new(dir), &link.dest).is_some_and(
+                    |(target, _)| markdown::slash_path(&target).starts_with(&format!("{dir}/")),
+                );
+            !inside
+        })
+        .map(|link| (link.line, link.dest))
+        .collect()
+}
+
+/// `https:`、`data:` のように、スキームで始まるか。
+fn has_scheme(dest: &str) -> bool {
+    dest.split_once(':').is_some_and(|(scheme, _)| {
+        scheme
+            .chars()
+            .next()
+            .is_some_and(|c| c.is_ascii_alphabetic())
+            && scheme
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '-' | '.'))
+    })
 }
 
 fn is_date(text: &str) -> bool {
@@ -390,6 +436,37 @@ mod tests {
                 "docv/adr/e.md:4 adr-invalid",
                 "docv/adr/a.md:4 adr-unknown-ref",
                 "docv/adr/a.md:4 adr-unknown-ref",
+            ]
+        );
+    }
+
+    #[test]
+    fn allows_only_images_in_its_own_directory() {
+        let body = "---\ndate: 2026-01-01\n---\n\n# R\n\n![a](r_a.svg)\n![b](./r_b.svg)\n![c](../free/c.svg)\n![d](https://example.com/d.png)\n![e](data:image/png;base64,AA)\n![f](/docv/adr/r_f.svg)\n![g](../pdr/g.svg)\n[link](../free/c.md)\n";
+        let (_dir, project) = project(&[
+            ("docv/adr/r.md", body),
+            (
+                "docv/pdr/p.md",
+                &body.replace("../pdr/g.svg", "../adr/r_a.svg"),
+            ),
+        ]);
+        let found: Vec<String> = check(&project)
+            .unwrap()
+            .iter()
+            .map(|d| format!("{}:{} {}", d.path, d.line, d.rule))
+            .collect();
+        assert_eq!(
+            found,
+            [
+                "docv/adr/r.md:9 adr-image",
+                "docv/adr/r.md:10 adr-image",
+                "docv/adr/r.md:11 adr-image",
+                "docv/adr/r.md:13 adr-image",
+                "docv/pdr/p.md:9 pdr-image",
+                "docv/pdr/p.md:10 pdr-image",
+                "docv/pdr/p.md:11 pdr-image",
+                "docv/pdr/p.md:12 pdr-image",
+                "docv/pdr/p.md:13 pdr-image",
             ]
         );
     }

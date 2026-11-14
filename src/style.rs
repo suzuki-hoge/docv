@@ -1,5 +1,5 @@
-//! 書式の規則。lint の bold、italic、dollar（docv/service/service/config.md の 4 章）と、
-//! 常に確かめる章番号（docv/service/service/free.md の 3 章）。
+//! 書式の規則。lint の bold、italic、dollar（docv/slot/service/service/config.md の 4 章）と、
+//! 常に確かめる章番号（docv/slot/service/service/free.md の 3 章）。
 
 use std::collections::BTreeMap;
 

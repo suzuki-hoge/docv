@@ -86,6 +86,8 @@ pub struct Heading {
 pub struct Link {
     pub dest: String,
     pub line: usize,
+    /// 画像（`![文字](先)`）か。
+    pub image: bool,
     /// 本文の中での、リンク全体（`[文字](先)`）の位置。
     pub span: Range<usize>,
 }
@@ -145,10 +147,19 @@ pub fn outline(document: &Document) -> Outline {
             }
             Event::Start(Tag::CodeBlock(_)) => in_code_block = true,
             Event::End(TagEnd::CodeBlock) => in_code_block = false,
-            Event::Start(Tag::Link { dest_url, .. } | Tag::Image { dest_url, .. }) => {
+            Event::Start(Tag::Link { dest_url, .. }) => {
                 outline.links.push(Link {
                     dest: dest_url.to_string(),
                     line: line_of(range.start),
+                    image: false,
+                    span: range.clone(),
+                });
+            }
+            Event::Start(Tag::Image { dest_url, .. }) => {
+                outline.links.push(Link {
+                    dest: dest_url.to_string(),
+                    line: line_of(range.start),
+                    image: true,
                     span: range.clone(),
                 });
             }

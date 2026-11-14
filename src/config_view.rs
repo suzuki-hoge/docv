@@ -1,4 +1,4 @@
-//! 現在の設定のページに並べる、docv.yaml のすべての項目と今の値。docv/service/service/html.md の「現在の設定のページ」。
+//! 現在の設定のページに並べる、docv.yaml のすべての項目と今の値。docv/slot/service/service/html.md の「現在の設定のページ」。
 
 use crate::config::{Config, Permission, Switch};
 
@@ -36,24 +36,10 @@ pub fn rows(config: &Config, title: &str) -> Vec<Row> {
                 .map_or(Cell::List(Vec::new()), Cell::Value),
         ),
         row("title", Cell::Value(title.to_string())),
-        row("dir.free", Cell::Value(config.free_dir())),
-        row("dir.slot", Cell::Value(config.slot_dir())),
-        row("dir.html", Cell::Value(config.html_dir())),
-        // dir.image を書いていなければ、値のない項目として `-` を出す。
-        row(
-            "dir.image",
-            config
-                .image_dir()
-                .map_or(Cell::List(Vec::new()), Cell::Value),
-        ),
-        // dir.index も、書いていなければ `-` を出す。
-        row(
-            "dir.index",
-            config
-                .index_dir()
-                .map_or(Cell::List(Vec::new()), Cell::Value),
-        ),
-        row("ignore", list(&config.ignore)),
+        row("dir.document_root", Cell::Value(config.document_root())),
+        row("dir.output", Cell::Value(config.output_dir())),
+        row("docv_exclude", list(&config.docv_exclude)),
+        row("generate.image", boolean(config.generate.image)),
         row(
             "tags",
             Cell::Tags(config.tags.iter().map(|t| t.name.clone()).collect()),
@@ -124,8 +110,11 @@ tags:
   - name: 仕様
     color: red
 dir:
-  image: out/jpg
-  index: .
+  output: out
+docv_exclude:
+  - docv/free/tmp/**
+generate:
+  image: true
 lint:
   bold: deny
   textlint: enable
@@ -139,17 +128,15 @@ docv_version
   1.8.0
 title
   repo
-dir.free
-  docs
-dir.slot
+dir.document_root
   docv
-dir.html
-  output/docv/html
-dir.image
-  out/jpg
-dir.index
-  .
-ignore
+dir.output
+  out
+docv_exclude
+  - docv/free/tmp/**
+generate.image
+  [x] true
+  [ ] false
 tags
   - 仕様
 lint.bold

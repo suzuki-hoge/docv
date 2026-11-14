@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=../../../assets/schema/install.schema.json
+requirements:
+  - name: Node.js
+    purpose_markdown: |
+      textlint を使うときだけ要る。`docv check --no-textlint` なら要らない
+    url: https://nodejs.org/
+  - name: Google Chrome
+    purpose_markdown: |
+      JPG を作るときだけ要る
+steps:
+  - id: cargo
+    name: GitHub のソースから入れる（Rust が必要）
+    items:
+      body_markdown: |
+        ```sh
+        cargo install --git https://github.com/suzuki-hoge/docv
+        ```
+  - id: local
+    name: 手元のソースから入れる（Rust が必要）
+    items:
+      body_markdown: |
+        クローンしたリポジトリや、手を入れている作業中のソースから入れる。リポジトリのルートで実行する。
+
+        ```sh
+        make install
+        ```
+
+        `~/.cargo/bin/docv` に入る。ソースを変えたら、もう一度実行すると入れ直せる。

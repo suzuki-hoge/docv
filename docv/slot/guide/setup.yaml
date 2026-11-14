@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=../../../assets/schema/setup.schema.json
+requirements:
+  - name: Rust
+    version: stable（2024 edition が使えるもの）
+    purpose_markdown: |
+      ビルドとテスト
+    url: https://rustup.rs/
+  - name: Node.js
+    purpose_markdown: |
+      make fix で textlint をかける
+  - name: Google Chrome
+    purpose_markdown: |
+      make fix で JPG を作る
+steps:
+  - id: install
+    name: ビルドして手元に入れる
+    items:
+      body_markdown: |
+        ```sh
+        make install
+        ```
+
+        このリポジトリのドキュメントは docv 自身で管理している。コードかドキュメントを変えたら、開発コマンドの `make fix` で確かめる。

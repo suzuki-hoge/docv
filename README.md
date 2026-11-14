@@ -4,4 +4,4 @@
 
 本リポジトリのドキュメントも docv で管理している。
 
-閲覧はローカル取得して `docv open` するか、[docv-index.md](docv-index.md) を GitHub で直接閲覧してほしい。
+閲覧はローカル取得して `docv open` するか、[docv/README.md](docv/README.md) を GitHub で直接閲覧してほしい。

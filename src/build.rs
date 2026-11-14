@@ -1,4 +1,4 @@
-//! docv build。人間向けの HTML と、設定で有効なら Slot のページの JPG を生成する。docv/service/service/html.md。
+//! docv build。人間向けの HTML と、設定で有効なら Slot のページの JPG を生成する。docv/slot/service/service/html.md。
 //!
 //! トップは 6 ページに分け、サイドバーで行き来する。ルートに README.md があれば、README のページをサイドバーの先頭に足す。
 //! index.html（プロジェクト概要）に Slot ファイルのページへのカード、ADR.html と PDR.html に決定のつながりの図、
@@ -8,7 +8,8 @@
 //! ページに分けた Slot は、ページごとに `<まとまり>/<Slot>/<ページの名前>.html` に置き、ページへのリンクをタブにして並べる。
 //! Slot、ADR、PDR、Free ファイルのページには、h1 の上に元のファイルのパスと、それをコピーするボタンを置く。表は、横にスクロールできる包みに入れる。
 //! 画像にしても読めるように、折りたたみは使わない。OS ごとの手順のタブは、印刷の表示（JPG）ではすべて並べる。
-//! dir.index を書いていれば、Slot ファイルへのリンクを並べたインデックス（docv-index.md）も書く（index.rs）。
+//! document_root の直下に、Slot ファイルへのリンクを並べたインデックス（README.md）も書く（index.rs）。
+//! 左のサイドバーの一番下に、作った docv の版を出す。
 
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
@@ -137,17 +138,15 @@ struct SearchEntry {
     lines: Vec<String>,
 }
 
-/// docv build。out（dir.html）の中を作り直す。image（dir.image）を書いていれば、Slot のページを JPG にしてそこに置く。
+/// docv build。out（dir.output の下の html/）の中を作り直す。image（generate.image が true なら image/）があれば、Slot のページを JPG にしてそこに置く。
 /// JPG は Slot のページごとに 1 枚（ページに分けた YAML の Slot は、ページごとに 1 枚）。見つけやすいように、まとまりと Slot の表示名をパスにする。
 /// Markdown から作るページ（md の Slot、ADR、Free ファイル）は、GitHub で md をそのまま見られるので JPG にしない。
-/// dir.index を書いていれば、インデックスも書く。書けないインデックスがあれば、何も書かずに error で終わる。
+/// インデックスも書く。書けないインデックスなら、何も書かずに error で終わる。
 pub fn run(project: &Project, out: &Path, image: Option<&Path>) -> Result<()> {
     let index = index::path(project);
-    if let Some(index) = &index {
-        index::ensure_writable(index)?;
-    }
+    index::ensure_writable(&index)?;
     let out = prepare_out(out)?;
-    let slots = render(project, &out, index.as_deref())?;
+    let slots = render(project, &out, &index)?;
     write(&out.join(CSS_FILE), CSS)?;
     write(&out.join(JS_FILE), JS)?;
     write(&out.join(MARKER), MARKER_TEXT)?;
@@ -164,13 +163,13 @@ pub fn run(project: &Project, out: &Path, image: Option<&Path>) -> Result<()> {
     Ok(())
 }
 
-/// out にすべてのページを書き、index があればインデックスを書いて、読み込んだ Slot を返す。
-fn render(project: &Project, out: &Path, index: Option<&Path>) -> Result<Vec<Slot>> {
+/// out にすべてのページを書き、index にインデックスを書いて、読み込んだ Slot を返す。
+fn render(project: &Project, out: &Path, index: &Path) -> Result<Vec<Slot>> {
     let mut pages = Vec::new();
     for path in project.managed()? {
         pages.push(read_page(project, &path)?);
     }
-    // README.md は管理外のファイルなので、ignore に当てはまらなければ読む。
+    // README.md は管理外のファイルなので、docv_exclude に当てはまらなければ読む。
     let readme = match project.classify(README_SOURCE) {
         Some(_) if project.root.join(README_SOURCE).is_file() => {
             Some(read_page(project, README_SOURCE)?)
@@ -217,10 +216,8 @@ fn render(project: &Project, out: &Path, index: Option<&Path>) -> Result<Vec<Slo
     for page in &pages {
         write(&out.join(doc_page(&page.source)), &site.render_doc(page))?;
     }
-    if let Some(path) = index {
-        let text = index::render(project, path, &slots, !pages.is_empty(), &kinds);
-        write(path, &text)?;
-    }
+    let text = index::render(project, index, &slots, !pages.is_empty(), &kinds);
+    write(index, &text)?;
     Ok(slots)
 }
 
@@ -242,7 +239,7 @@ fn page_path(slot: &Slot) -> String {
     }
 }
 
-/// Slot の JPG の、dir.image からの相対パス。`サービス/用語集.jpg`。名前の空白は除く（`開発者向けガイド/Docガイド.jpg`）。
+/// Slot の JPG の、JPG の出力先（dir.output の下の image/）からの相対パス。`サービス/用語集.jpg`。名前の空白は除く（`開発者向けガイド/Docガイド.jpg`）。
 /// 分けた Slot のページは、HTML と同じく、Slot の名前のディレクトリの下に、ページの名前で置く。`開発者向けガイド/開発コマンド/Web.jpg`。
 pub(crate) fn jpg_path(slot: &Slot) -> String {
     match &slot.page {
@@ -274,8 +271,8 @@ fn read_page(project: &Project, path: &str) -> Result<Page> {
     })
 }
 
-/// Free ファイルのページの、出力先からの相対パス。`プロジェクト詳細/docs/order.html`。
-/// ディレクトリとファイルの名前の空白は除く（`docs/my notes/a b.md` は `プロジェクト詳細/docs/mynotes/ab.html`）。
+/// Free ファイルのページの、出力先からの相対パス。`プロジェクト詳細/docv/free/order.html`。
+/// ディレクトリとファイルの名前の空白は除く（`docv/free/my notes/a b.md` は `プロジェクト詳細/docv/free/mynotes/ab.html`）。
 fn doc_page(source: &str) -> String {
     format!(
         "{DETAIL_DIR}/{}.html",
@@ -323,7 +320,7 @@ struct Site<'a> {
     out: &'a Path,
     /// 描いているページのディレクトリ。リンクの起点。
     dir: RefCell<PathBuf>,
-    /// ルートの README.md。ないか、ignore に当てはまれば None。
+    /// ルートの README.md。ないか、docv_exclude に当てはまれば None。
     readme: Option<&'a Page>,
     pages: &'a [Page],
     slots: &'a [Slot],
@@ -564,7 +561,7 @@ impl Site<'_> {
     }
 
     /// HTML の全体。左に README とトップの 6 ページへのサイドバーを、右に h2 と h3 の目次を置く。印刷の表示（JPG）では、どちらも出さない。
-    /// README、ADR、PDR は、そのページがあるときだけ出す。
+    /// README、ADR、PDR は、そのページがあるときだけ出す。サイドバーの一番下に、作った docv の版を出す。
     fn page(&self, title: &str, current: Nav, body: &str) -> String {
         let mut nav = format!(
             "<nav class=\"sidebar\">\n<p class=\"project\">{}</p>\n<ul>\n",
@@ -600,7 +597,11 @@ impl Site<'_> {
                 item.label()
             );
         }
-        nav.push_str("</ul>\n</nav>\n");
+        let _ = write!(
+            nav,
+            "</ul>\n<p class=\"generated\">{}</p>\n</nav>\n",
+            escape(&index::generated_by())
+        );
         let (body, aside) = outline(&wrap_tables(body));
         let root = |name: &str| relative_path(&self.dir.borrow(), &self.out.join(name));
         page(title, &root(CSS_FILE), &root(JS_FILE), &nav, &body, &aside)
@@ -1160,7 +1161,7 @@ impl Site<'_> {
         for page in self.pages {
             root.insert(page);
         }
-        // すべての Free ファイルが 1 つのディレクトリ（docs/ など）の中にあるときは、そのディレクトリの行を出さない。
+        // すべての Free ファイルが 1 つのディレクトリ（docv/free/ など）の中にあるときは、そのディレクトリの行を出さない。
         let mut top = &root;
         let mut path = String::new();
         while top.files.is_empty() && top.dirs.len() == 1 {
@@ -2050,7 +2051,7 @@ mod tests {
         write_file(
             dir.path(),
             "docv.yaml",
-            "title: demo\nignore: [docs/tmp/**]\ntags:\n  - name: 仕様\n    color: blue\n",
+            "title: demo\ndocv_exclude: [docv/free/tmp/**]\ntags:\n  - name: 仕様\n    color: blue\n",
         );
         for (path, text) in files {
             write_file(dir.path(), path, text);
@@ -2064,10 +2065,10 @@ mod tests {
         let (dir, project) = project(&[
             ("README.md", "# Demo\n"),
             (
-                "docs/spec/a.md",
+                "docv/free/spec/a.md",
                 "---\nmission: A は何か\ntags: [仕様]\n---\n\n# A <仕様>\n\n## 1. 章\n\n本文\n",
             ),
-            ("docs/plan/b.md", "---\nmission: q\n---\n# B\n"),
+            ("docv/free/plan/b.md", "---\nmission: q\n---\n# B\n"),
             (
                 "docv/adr/go.md",
                 "---\ngroup: 言語\ndate: 2026-01-01\n---\n\n# Go にする\n\nGo で書く\n",
@@ -2080,26 +2081,26 @@ mod tests {
                 "docv/adr/react.md",
                 "---\ngroup: 言語\ndate: 2026-02-01\n---\n\n# React にする\n\nReact で書く\n",
             ),
-            ("docs/tmp/memo.md", "# Memo\n"),
+            ("docv/free/tmp/memo.md", "# Memo\n"),
             (
-                "docv/service/install.yaml",
+                "docv/slot/service/install.yaml",
                 "steps:\n  - id: binary\n    name: 取る\n    items:\n      - os: macos\n        body_markdown: \"`curl`\"\n      - os: windows\n  - id: cargo\n    name: cargo\n    items:\n      body_markdown: \"`cargo install`\"\nappendix_markdown: |\n  # 補足\n\n  後書き\n",
             ),
             (
-                "docv/guide/setup.yaml",
+                "docv/slot/guide/setup.yaml",
                 "steps:\n  - id: clone\n    name: 取ってくる\n    items:\n      body_markdown: |\n        # 注意\n\n        `git clone`\n",
             ),
             (
-                "docv/service/service.md",
-                "# サービス仕様\n\n概要の本文\n\n## 部品\n\n[a](../../docs/spec/a.md)\n\n<details>\n\n細部\n\n</details>\n\n### 小見出し\n",
+                "docv/slot/service/service.md",
+                "# サービス仕様\n\n概要の本文\n\n## 部品\n\n[a](../../free/spec/a.md)\n\n<details>\n\n細部\n\n</details>\n\n### 小見出し\n",
             ),
             (
-                "docv/service/manual.md",
+                "docv/slot/service/manual.md",
                 "# 利用マニュアル\n\n| コマンド | 説明 |\n| --- | --- |\n| [demo run](#demo-run) | 動かす |\n\n## demo run\n\n詳しく\n",
             ),
-            ("docv/system/db.md", "# DB 仕様書\n\n表\n"),
+            ("docv/slot/system/db.md", "# DB 仕様書\n\n表\n"),
             (
-                "docv/operation/cost.yaml",
+                "docv/slot/operation/cost.yaml",
                 "accepted_items:\n  - name: サーバー\n    monthly: 3 ドル\n",
             ),
         ]);
@@ -2123,14 +2124,14 @@ mod tests {
             "{search}"
         );
         assert!(
-            search.contains("{\"path\":\"docs/spec/a.md\",\"href\":\"プロジェクト詳細/docs/spec/a.html\",\"tags\":[[\"仕様\",0]],\"lines\":[\"---\",\"mission: A は何か\","),
+            search.contains("{\"path\":\"docv/free/spec/a.md\",\"href\":\"プロジェクト詳細/docv/free/spec/a.html\",\"tags\":[[\"仕様\",0]],\"lines\":[\"---\",\"mission: A は何か\","),
             "{search}"
         );
         let slot_entry = search
-            .find("\"path\":\"docv/service/install.yaml\"")
+            .find("\"path\":\"docv/slot/service/install.yaml\"")
             .unwrap();
         let adr_entry = search.find("\"path\":\"docv/adr/go.md\"").unwrap();
-        let free_entry = search.find("\"path\":\"docs/spec/a.md\"").unwrap();
+        let free_entry = search.find("\"path\":\"docv/free/spec/a.md\"").unwrap();
         assert!(slot_entry < adr_entry && adr_entry < free_entry, "{search}");
         // 見出しのないページは、目次の代わりに同じ幅の空の枠を置く
         assert!(!search.contains("<nav class=\"outline\">"), "{search}");
@@ -2153,8 +2154,8 @@ mod tests {
             "{config}"
         );
         assert!(
-            config.contains("<tr><td><code>dir.free</code></td><td><code>docs</code></td></tr>\n<tr><td><code>dir.slot</code></td><td><code>docv</code></td></tr>")
-                && config.contains("<tr><td><code>dir.image</code></td><td>-</td></tr>"),
+            config.contains("<tr><td><code>dir.document_root</code></td><td><code>docv</code></td></tr>\n<tr><td><code>dir.output</code></td><td><code>output/docv</code></td></tr>")
+                && config.contains("<tr><td><code>generate.image</code></td><td><div class=\"choices\"><span class=\"choice\">true</span><span class=\"choice on\">false</span></div></td></tr>"),
             "{config}"
         );
         // docv が決めた textlint のルールを、検査項目と非検査項目に分け、プリセットごとの表に並べる
@@ -2234,13 +2235,13 @@ mod tests {
         );
         // プロジェクト詳細.html に、Free ファイルのページへのリンクをツリーに並べる。管理外のファイルは出さない
         let plan = detail
-            .find("<tr class=\"dir\" data-dir=\"docs/plan\"><td colspan=\"3\"><div style=\"margin-left:0px\">plan/</div></td></tr>")
+            .find("<tr class=\"dir\" data-dir=\"docv/free/plan\"><td colspan=\"3\"><div style=\"margin-left:0px\">plan/</div></td></tr>")
             .unwrap();
         let spec = detail.find(">spec/</div>").unwrap();
-        // すべての Free ファイルが入っている docs/ の行は出さず、ファイル名も出さない。タグには色を付ける
-        assert!(!detail.contains(">docs/</div>"), "{detail}");
+        // すべての Free ファイルが入っている docv/free/ の行は出さず、ファイル名も出さない。タグには色を付ける
+        assert!(!detail.contains(">docv/free/</div>"), "{detail}");
         assert!(
-            detail.contains("<tr data-path=\"docs/spec/a.md\" data-tags=\"[&quot;仕様&quot;]\"><td style=\"padding-left:30px\"><a href=\"プロジェクト詳細/docs/spec/a.html\">A &lt;仕様&gt;</a></td><td title=\"A は何か\">A は何か</td><td><span class=\"tag c0\">仕様</span></td>"),
+            detail.contains("<tr data-path=\"docv/free/spec/a.md\" data-tags=\"[&quot;仕様&quot;]\"><td style=\"padding-left:30px\"><a href=\"プロジェクト詳細/docv/free/spec/a.html\">A &lt;仕様&gt;</a></td><td title=\"A は何か\">A は何か</td><td><span class=\"tag c0\">仕様</span></td>"),
             "{detail}"
         );
         // 表の上に、タグのトグルを数と一緒に並べる。最初はすべて選んでいる
@@ -2249,7 +2250,7 @@ mod tests {
             "{detail}"
         );
         // Free ファイルは 1 つずつ HTML のページにする。見出しは h1 から段を飛ばさない
-        let a = fs::read_to_string(out.join("プロジェクト詳細/docs/spec/a.html")).unwrap();
+        let a = fs::read_to_string(out.join("プロジェクト詳細/docv/free/spec/a.html")).unwrap();
         assert!(a.contains("<h1>A &lt;仕様&gt;</h1>"), "{a}");
         // 見出しには GitHub と同じ形の id を付け、右のサイドバーに目次を置く
         assert!(a.contains("<h2 id=\"1-章\">1. 章</h2>"), "{a}");
@@ -2258,12 +2259,12 @@ mod tests {
             "{a}"
         );
         assert!(
-            a.contains("<a href=\"../../../プロジェクト詳細.html\" aria-current=\"page\">"),
+            a.contains("<a href=\"../../../../プロジェクト詳細.html\" aria-current=\"page\">"),
             "{a}"
         );
         // h1 の上に、元のファイルのルートからのパスと、それをコピーするボタンを置く。ボタンは JS が動くときだけ出す
         assert!(
-            a.contains("<main>\n<p class=\"source\"><code>docs/spec/a.md</code><button type=\"button\" class=\"copy\" data-path=\"docs/spec/a.md\" title=\"パスをコピーする\" aria-label=\"パスをコピーする\" hidden>"),
+            a.contains("<main>\n<p class=\"source\"><code>docv/free/spec/a.md</code><button type=\"button\" class=\"copy\" data-path=\"docv/free/spec/a.md\" title=\"パスをコピーする\" aria-label=\"パスをコピーする\" hidden>"),
             "{a}"
         );
         // トップのページには、元のファイルのパスを出さない
@@ -2279,7 +2280,7 @@ mod tests {
         assert!(install.contains("</svg>インストール</h1>"), "{install}");
         // Slot のページにも、h1 の上に元のファイルのパスを置く
         assert!(
-            install.contains("<main>\n<p class=\"source\"><code>docv/service/install.yaml</code><button type=\"button\" class=\"copy\" data-path=\"docv/service/install.yaml\" title=\"パスをコピーする\" aria-label=\"パスをコピーする\" hidden>"),
+            install.contains("<main>\n<p class=\"source\"><code>docv/slot/service/install.yaml</code><button type=\"button\" class=\"copy\" data-path=\"docv/slot/service/install.yaml\" title=\"パスをコピーする\" aria-label=\"パスをコピーする\" hidden>"),
             "{install}"
         );
         // Slot のページのサイドバーは、1 つ上のトップのページを指す
@@ -2326,7 +2327,7 @@ mod tests {
         assert!(service.contains("<h2 id=\"部品\">部品</h2>"), "{service}");
         assert!(
             // Markdown の中のリンクは、pulldown-cmark が和名をパーセントエンコードする
-            service.contains("href=\"../%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E8%A9%B3%E7%B4%B0/docs/spec/a.html\">a</a>"),
+            service.contains("href=\"../%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E8%A9%B3%E7%B4%B0/docv/free/spec/a.html\">a</a>"),
             "{service}"
         );
         assert!(service.contains("<details open>"), "{service}");
@@ -2462,8 +2463,8 @@ mod tests {
                 "---\ngroup: 料金\ndate: 2026-02-01\nsupersedes: [free]\n---\n\n# 有料のプランを足す\n\n## 見直す条件\n\n解約が増えたら見直す\n",
             ),
             (
-                "docs/a.md",
-                "---\nmission: a\n---\n\n# A\n\n[料金](../docv/pdr/paid.md)\n",
+                "docv/free/a.md",
+                "---\nmission: a\n---\n\n# A\n\n[料金](../pdr/paid.md)\n",
             ),
         ]);
         let out = dir.path().join("out");
@@ -2510,8 +2511,8 @@ mod tests {
             "{paid}"
         );
         // Free ファイルからのリンクと検索の索引も、PDR のページに向く。索引は ADR の後に PDR を並べる
-        let a = read("プロジェクト詳細/docs/a.html");
-        assert!(a.contains("href=\"../../PDR/"), "{a}");
+        let a = read("プロジェクト詳細/docv/free/a.html");
+        assert!(a.contains("href=\"../../../PDR/"), "{a}");
         let search = read(SEARCH_PAGE);
         let adr = search.find("\"path\":\"docv/adr/go.md\"").unwrap();
         let pdr = search
@@ -2537,11 +2538,11 @@ mod tests {
     fn links_slot_and_adr_files_to_their_pages() {
         let (dir, project) = project(&[
             (
-                "docs/a.md",
-                "---\nmission: q\n---\n# A\n\n[s](../docv/system/system.md#部品) [d](../docv/adr/go.md) [n](<my notes/b c.md>)\n",
+                "docv/free/a.md",
+                "---\nmission: q\n---\n# A\n\n[s](../slot/system/system.md#部品) [d](../adr/go.md) [n](<my notes/b c.md>)\n",
             ),
-            ("docs/my notes/b c.md", "---\nmission: n\n---\n# B\n"),
-            ("docv/system/system.md", "# システム仕様\n"),
+            ("docv/free/my notes/b c.md", "---\nmission: n\n---\n# B\n"),
+            ("docv/slot/system/system.md", "# システム仕様\n"),
             (
                 "docv/adr/go.md",
                 "---\ngroup: 言語\ndate: 2026-01-01\n---\n\n# Go にする\n",
@@ -2557,7 +2558,7 @@ mod tests {
             adr_index.contains("<div class=\"decision-grid\"><a class=\"decision-box\""),
             "{adr_index}"
         );
-        let page = fs::read_to_string(out.join("プロジェクト詳細/docs/a.html")).unwrap();
+        let page = fs::read_to_string(out.join("プロジェクト詳細/docv/free/a.html")).unwrap();
         // Markdown のリンクは、パーセントエンコードして出る。読めるように戻して比べる
         let bytes = page.as_bytes();
         let mut decoded = Vec::new();
@@ -2577,19 +2578,22 @@ mod tests {
         let page = String::from_utf8(decoded).unwrap();
         // ページのあるファイルは、出力先の中の相対パスで向ける
         assert!(
-            page.contains("href=\"../../システム/システム仕様.html#部品\""),
+            page.contains("href=\"../../../システム/システム仕様.html#部品\""),
             "{page}"
         );
         assert!(
-            page.contains("href=\"../../ADR/言語/Goにする.html\""),
+            page.contains("href=\"../../../ADR/言語/Goにする.html\""),
             "{page}"
         );
         // Free ファイルのページは、ディレクトリとファイルの名前から空白を除いて置く
         assert!(page.contains("href=\"mynotes/bc.html\""), "{page}");
-        assert!(out.join("プロジェクト詳細/docs/mynotes/bc.html").is_file());
+        assert!(
+            out.join("プロジェクト詳細/docv/free/mynotes/bc.html")
+                .is_file()
+        );
         let detail = fs::read_to_string(out.join(DETAIL_PAGE)).unwrap();
         assert!(
-            detail.contains("<a href=\"プロジェクト詳細/docs/mynotes/bc.html\">B</a>"),
+            detail.contains("<a href=\"プロジェクト詳細/docv/free/mynotes/bc.html\">B</a>"),
             "{detail}"
         );
     }
@@ -2597,10 +2601,10 @@ mod tests {
     #[test]
     fn does_not_link_files_without_page() {
         let (dir, project) = project(&[
-            ("docs/a.md", "---\nmission: q\n---\n# A\n"),
+            ("docv/free/a.md", "---\nmission: q\n---\n# A\n"),
             (
-                "docv/system/system.md",
-                "# システム仕様\n\n[memo](../../notes.md) ![図](../../a.svg) [設定](../../docv.yaml)\n",
+                "docv/slot/system/system.md",
+                "# システム仕様\n\n[memo](../../../notes.md) ![図](../../../a.svg) [設定](../../../docv.yaml)\n",
             ),
         ]);
         let out = dir.path().join("out");
@@ -2618,7 +2622,7 @@ mod tests {
             "{page}"
         );
         assert!(
-            detail.contains("href=\"プロジェクト詳細/docs/a.html\""),
+            detail.contains("href=\"プロジェクト詳細/docv/free/a.html\""),
             "{detail}"
         );
         // ADR がないときは、ADR.html を作らず、サイドバーにも出さない。README.md がないときも同じ
@@ -2635,11 +2639,11 @@ mod tests {
         let (dir, project) = project(&[
             (
                 "README.md",
-                "# Demo\n\n概要\n\n## 使い方\n\n[仕様](docv/system/system.md) [索引](docv-index.md) [コード](src/main.rs)\n",
+                "# Demo\n\n概要\n\n## 使い方\n\n[仕様](docv/slot/system/system.md) [索引](docv/README.md) [コード](src/main.rs)\n",
             ),
             (
-                "docv/system/system.md",
-                "# システム仕様\n\n[README](../../README.md#使い方)\n",
+                "docv/slot/system/system.md",
+                "# システム仕様\n\n[README](../../../README.md#使い方)\n",
             ),
         ]);
         let out = dir.path().join("out");
@@ -2654,6 +2658,14 @@ mod tests {
         );
         assert!(
             readme.contains("<li><a href=\"README.html\" aria-current=\"page\">README</a></li>\n<li><a href=\"index.html\">プロジェクト概要</a></li>"),
+            "{readme}"
+        );
+        // サイドバーの一番下に、作った docv の版を出す
+        assert!(
+            readme.contains(&format!(
+                "</ul>\n<p class=\"generated\">Generated by docv {}</p>\n</nav>",
+                env!("CARGO_PKG_VERSION")
+            )),
             "{readme}"
         );
         // README のページには、元のファイルのパスを出さない
@@ -2681,7 +2693,7 @@ mod tests {
             ("src/main.rs", ""),
             ("docs/a.md", "---\nmission: q\n---\n# A\n"),
             (
-                "docv/guide/directory-tree.yaml",
+                "docv/slot/guide/directory-tree.yaml",
                 "entries:\n  - path: src/\n    desc_markdown: ソース\n  - path: docs/\n    desc_markdown: \"`docv` の文書\"\n  - path: src/main.rs\n    desc_markdown: 入口\n  - path: docs/rule/guide.md\n    desc_markdown: 書き方\n  - path: docs/spec/\n    desc_markdown: 規格\n",
             ),
         ]);
@@ -2728,16 +2740,16 @@ mod tests {
     fn builds_each_page_of_a_split_slot_with_tabs() {
         let (dir, project) = project(&[
             (
-                "docv/service/service/user.md",
+                "docv/slot/service/service/user.md",
                 "---\norder: 1\n---\n\n# 利用者向け機能\n\n## 注文\n\n[取り消し](admin.md#取り消し)\n",
             ),
             (
-                "docv/service/service/admin.md",
+                "docv/slot/service/service/admin.md",
                 "---\norder: 2\n---\n\n# 管理者向け機能\n\n## 取り消し\n\n本文\n",
             ),
             (
-                "docs/a.md",
-                "---\nmission: a\n---\n\n# A\n\n[管理](../docv/service/service/admin.md)\n",
+                "docv/free/a.md",
+                "---\nmission: a\n---\n\n# A\n\n[管理](../slot/service/service/admin.md)\n",
             ),
         ]);
         let out = dir.path().join("out");
@@ -2768,7 +2780,7 @@ mod tests {
         );
         // 分けたページには、そのページの元のファイルのパスを出す
         assert!(
-            user.contains("<p class=\"source\"><code>docv/service/service/user.md</code><button type=\"button\" class=\"copy\" data-path=\"docv/service/service/user.md\" title=\"パスをコピーする\" aria-label=\"パスをコピーする\" hidden>"),
+            user.contains("<p class=\"source\"><code>docv/slot/service/service/user.md</code><button type=\"button\" class=\"copy\" data-path=\"docv/slot/service/service/user.md\" title=\"パスをコピーする\" aria-label=\"パスをコピーする\" hidden>"),
             "{user}"
         );
         // ページの h1 は本文に出さない。目次と、ほかのページへのリンクは、ページごとに効く
@@ -2789,15 +2801,15 @@ mod tests {
             "{admin}"
         );
         // Free ファイルからのリンクも、そのページに向く
-        let a = read("プロジェクト詳細/docs/a.html");
+        let a = read("プロジェクト詳細/docv/free/a.html");
         assert!(
-            a.contains("href=\"../../%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9/%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E4%BB%95%E6%A7%98/%E7%AE%A1%E7%90%86%E8%80%85%E5%90%91%E3%81%91%E6%A9%9F%E8%83%BD.html\">管理</a>"),
+            a.contains("href=\"../../../%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9/%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E4%BB%95%E6%A7%98/%E7%AE%A1%E7%90%86%E8%80%85%E5%90%91%E3%81%91%E6%A9%9F%E8%83%BD.html\">管理</a>"),
             "{a}"
         );
         // 検索の索引も、ページごとに持つ
         let search = read(SEARCH_PAGE);
         assert!(
-            search.contains("{\"path\":\"docv/service/service/admin.md\",\"href\":\"サービス/サービス仕様/管理者向け機能.html\""),
+            search.contains("{\"path\":\"docv/slot/service/service/admin.md\",\"href\":\"サービス/サービス仕様/管理者向け機能.html\""),
             "{search}"
         );
     }
@@ -2805,8 +2817,8 @@ mod tests {
     #[test]
     fn links_css_and_js_files_from_every_page() {
         let (dir, project) = project(&[
-            ("docs/spec/a.md", "---\nmission: q\n---\n# A\n"),
-            ("docv/service/install.yaml", "steps: []\n"),
+            ("docv/free/spec/a.md", "---\nmission: q\n---\n# A\n"),
+            ("docv/slot/service/install.yaml", "steps: []\n"),
             (
                 "docv/adr/go.md",
                 "---\ngroup: 言語\ndate: 2026-01-01\n---\n\n# Go にする\n",
@@ -2822,7 +2834,7 @@ mod tests {
             ("index.html", ""),
             ("サービス/インストール.html", "../"),
             ("ADR/言語/Goにする.html", "../../"),
-            ("プロジェクト詳細/docs/spec/a.html", "../../../"),
+            ("プロジェクト詳細/docv/free/spec/a.html", "../../../../"),
         ] {
             let html = fs::read_to_string(out.join(page)).unwrap();
             assert!(
@@ -2869,7 +2881,7 @@ mod tests {
     fn puts_jpg_under_group_and_label() {
         let slot = Slot {
             def: slot::def("words").unwrap(),
-            path: "docv/service/words.yaml".to_string(),
+            path: "docv/slot/service/words.yaml".to_string(),
             content: Content::Markdown(String::new()),
             page: None,
         };
@@ -2877,7 +2889,7 @@ mod tests {
         // 分けた Slot のページは、Slot の名前のディレクトリの下に、ページの名前で置く
         let page = Slot {
             def: slot::def("develop").unwrap(),
-            path: "docv/guide/develop/web.yaml".to_string(),
+            path: "docv/slot/guide/develop/web.yaml".to_string(),
             content: Content::Markdown(String::new()),
             page: Some(slot::Page {
                 title: "Web 画面".to_string(),
@@ -2891,10 +2903,10 @@ mod tests {
     fn builds_each_yaml_page_of_a_split_slot_with_tabs() {
         let (dir, project) = project(&[
             (
-                "docv/guide/develop/web.yaml",
+                "docv/slot/guide/develop/web.yaml",
                 "order: 2\ntitle: Web\nsteps:\n  - id: test\n    name: テストを実行する\n    items:\n      body_markdown: |\n        npm test\n",
             ),
-            ("docv/guide/develop/api.yaml", "order: 1\ntitle: API\n"),
+            ("docv/slot/guide/develop/api.yaml", "order: 1\ntitle: API\n"),
         ]);
         let out = dir.path().join("out");
         run(&project, &out, None).unwrap();
@@ -2922,7 +2934,7 @@ mod tests {
             "{web}"
         );
         assert!(
-            web.contains("<p class=\"source\"><code>docv/guide/develop/web.yaml</code>"),
+            web.contains("<p class=\"source\"><code>docv/slot/guide/develop/web.yaml</code>"),
             "{web}"
         );
     }

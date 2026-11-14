@@ -1,4 +1,4 @@
-//! docv check のルール。Free ファイルのルールは docv/service/service/free.md の 3 章、書式の規則と textlint は docv/service/service/config.md。
+//! docv check のルール。Free ファイルのルールは docv/slot/service/service/free.md の 3 章、書式の規則と textlint は docv/slot/service/service/config.md。
 
 use std::fs;
 use std::path::Path;
@@ -11,7 +11,7 @@ use crate::markdown::{self, Document, Outline};
 use crate::style::{self, Style};
 use crate::textlint::Textlint;
 use crate::workspace::Project;
-use crate::{decision, format, slot, slot_markdown, version};
+use crate::{decision, format, layout, slot, slot_markdown, version};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Options {
@@ -35,9 +35,9 @@ pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Ve
         diagnostics.extend(check_markdown(project, &style, &path, &text, true));
         textlint_files.push(path);
     }
-    // Slot のディレクトリの中の .md のファイル（md の Slot、ADR、PDR）には、YAML front matter のほかは、Free ファイルと同じ検査をかける。
+    // md の Slot、ADR、PDR には、YAML front matter のほかは、Free ファイルと同じ検査をかける。
     // ADR と PDR の YAML front matter は decision::check で確かめる。
-    for path in project.slot_markdown()?.into_iter().filter(|p| wanted(p)) {
+    for path in project.docv_markdown()?.into_iter().filter(|p| wanted(p)) {
         let text = read(&path)?;
         diagnostics.extend(check_markdown(project, &style, &path, &text, false));
         textlint_files.push(path);
@@ -84,6 +84,12 @@ pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Ve
     );
     diagnostics.extend(
         decision::check(project)?
+            .into_iter()
+            .filter(|d| wanted(&d.path)),
+    );
+    // document_root の直下に置いたものと、画像の持ち主。
+    diagnostics.extend(
+        layout::check(project)?
             .into_iter()
             .filter(|d| wanted(&d.path)),
     );
@@ -369,8 +375,8 @@ mod tests {
         "docv_version: ",
         env!("CARGO_PKG_VERSION"),
         "
-ignore:
-  - docs/ignored/**
+docv_exclude:
+  - docv/free/ignored/**
 tags:
   - name: 仕様
     color: blue
@@ -405,19 +411,19 @@ lint:
         let result = check(&[
             ("README.md", "no frontmatter\n\n## X\n"),
             (
-                "docs/spec/a.md",
+                "docv/free/spec/a.md",
                 &format!(
-                    "{}\n# A\n\n`以前は` と書かない。[README](../../README.md#x)\n",
+                    "{}\n# A\n\n`以前は` と書かない。[README](../../../README.md#x)\n",
                     fm("tags: [仕様]\n")
                 ),
             ),
             (
-                "docs/plan/p.md",
+                "docv/free/plan/p.md",
                 &format!("{}\n# P\n\n- [ ] t\n", fm("tags: [計画]\n")),
             ),
-            ("docs/ignored/memo.md", "**太字** [x](missing.md)\n"),
+            ("docv/free/ignored/memo.md", "**太字** [x](missing.md)\n"),
             (
-                "docv/service/service.md",
+                "docv/slot/service/service.md",
                 "---\nmission: 外から見た機能と、それぞれの振る舞いと決まり\n---\n\n# サービス仕様\n",
             ),
         ]);
@@ -427,51 +433,54 @@ lint:
     #[test]
     fn reports_frontmatter_problems() {
         let result = check(&[
-            ("docs/spec/a.md", "# A\n"),
+            ("docv/free/spec/a.md", "# A\n"),
             (
-                "docs/spec/b.md",
+                "docv/free/spec/b.md",
                 "---\nmission: |\n  1\n  2\ntags: [仕様, z]\n---\n# B\n",
             ),
-            ("docs/spec/c.md", "---\nmission: [\n---\n# C\n"),
+            ("docv/free/spec/c.md", "---\nmission: [\n---\n# C\n"),
         ]);
         let without_c: Vec<&str> = result
             .iter()
-            .filter(|r| !r.starts_with("docs/spec/c.md"))
+            .filter(|r| !r.starts_with("docv/free/spec/c.md"))
             .map(String::as_str)
             .collect();
         assert_eq!(
             without_c,
             [
-                "docs/spec/a.md:1: mission-missing mission がない。このファイルを読むと何が分かるかを 1 文で書く".to_string(),
-                "docs/spec/b.md:2: mission-multiline mission は 1 行で書く".to_string(),
-                "docs/spec/b.md:5: tag-unknown タグ z は docv.yaml の tags にない。使うなら、docv.yaml の tags に name と color を書いて足す".to_string(),
+                "docv/free/spec/a.md:1: mission-missing mission がない。このファイルを読むと何が分かるかを 1 文で書く".to_string(),
+                "docv/free/spec/b.md:2: mission-multiline mission は 1 行で書く".to_string(),
+                "docv/free/spec/b.md:5: tag-unknown タグ z は docv.yaml の tags にない。使うなら、docv.yaml の tags に name と color を書いて足す".to_string(),
             ]
         );
         assert!(
             result
                 .iter()
-                .any(|r| r.starts_with("docs/spec/c.md:1: frontmatter-invalid"))
+                .any(|r| r.starts_with("docv/free/spec/c.md:1: frontmatter-invalid"))
         );
     }
 
     #[test]
     fn reports_structure_problems() {
         let result = check(&[
-            ("docs/spec/a.md", &format!("{}# A\n\n# B\n", fm(""))),
+            ("docv/free/spec/a.md", &format!("{}# A\n\n# B\n", fm(""))),
             // 終わったタスクは確かめない
-            ("docs/plan/p.md", &format!("{}# P\n\n- [x] done\n", fm(""))),
+            (
+                "docv/free/plan/p.md",
+                &format!("{}# P\n\n- [x] done\n", fm("")),
+            ),
             // 書式の規則は、lint で deny にしたものと、章番号を確かめる
             (
-                "docs/spec/b.md",
+                "docv/free/spec/b.md",
                 &format!("{}# B\n\n## 1. 一\n\n**b** [a](a.md)\n\n## 二\n", fm("")),
             ),
         ]);
         assert_eq!(
             result,
             [
-                "docs/spec/a.md:6: title-count h1 が 2 個ある。1 つにする",
-                "docs/spec/b.md:8: style-bold 太字を使わない",
-                "docs/spec/b.md:10: heading-number h2 の見出しを「2. 」で始める。章番号は 1 から順に振る",
+                "docv/free/spec/a.md:6: title-count h1 が 2 個ある。1 つにする",
+                "docv/free/spec/b.md:8: style-bold 太字を使わない",
+                "docv/free/spec/b.md:10: heading-number h2 の見出しを「2. 」で始める。章番号は 1 から順に振る",
             ]
         );
     }
@@ -480,15 +489,15 @@ lint:
     fn reports_broken_links_and_slot_adr_and_pdr_problems() {
         let result = check(&[
             (
-                "docs/spec/a.md",
+                "docv/free/spec/a.md",
                 &format!(
                     "{}# A\n\n[x](missing.md) [y](https://example.com) [z](#a) [spec/あ.md](%E3%81%82.md) [v](/README.md)\n",
                     fm("")
                 ),
             ),
-            ("docs/spec/あ.md", &format!("{}# あ\n", fm(""))),
+            ("docv/free/spec/あ.md", &format!("{}# あ\n", fm(""))),
             ("README.md", "# R\n"),
-            ("docv/service/words.yaml", "groups: 1\n"),
+            ("docv/slot/service/words.yaml", "groups: 1\n"),
             ("docv/adr/a.md", "# A\n"),
             // PDR も ADR と同じく決定として読み、Slot の名前でないファイルとはしない。Markdown には Free ファイルと同じ検査をかける
             (
@@ -497,13 +506,13 @@ lint:
             ),
         ]);
         assert_eq!(result.len(), 4, "{result:#?}");
-        assert_eq!(
-            result[0],
-            "docs/spec/a.md:6: link-broken リンク先 missing.md がない"
-        );
         assert!(
-            result[1].starts_with("docv/adr/a.md:1: adr-invalid"),
+            result[0].starts_with("docv/adr/a.md:1: adr-invalid"),
             "{result:#?}"
+        );
+        assert_eq!(
+            result[1],
+            "docv/free/spec/a.md:6: link-broken リンク先 missing.md がない"
         );
         assert_eq!(
             result[2],
@@ -511,14 +520,14 @@ lint:
         );
         assert_eq!(
             result[3],
-            "docv/service/words.yaml:1: slot-invalid 用語集の Slot の形に合わない: groups: invalid type: integer `1`, expected a sequence at line 1 column 9"
+            "docv/slot/service/words.yaml:1: slot-invalid 用語集の Slot の形に合わない: groups: invalid type: integer `1`, expected a sequence at line 1 column 9"
         );
     }
 
     /// md の Slot、ADR、YAML の Slot の Markdown の項目に、Free ファイルと同じ検査をかける（YAML front matter を除く）。
     const SLOT_FILES: &[(&str, &str)] = &[
         (
-            "docv/service/manual.md",
+            "docv/slot/service/manual.md",
             "---\nmission: 利用者の使い方（CLI のコマンド、GUI の操作など）\n---\n\n# 利用マニュアル\n\n**太字** [切れた](none.md) [見出し](#ない)\n\n# 二つ目\n",
         ),
         (
@@ -526,24 +535,24 @@ lint:
             "---\ngroup: g\ndate: 2026-01-01\nsupersedes: [none]\n---\n\n# A\n\n[切れた](none.md)\n",
         ),
         (
-            "docv/service/words.yaml",
-            "groups:\n  - name: g\n    items:\n      - ja: 用語\n        desc_markdown: |\n          説明\n\n          **太字** [切れた](none.md) [ある](docs/spec/b.md)\n      - ja: 二つ目\n        desc_markdown: 1 行\n      - ja: |\n          複数行\n        desc_markdown: |-\n          x\n",
+            "docv/slot/service/words.yaml",
+            "groups:\n  - name: g\n    items:\n      - ja: 用語\n        desc_markdown: |\n          説明\n\n          **太字** [切れた](none.md) [ある](docv/free/spec/b.md)\n      - ja: 二つ目\n        desc_markdown: 1 行\n      - ja: |\n          複数行\n        desc_markdown: |-\n          x\n",
         ),
-        ("docs/spec/b.md", "---\nmission: q\n---\n\n# B\n"),
+        ("docv/free/spec/b.md", "---\nmission: q\n---\n\n# B\n"),
     ];
 
     const SLOT_RESULTS: &[&str] = &[
         "docv/adr/a.md:4: adr-unknown-ref supersedes の none という ADR がない",
         "docv/adr/a.md:9: link-broken リンク先 none.md がない",
-        "docv/service/manual.md:7: link-anchor リンク先の見出し #ない がない",
-        "docv/service/manual.md:7: link-broken リンク先 none.md がない",
-        "docv/service/manual.md:7: style-bold 太字を使わない",
-        "docv/service/manual.md:9: title-count h1 が 2 個ある。1 つにする",
-        "docv/service/words.yaml:8: link-broken リンク先 none.md がない",
-        "docv/service/words.yaml:8: style-bold 太字を使わない",
-        "docv/service/words.yaml:10: slot-markdown-style desc_markdown は Markdown なので、| のブロックで書く",
-        "docv/service/words.yaml:12: slot-text-multiline ja は 1 行で書く。複数行の文章は、_markdown で終わる項目に書く",
-        "docv/service/words.yaml:13: slot-markdown-style desc_markdown は | だけで書く。|- や |+ や字下げの数は付けない",
+        "docv/slot/service/manual.md:7: link-anchor リンク先の見出し #ない がない",
+        "docv/slot/service/manual.md:7: link-broken リンク先 none.md がない",
+        "docv/slot/service/manual.md:7: style-bold 太字を使わない",
+        "docv/slot/service/manual.md:9: title-count h1 が 2 個ある。1 つにする",
+        "docv/slot/service/words.yaml:8: link-broken リンク先 none.md がない",
+        "docv/slot/service/words.yaml:8: style-bold 太字を使わない",
+        "docv/slot/service/words.yaml:10: slot-markdown-style desc_markdown は Markdown なので、| のブロックで書く",
+        "docv/slot/service/words.yaml:12: slot-text-multiline ja は 1 行で書く。複数行の文章は、_markdown で終わる項目に書く",
+        "docv/slot/service/words.yaml:13: slot-markdown-style desc_markdown は | だけで書く。|- や |+ や字下げの数は付けない",
     ];
 
     #[test]
@@ -561,9 +570,9 @@ lint:
         let project = Project::open(&Locate::default(), dir.path()).unwrap();
         // パスを渡すと、そのファイルだけを、パスを渡さないときと同じ検査で確かめる
         for path in [
-            "docv/service/manual.md",
+            "docv/slot/service/manual.md",
             "docv/adr/a.md",
-            "docv/service/words.yaml",
+            "docv/slot/service/words.yaml",
         ] {
             let result: Vec<String> = run(&project, &[path.to_string()], OPTIONS)
                 .unwrap()
@@ -583,19 +592,22 @@ lint:
     fn reports_missing_anchors() {
         let result = check(&[
             (
-                "docs/spec/a.md",
+                "docv/free/spec/a.md",
                 &format!(
                     "{}# A\n\n## 一\n\n## 一\n\n[x](#一-1) [x](#%E4%B8%80) [x](#%E4%BA%8C) [spec/b.md](b.md#2-二) [spec/b.md](b.md#1-一) [y](/docv.yaml#x)\n",
                     fm("")
                 ),
             ),
-            ("docs/spec/b.md", &format!("{}# B\n\n## 1. 一\n", fm(""))),
+            (
+                "docv/free/spec/b.md",
+                &format!("{}# B\n\n## 1. 一\n", fm("")),
+            ),
         ]);
         assert_eq!(
             result,
             [
-                "docs/spec/a.md:10: link-anchor リンク先 docs/spec/b.md に見出し #2-二 がない",
-                "docs/spec/a.md:10: link-anchor リンク先の見出し #%E4%BA%8C がない",
+                "docv/free/spec/a.md:10: link-anchor リンク先 docv/free/spec/b.md に見出し #2-二 がない",
+                "docv/free/spec/a.md:10: link-anchor リンク先の見出し #%E4%BA%8C がない",
             ]
         );
     }
@@ -604,10 +616,10 @@ lint:
     fn skips_excluded_and_dot_files_in_slot_dir() {
         let result = check(&[
             (".gitignore", "memo.txt\n"),
-            ("docv/service/words.yaml", "groups: []\n"),
-            ("docv/service/.DS_Store", ""),
+            ("docv/slot/service/words.yaml", "groups: []\n"),
+            ("docv/slot/service/.DS_Store", ""),
             ("docv/.cache/a.yaml", "a: 1\n"),
-            ("docv/service/memo.txt", "メモ\n"),
+            ("docv/slot/service/memo.txt", "メモ\n"),
             ("docv/adr/.draft.md", "# 下書き\n"),
         ]);
         assert!(result.is_empty(), "{result:#?}");
@@ -627,7 +639,7 @@ lint:
         );
         write(
             dir.path(),
-            "docv/service/manual.md",
+            "docv/slot/service/manual.md",
             "---\nmission: 利用者の使い方（CLI のコマンド、GUI の操作など）\n---\n\n# M\n\n| a | b |\n| --- | --- |\n| 種類 | c |\n",
         );
         write(
@@ -635,7 +647,7 @@ lint:
             "docv/adr/a.md",
             "---\ndate: 2026-10-13\n---\n\n# A\n\n| 種類 | c |\n| ---- | - |\n",
         );
-        write(dir.path(), "docv/service/words.yaml", "groups: []");
+        write(dir.path(), "docv/slot/service/words.yaml", "groups: []");
         let project = Project::open(&Locate::default(), dir.path()).unwrap();
         let result: Vec<String> = run(&project, &[], OPTIONS)
             .unwrap()
@@ -645,8 +657,8 @@ lint:
         assert_eq!(
             result,
             [
-                "docv/service/manual.md:7: format-diff 整形が必要。docv fix で整形する",
-                "docv/service/words.yaml:1: format-diff 末尾の改行を 1 つにする。docv fix で整形する",
+                "docv/slot/service/manual.md:7: format-diff 整形が必要。docv fix で整形する",
+                "docv/slot/service/words.yaml:1: format-diff 末尾の改行を 1 つにする。docv fix で整形する",
             ]
         );
     }
@@ -655,11 +667,11 @@ lint:
     fn checks_only_targets() {
         let dir = tempfile::tempdir().unwrap();
         write(dir.path(), "docv.yaml", CONFIG);
-        write(dir.path(), "docs/spec/a.md", "# A\n");
-        write(dir.path(), "docs/spec/b.md", "# B\n");
+        write(dir.path(), "docv/free/spec/a.md", "# A\n");
+        write(dir.path(), "docv/free/spec/b.md", "# B\n");
         let project = Project::open(&Locate::default(), dir.path()).unwrap();
-        let result = run(&project, &["docs/spec/b.md".to_string()], OPTIONS).unwrap();
+        let result = run(&project, &["docv/free/spec/b.md".to_string()], OPTIONS).unwrap();
         assert_eq!(result.len(), 1);
-        assert!(result.iter().all(|d| d.path == "docs/spec/b.md"));
+        assert!(result.iter().all(|d| d.path == "docv/free/spec/b.md"));
     }
 }

@@ -1,5 +1,5 @@
 //! docv open。docv build が作った index.html（プロジェクト概要）を、OS の既定のブラウザで開く。
-//! docv/service/manual.md の「docv open」。
+//! docv/slot/service/manual.md の「docv open」。
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -8,7 +8,7 @@ use anyhow::{Context, Result, bail};
 
 use crate::build::PAGE;
 
-/// out（dir.html）の index.html を、program（opener の返すコマンド）で開く。ファイルは書かない。
+/// out（dir.output の下の html/）の index.html を、program（opener の返すコマンド）で開く。ファイルは書かない。
 pub fn run(program: &str, out: &Path) -> Result<()> {
     let page = page(out)?;
     let status = Command::new(program)

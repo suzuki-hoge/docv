@@ -1,4 +1,4 @@
-//! docv slot list と docv slot gen。Slot の一覧を出し、Slot ファイルを決まったパスに作る。docv/service/manual.md の docv slot。
+//! docv slot list と docv slot gen。Slot の一覧を出し、Slot ファイルを決まったパスに作る。docv/slot/service/manual.md の docv slot。
 //!
 //! パスは docv が Slot ごとに決めていて、選ぶ余地はない。yaml の Slot には項目のサンプル（テンプレ）を書く。
 //! md の Slot は、YAML front matter の mission にミッションを書き、中身の形は自由だと伝える。Doc ガイドの Slot（doc-guide）だけは、ガイドラインの雛形を書く。
@@ -13,7 +13,7 @@ use crate::schema;
 use crate::slot::{self, DEFS, Def, Format};
 use crate::workspace::Project;
 
-/// docv slot list の出力。名前、作るファイル（dir.slot からの相対パス）、Slot の名前とミッションを 1 行ずつ並べる。
+/// docv slot list の出力。名前、作るファイル（Slot のディレクトリからの相対パス）、Slot の名前とミッションを 1 行ずつ並べる。
 pub fn list() -> String {
     let name_width = DEFS.iter().map(|d| d.id.len()).max().unwrap_or(0);
     let file_width = DEFS.iter().map(|d| d.file_name().len()).max().unwrap_or(0);
@@ -72,7 +72,7 @@ fn note(def: &Def) -> Option<String> {
         };
         let _ = writeln!(
             note,
-            "ページに分けるときは、このファイルの代わりに、dir.slot の下の {dir}/ に 1 ページ 1 つの {kind} で置く。書き方は docv desc の「ページ分け」"
+            "ページに分けるときは、このファイルの代わりに、Slot のディレクトリ（document_root の下の slot/）の下の {dir}/ に 1 ページ 1 つの {kind} で置く。書き方は docv desc の「ページ分け」"
         );
     }
     (!note.is_empty()).then_some(note)
@@ -162,12 +162,12 @@ mod tests {
     fn creates_slots_at_fixed_paths() {
         let (dir, project) = project();
         let words = run(&project, "words", false).unwrap();
-        assert_eq!(words.path, "docv/service/words.yaml");
+        assert_eq!(words.path, "docv/slot/service/words.yaml");
         assert!(words.note.is_none());
         assert_eq!(read(&dir, &words.path), words_text());
         // md の Slot は、YAML front matter の mission だけを書いたファイルを作り、中身の形は自由だと伝える
         let api = run(&project, "api", false).unwrap();
-        assert_eq!(api.path, "docv/system/api.md");
+        assert_eq!(api.path, "docv/slot/system/api.md");
         assert_eq!(
             read(&dir, &api.path),
             "---\nmission: API の一覧と、それぞれが受け取るものと返すもの\n---\n"
@@ -175,7 +175,7 @@ mod tests {
         assert!(api.note.unwrap().contains("中身の形は決めていない"));
         // Doc ガイドの Slot は、ガイドラインの雛形を書く
         let guide = run(&project, "doc-guide", false).unwrap();
-        assert_eq!(guide.path, "docv/guide/doc-guide.md");
+        assert_eq!(guide.path, "docv/slot/guide/doc-guide.md");
         assert!(guide.note.is_none());
         assert_eq!(
             read(&dir, &guide.path),
@@ -186,15 +186,15 @@ mod tests {
     #[test]
     fn rewrites_only_with_force() {
         let (dir, project) = project();
-        write(dir.path(), "docv/service/words.yaml", "groups: []\n");
+        write(dir.path(), "docv/slot/service/words.yaml", "groups: []\n");
         let error = run(&project, "words", false).unwrap_err().to_string();
         assert!(
-            error.contains("docv/service/words.yaml がすでにある"),
+            error.contains("docv/slot/service/words.yaml がすでにある"),
             "{error}"
         );
-        assert_eq!(read(&dir, "docv/service/words.yaml"), "groups: []\n");
+        assert_eq!(read(&dir, "docv/slot/service/words.yaml"), "groups: []\n");
         run(&project, "words", true).unwrap();
-        assert_eq!(read(&dir, "docv/service/words.yaml"), words_text());
+        assert_eq!(read(&dir, "docv/slot/service/words.yaml"), words_text());
     }
 
     #[test]
@@ -202,41 +202,41 @@ mod tests {
         let (dir, paged) = project();
         write(
             dir.path(),
-            "docv/service/service/user.md",
+            "docv/slot/service/service/user.md",
             "---\norder: 1\n---\n\n# 利用者向け機能\n",
         );
         let error = run(&paged, "service", true).unwrap_err().to_string();
         assert!(
-            error.contains("docv/service/service/ にページがある"),
+            error.contains("docv/slot/service/service/ にページがある"),
             "{error}"
         );
-        assert!(!dir.path().join("docv/service/service.md").exists());
+        assert!(!dir.path().join("docv/slot/service/service.md").exists());
         // 分けていなければ、1 つのファイルを作り、分けるときの置き場所を伝える
         let (_dir, whole) = project();
         let service = run(&whole, "service", false).unwrap();
-        assert_eq!(service.path, "docv/service/service.md");
+        assert_eq!(service.path, "docv/slot/service/service.md");
         assert!(
             service
                 .note
                 .unwrap()
-                .contains("dir.slot の下の service/service/ に 1 ページ 1 つの Markdown で置く")
+                .contains("Slot のディレクトリ（document_root の下の slot/）の下の service/service/ に 1 ページ 1 つの Markdown で置く")
         );
         // YAML の Slot も、分けられるなら置き場所を伝える
         let develop = run(&whole, "develop", false).unwrap();
         assert_eq!(
             develop.note.as_deref(),
             Some(
-                "ページに分けるときは、このファイルの代わりに、dir.slot の下の guide/develop/ に 1 ページ 1 つの YAML で置く。書き方は docv desc の「ページ分け」\n"
+                "ページに分けるときは、このファイルの代わりに、Slot のディレクトリ（document_root の下の slot/）の下の guide/develop/ に 1 ページ 1 つの YAML で置く。書き方は docv desc の「ページ分け」\n"
             )
         );
         write(
             dir.path(),
-            "docv/guide/develop/web.yaml",
+            "docv/slot/guide/develop/web.yaml",
             "order: 1\ntitle: Web\n",
         );
         let error = run(&paged, "develop", true).unwrap_err().to_string();
         assert!(
-            error.contains("docv/guide/develop/ にページがある"),
+            error.contains("docv/slot/guide/develop/ にページがある"),
             "{error}"
         );
     }
@@ -252,7 +252,7 @@ mod tests {
             print("manual").unwrap(),
             "---\nmission: 利用者の使い方（CLI のコマンド、GUI の操作など）\n---\n"
         );
-        for name in ["api-md", "docv/service/words.yaml"] {
+        for name in ["api-md", "docv/slot/service/words.yaml"] {
             let error = print(name).unwrap_err().to_string();
             assert!(error.contains("Slot の名前ではない"), "{name}: {error}");
         }

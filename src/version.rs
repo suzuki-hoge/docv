@@ -1,4 +1,4 @@
-//! docv の版。docv.yaml の docv_version と、YAML の 1 行目のスキーマの URL の版を確かめる。docv/service/service/config.md の「docv の版」。
+//! docv の版。docv.yaml の docv_version と、YAML の 1 行目のスキーマの URL の版を確かめる。docv/slot/service/service/config.md の「docv の版」。
 
 use std::fmt;
 use std::fs;
@@ -295,14 +295,14 @@ mod tests {
         let words = format!("{}groups: []\n", url("1.4.0", "words.schema.json"));
         let result = check_files(&[
             ("docv.yaml", &config),
-            ("docv/service/words.yaml", &words),
+            ("docv/slot/service/words.yaml", &words),
             // 今の版の URL と、ローカルのパスは指摘しない
             (
-                "docv/system/stack.yaml",
+                "docv/slot/system/stack.yaml",
                 &format!("{}stack: []\n", schema::header("stack.schema.json")),
             ),
             (
-                "docv/guide/env.yaml",
+                "docv/slot/guide/env.yaml",
                 "# yaml-language-server: $schema=../../assets/schema/env.schema.json\nenvs: []\n",
             ),
         ]);
@@ -313,7 +313,7 @@ mod tests {
             result,
             [
                 format!("docv.yaml:1: {message}"),
-                format!("docv/service/words.yaml:1: {message}"),
+                format!("docv/slot/service/words.yaml:1: {message}"),
             ]
         );
         // docv_version がなければ、先に docv_version を直すので、URL は比べない
@@ -322,7 +322,7 @@ mod tests {
                 "docv.yaml",
                 &format!("{}title: t\n", url("1.4.0", "docv.schema.json")),
             ),
-            ("docv/service/words.yaml", &words),
+            ("docv/slot/service/words.yaml", &words),
         ]);
         assert_eq!(result.len(), 1);
         assert!(result[0].contains("docv-version"), "{result:?}");

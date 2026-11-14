@@ -1,4 +1,4 @@
-//! ルートと設定ファイルの探索、ファイルの分類。docv/system/system.md の「処理の流れ」と、docv/service/service/config.md の「管理対象と管理外」。
+//! ルートと設定ファイルの探索、ファイルの分類。docv/slot/system/system.md の「処理の流れ」と、docv/slot/service/service/config.md の「配置」と「docv が読むファイル」。
 
 use std::path::{Path, PathBuf};
 
@@ -20,7 +20,8 @@ pub struct Project {
     pub root: PathBuf,
     pub config_path: PathBuf,
     pub config: Config,
-    ignore: GlobSet,
+    /// docv_exclude の glob。
+    exclude: GlobSet,
 }
 
 /// ルートの中の .md のファイル。path はルートからの相対パスで、区切りは `/`。
@@ -68,17 +69,16 @@ impl Project {
         Ok(Project {
             root,
             config_path,
-            ignore: glob_set(&config.ignore)?,
+            exclude: glob_set(&config.docv_exclude)?,
             config,
         })
     }
 
     /// 除外したものを除く .md のファイルを、パスの辞書順で返す。
     pub fn files(&self) -> Result<Vec<DocFile>> {
-        let output_dirs = self.output_dirs();
         let mut files = Vec::new();
         for rel in self.markdown_under(&self.root)? {
-            if let Some(class) = self.classify_with(&rel, &output_dirs) {
+            if let Some(class) = self.classify(&rel) {
                 files.push(DocFile { path: rel, class });
             }
         }
@@ -86,23 +86,48 @@ impl Project {
         Ok(files)
     }
 
-    /// Slot のディレクトリの中の .md のファイル（md の Slot、ADR、PDR）を、パスの辞書順で返す。
+    /// md の Slot、ADR、PDR（slot/、adr/、pdr/ の中の .md のファイル）を、パスの辞書順で返す。
     /// Free ファイルのルールはかけず、整形と textlint だけをかける。シンボリックリンクは書き換えないので除く。
-    pub fn slot_markdown(&self) -> Result<Vec<String>> {
+    pub fn docv_markdown(&self) -> Result<Vec<String>> {
+        let mut files = Vec::new();
+        for dir in self.docv_dirs() {
+            files.extend(
+                self.walk(&dir)?
+                    .into_iter()
+                    .filter(|(rel, symlink)| !symlink && rel.ends_with(".md"))
+                    .map(|(rel, _)| rel),
+            );
+        }
+        files.sort();
+        Ok(files)
+    }
+
+    /// Slot、ADR、PDR を置くディレクトリ（ルートからの相対パス）。
+    fn docv_dirs(&self) -> Vec<String> {
+        std::iter::once(self.slot_dir())
+            .chain(
+                crate::decision::Kind::ALL
+                    .iter()
+                    .map(|kind| crate::decision::dir(self, *kind)),
+            )
+            .collect()
+    }
+
+    /// Slot のディレクトリの中のファイル（Slot と画像の候補）を、パスの辞書順で返す。シンボリックリンクも含む。
+    /// 除外するもの（.gitignore に書かれている、docv_exclude に当てはまる）と、
+    /// 名前がドットで始まるファイルとディレクトリ（.DS_Store など）は除く。
+    pub fn slot_dir_files(&self) -> Result<Vec<String>> {
         Ok(self
-            .walk_slot_dir()?
+            .walk(&self.slot_dir())?
             .into_iter()
-            .filter(|(rel, symlink)| !symlink && rel.ends_with(".md"))
             .map(|(rel, _)| rel)
             .collect())
     }
 
-    /// Slot のディレクトリの中のファイル（Slot、ADR、PDR の候補）を、パスの辞書順で返す。シンボリックリンクも含む。
-    /// 除外するもの（.gitignore に書かれている、ignore に当てはまる）と、
-    /// 名前がドットで始まるファイルとディレクトリ（.DS_Store など）は除く。
-    pub fn slot_dir_files(&self) -> Result<Vec<String>> {
+    /// document_root の中のファイルを、パスの辞書順で返す。シンボリックリンクも含む。除外するものは slot_dir_files と同じ。
+    pub fn document_root_files(&self) -> Result<Vec<String>> {
         Ok(self
-            .walk_slot_dir()?
+            .walk(&self.config.document_root())?
             .into_iter()
             .map(|(rel, _)| rel)
             .collect())
@@ -112,7 +137,7 @@ impl Project {
     /// targets が空ならすべて、そうでなければそのパス（ルートからの相対パス）だけ。
     pub fn yaml_targets(&self, targets: &[String]) -> Result<Vec<String>> {
         let mut files: Vec<String> = self
-            .walk_slot_dir()?
+            .walk(&self.slot_dir())?
             .into_iter()
             .filter(|(rel, symlink)| !symlink && (rel.ends_with(".yaml") || rel.ends_with(".yml")))
             .map(|(rel, _)| rel)
@@ -125,9 +150,10 @@ impl Project {
         Ok(files)
     }
 
-    /// Slot のディレクトリの中のファイルと、それがシンボリックリンクか。
-    fn walk_slot_dir(&self) -> Result<Vec<(String, bool)>> {
-        let dir = self.root.join(self.slot_dir());
+    /// dir（ルートからの相対パス）の中のファイルと、それがシンボリックリンクか。
+    /// .gitignore に書かれたもの、docv_exclude に当てはまるもの、名前がドットで始まるものは除く。
+    fn walk(&self, dir: &str) -> Result<Vec<(String, bool)>> {
+        let dir = self.root.join(dir);
         if !dir.is_dir() {
             return Ok(Vec::new());
         }
@@ -141,7 +167,7 @@ impl Project {
                 continue;
             }
             let rel = relative(&self.root, entry.path())?;
-            if self.ignore.is_match(&rel) {
+            if self.exclude.is_match(&rel) {
                 continue;
             }
             files.push((rel, file_type.is_symlink()));
@@ -167,32 +193,20 @@ impl Project {
         Ok(files)
     }
 
-    /// ルートからの相対パスを分類する。docv build の出力先の中と ignore に当てはまるものは None。
+    /// ルートからの相対パスを分類する。free/ の下は管理対象、document_root と dir.output の外は管理外。
+    /// document_root の中のほかのもの（Slot、ADR、PDR、インデックス）、dir.output の中、docv_exclude に当てはまるものは None。
     /// .gitignore は見ない。ファイルがあるかどうかも見ない。
     pub fn classify(&self, rel: &str) -> Option<Class> {
-        self.classify_with(rel, &self.output_dirs())
-    }
-
-    /// docv build の出力先（dir.html と dir.image）。
-    fn output_dirs(&self) -> Vec<String> {
-        let mut dirs = vec![self.config.html_dir()];
-        dirs.extend(self.config.image_dir());
-        dirs
-    }
-
-    /// Slot のディレクトリの中の Markdown は、Slot ファイルとして読むので、管理対象にも管理外にもしない。
-    fn classify_with(&self, rel: &str, output_dirs: &[String]) -> Option<Class> {
-        if output_dirs.iter().any(|d| is_under(rel, d))
-            || is_under(rel, &self.slot_dir())
-            || self.ignore.is_match(rel)
-        {
+        if self.exclude.is_match(rel) || is_under(rel, &self.config.output_dir()) {
             return None;
         }
-        Some(if is_under(rel, &self.config.free_dir()) {
-            Class::Managed
-        } else {
-            Class::Unmanaged
-        })
+        if is_under(rel, &self.config.free_dir()) {
+            return Some(Class::Managed);
+        }
+        if is_under(rel, &self.config.document_root()) {
+            return None;
+        }
+        Some(Class::Unmanaged)
     }
 
     /// 管理対象のファイルのパス。
@@ -214,11 +228,11 @@ impl Project {
             .collect())
     }
 
-    /// fix で書き換えるファイル。管理対象のファイルと、Slot のディレクトリの中の .md のファイル。
+    /// fix で書き換えるファイル。管理対象のファイルと、md の Slot、ADR、PDR。
     /// targets が空ならすべて、そうでなければそのパス（ルートからの相対パス）だけ。
     pub fn fix_targets(&self, targets: &[String]) -> Result<Vec<String>> {
         let mut files = self.managed()?;
-        files.extend(self.slot_markdown()?);
+        files.extend(self.docv_markdown()?);
         files.retain(|path| targets.is_empty() || targets.contains(path));
         files.sort();
         Ok(files)
@@ -234,9 +248,14 @@ impl Project {
         self.root.join(self.config.html_dir())
     }
 
-    /// docv build の JPG の出力先。dir.image を書いていなければ None。
+    /// docv build の JPG の出力先。generate.image が false なら None。
     pub fn image_dir(&self) -> Option<PathBuf> {
         self.config.image_dir().map(|dir| self.root.join(dir))
+    }
+
+    /// docv build が書くインデックスのパス。
+    pub fn index_path(&self) -> PathBuf {
+        self.root.join(self.config.index_path())
     }
 
     pub fn title(&self) -> String {
@@ -300,10 +319,9 @@ mod tests {
         fs::write(path, text).unwrap();
     }
 
-    const CONFIG: &str = "dir:
-  free: docs
-ignore:
+    const CONFIG: &str = "docv_exclude:
   - tmp/**
+  - docv/free/tmp/**
 ";
 
     #[test]
@@ -314,15 +332,19 @@ ignore:
         write(root, ".gitignore", "secret.md\n");
         for path in [
             "README.md",
-            "docs/spec/a.md",
-            "docs/spec/sub/b.md",
-            "docs/memo.txt",
+            "docv/README.md",
+            "docv/free/spec/a.md",
+            "docv/free/spec/sub/b.md",
+            "docv/free/memo.txt",
+            "docv/free/tmp/work.md",
             "notes.md",
             "secret.md",
             "tmp/work.md",
             "output/docv/html/index.md",
             "docv/adr/rust.md",
-            "docv/service/secret.md",
+            "docv/pdr/free.md",
+            "docv/slot/service/manual.md",
+            "docv/other/x.md",
         ] {
             write(root, path, "# x\n");
         }
@@ -335,21 +357,47 @@ ignore:
             summary,
             [
                 ("README.md", Class::Unmanaged),
-                ("docs/spec/a.md", Class::Managed),
-                ("docs/spec/sub/b.md", Class::Managed),
+                ("docv/free/spec/a.md", Class::Managed),
+                ("docv/free/spec/sub/b.md", Class::Managed),
                 ("notes.md", Class::Unmanaged),
             ]
         );
-        assert_eq!(project.slot_markdown().unwrap(), ["docv/adr/rust.md"]);
+        assert_eq!(
+            project.docv_markdown().unwrap(),
+            [
+                "docv/adr/rust.md",
+                "docv/pdr/free.md",
+                "docv/slot/service/manual.md"
+            ]
+        );
         assert_eq!(
             project.fix_targets(&[]).unwrap(),
-            ["docs/spec/a.md", "docs/spec/sub/b.md", "docv/adr/rust.md",]
+            [
+                "docv/adr/rust.md",
+                "docv/free/spec/a.md",
+                "docv/free/spec/sub/b.md",
+                "docv/pdr/free.md",
+                "docv/slot/service/manual.md",
+            ]
         );
         assert_eq!(
             project
                 .fix_targets(&["docv/adr/rust.md".to_string()])
                 .unwrap(),
             ["docv/adr/rust.md"]
+        );
+        assert_eq!(
+            project.document_root_files().unwrap(),
+            [
+                "docv/README.md",
+                "docv/adr/rust.md",
+                "docv/free/memo.txt",
+                "docv/free/spec/a.md",
+                "docv/free/spec/sub/b.md",
+                "docv/other/x.md",
+                "docv/pdr/free.md",
+                "docv/slot/service/manual.md",
+            ]
         );
     }
 
@@ -358,7 +406,7 @@ ignore:
         let config_dir = tempfile::tempdir().unwrap();
         let root_dir = tempfile::tempdir().unwrap();
         write(config_dir.path(), "trial.yaml", CONFIG);
-        write(root_dir.path(), "docs/a.md", "# x\n");
+        write(root_dir.path(), "docv/free/a.md", "# x\n");
 
         let locate = Locate {
             config: Some(config_dir.path().join("trial.yaml")),
@@ -384,7 +432,10 @@ ignore:
         write(dir.path(), "docv.yaml", CONFIG);
         let project = Project::open(&Locate::default(), dir.path()).unwrap();
         assert_eq!(project.classify("tmp/x.md"), None);
-        assert_eq!(project.classify("docs/x.md"), Some(Class::Managed));
+        assert_eq!(project.classify("docv/free/x.md"), Some(Class::Managed));
+        assert_eq!(project.classify("docv/slot/service/manual.md"), None);
+        assert_eq!(project.classify("output/docv/html/x.md"), None);
+        assert_eq!(project.classify("x.md"), Some(Class::Unmanaged));
     }
 
     #[test]

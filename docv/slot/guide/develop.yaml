@@ -1,0 +1,45 @@
+# yaml-language-server: $schema=../../../assets/schema/develop.schema.json
+steps:
+  - id: fix
+    name: 変えたら整えて確かめる
+    items:
+      body_markdown: |
+        コードかドキュメントを変えたら、コミットの前に実行する。指摘が 1 件でもあれば止まる。
+
+        ```sh
+        make fix
+        ```
+
+        - コードを `cargo fmt` で整え、`cargo clippy` と `cargo test` を通す
+        - `make check-doc-guide` で docv を install し、Doc ガイドの雛形を整えて確かめる。以降は、install した docv で実行する
+        - このリポジトリのドキュメントを `docv fix` で整え、`docv check` を通す
+        - `docv build` で、HTML を `output/docv/html/` に、JPG を `output/docv/image/` に、インデックスを `docv/README.md` に作り直す。どれもコミットする。GitHub で `docv/README.md` から JPG を辿れるようにし、clone してすぐ `docv open` で HTML を見られるようにするため
+
+        textlint を使うので Node.js が、JPG を作るので Chrome が要る。
+  - id: check-doc-guide
+    name: Doc ガイドの雛形を整えて確かめる
+    items:
+      body_markdown: |
+        docv を install してから、雛形（`assets/template/doc-guide.md`）を一時ディレクトリに書き出して `docv fix` する。雛形は管理対象の外にあるため。変わったら雛形に書き戻して install し直し、`docv check` を通す。`make fix` も、途中でこれを実行する。
+
+        ```sh
+        make check-doc-guide
+        ```
+  - id: install
+    name: 手元の docv を新しくする
+    items:
+      body_markdown: |
+        ```sh
+        make install
+        ```
+  - id: install-tag
+    name: 任意の版の docv を入れる
+    items:
+      body_markdown: |
+        版のタグを指定して、GitHub のソースから入れる。前の版の動きを確かめるときに使う。
+
+        ```sh
+        cargo install --git https://github.com/suzuki-hoge/docv --tag v1.7.0
+        ```
+
+        `make install` で入れた docv は置き換わる。手元のソースに戻すときは、もう一度 `make install` を実行する。

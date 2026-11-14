@@ -47,6 +47,6 @@ docv を更新すると check が error になり、AI Agent は案内に従っ�
 
 ## 参考
 
-- [設定ファイル](../service/service/config.md)
-- [利用マニュアル](../service/manual.md)
-- [リリース](../operation/release.md)
+- [設定ファイル](../slot/service/service/config.md)
+- [利用マニュアル](../slot/service/manual.md)
+- [リリース](../slot/operation/release.md)

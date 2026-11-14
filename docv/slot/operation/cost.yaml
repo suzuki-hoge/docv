@@ -1,0 +1,7 @@
+# yaml-language-server: $schema=../../../assets/schema/cost.schema.json
+accepted_items:
+  - name: GitHub
+    desc_markdown: |
+      ソースと、版のタグごとのスキーマの置き場所。public リポジトリでは無料
+    monthly: 0 円
+rejected_items: []

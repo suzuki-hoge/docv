@@ -1,4 +1,4 @@
-//! docv.yaml の読み込みと検証。項目の意味は docv/service/service/config.md。
+//! docv.yaml の読み込みと検証。項目の意味は docv/slot/service/service/config.md。
 //!
 //! docv.yaml にはツールの設定と、プロジェクト全体で共有する語彙だけを書く。ファイルごとの設定は YAML front matter に書く。
 
@@ -15,13 +15,16 @@ pub const SCHEMA: &str = include_str!("../assets/schema/docv.schema.json");
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
-    /// ドキュメントを合わせた docv の版。docv の版と違えば、check が error にする。docv/service/service/config.md の「docv の版」。
+    /// ドキュメントを合わせた docv の版。docv の版と違えば、check が error にする。docv/slot/service/service/config.md の「docv の版」。
     pub docv_version: Option<String>,
     pub title: Option<String>,
     #[serde(default)]
     pub dir: Dirs,
+    /// docv が読まないファイルの glob。docv/slot/service/service/config.md の「docv が読むファイル」。
     #[serde(default)]
-    pub ignore: Vec<String>,
+    pub docv_exclude: Vec<String>,
+    #[serde(default)]
+    pub generate: Generate,
     /// タグの一覧。YAML front matter の tags には、ここにあるタグだけを書ける。
     #[serde(default)]
     pub tags: Vec<TagDef>,
@@ -58,37 +61,47 @@ impl TagColor {
     }
 }
 
-/// dir。docv が読み書きするディレクトリ。どれもルートからの相対パス。docv/service/service/config.md の 3 章。
+/// dir。docv が読み書きするディレクトリ。どちらもルートからの相対パス。docv/slot/service/service/config.md の「配置」。
+/// その下の配置は docv が決める。
 #[derive(Debug, Clone, Deserialize)]
 pub struct Dirs {
-    /// 管理対象の Markdown（Free ファイル）を置くディレクトリ。
-    #[serde(default = "default_free")]
-    pub free: String,
-    /// Slot ファイルを置くディレクトリ。
-    #[serde(default = "default_slot")]
-    pub slot: String,
-    /// docv build が HTML を出すディレクトリ。
-    #[serde(default = "default_html")]
-    pub html: String,
-    /// docv build が Slot のページの JPG を出すディレクトリ。書かなければ JPG を作らない。
-    pub image: Option<String>,
-    /// docv build がインデックス（docv-index.md）を書くディレクトリ。`.`（ルート）だけを書ける。書かなければ作らない。
-    pub index: Option<String>,
+    /// ドキュメントを置くディレクトリ。この下に free/、slot/、adr/、pdr/ と、build が作るインデックスの README.md を置く。
+    #[serde(default = "default_document_root")]
+    pub document_root: String,
+    /// docv build の出力先。この下に html/ と image/ を作る。
+    #[serde(default = "default_output")]
+    pub output: String,
 }
 
 impl Default for Dirs {
     fn default() -> Self {
         Dirs {
-            free: default_free(),
-            slot: default_slot(),
-            html: default_html(),
-            image: None,
-            index: None,
+            document_root: default_document_root(),
+            output: default_output(),
         }
     }
 }
 
-/// lint。docv/service/service/config.md の 4 章と 5 章。
+/// generate。docv build が作るもの。
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct Generate {
+    /// YAML の Slot のページを JPG にするか。
+    #[serde(default)]
+    pub image: bool,
+}
+
+/// document_root の下の、Free ファイルのディレクトリ。
+pub const FREE_DIR: &str = "free";
+/// document_root の下の、Slot ファイルのディレクトリ。
+pub const SLOT_DIR: &str = "slot";
+/// document_root の直下に build が書くインデックス。
+pub const INDEX_FILE: &str = "README.md";
+/// dir.output の下の、HTML のディレクトリ。
+pub const HTML_DIR: &str = "html";
+/// dir.output の下の、JPG のディレクトリ。
+pub const IMAGE_DIR: &str = "image";
+
+/// lint。docv/slot/service/service/config.md の 4 章と 5 章。
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct Lint {
     #[serde(default)]
@@ -125,16 +138,12 @@ pub struct Format {
     pub enabled: bool,
 }
 
-fn default_free() -> String {
-    "docs".to_string()
-}
-
-fn default_slot() -> String {
+fn default_document_root() -> String {
     "docv".to_string()
 }
 
-fn default_html() -> String {
-    "output/docv/html".to_string()
+fn default_output() -> String {
+    "output/docv".to_string()
 }
 
 /// `./` と末尾の `/` を除く。
@@ -158,27 +167,41 @@ pub fn load(path: &Path) -> Result<Config> {
 }
 
 impl Config {
-    /// 管理対象の Markdown を置くディレクトリ（ルートからの相対パス）。
+    /// ドキュメントを置くディレクトリ（ルートからの相対パス）。
+    pub fn document_root(&self) -> String {
+        normalize_dir(&self.dir.document_root)
+    }
+
+    /// docv build の出力先（ルートからの相対パス）。
+    pub fn output_dir(&self) -> String {
+        normalize_dir(&self.dir.output)
+    }
+
+    /// 管理対象の Markdown（Free ファイル）を置くディレクトリ（ルートからの相対パス）。
     pub fn free_dir(&self) -> String {
-        normalize_dir(&self.dir.free)
+        format!("{}/{FREE_DIR}", self.document_root())
     }
 
+    /// Slot ファイルを置くディレクトリ（ルートからの相対パス）。
     pub fn slot_dir(&self) -> String {
-        normalize_dir(&self.dir.slot)
+        format!("{}/{SLOT_DIR}", self.document_root())
     }
 
+    /// HTML を出すディレクトリ（ルートからの相対パス）。
     pub fn html_dir(&self) -> String {
-        normalize_dir(&self.dir.html)
+        format!("{}/{HTML_DIR}", self.output_dir())
     }
 
-    /// JPG を出すディレクトリ。書いていなければ None で、JPG を作らない。
+    /// JPG を出すディレクトリ（ルートからの相対パス）。generate.image が false なら None で、JPG を作らない。
     pub fn image_dir(&self) -> Option<String> {
-        self.dir.image.as_deref().map(normalize_dir)
+        self.generate
+            .image
+            .then(|| format!("{}/{IMAGE_DIR}", self.output_dir()))
     }
 
-    /// インデックスを書くディレクトリ。書いていなければ None で、インデックスを作らない。
-    pub fn index_dir(&self) -> Option<String> {
-        self.dir.index.as_deref().map(normalize_dir)
+    /// インデックスのパス（ルートからの相対パス）。
+    pub fn index_path(&self) -> String {
+        format!("{}/{INDEX_FILE}", self.document_root())
     }
 
     /// tags に書いたタグの色。tags にないタグなら None。
@@ -227,30 +250,31 @@ fn validate_semantics(config: &Config) -> Result<()> {
     let mut errors = Vec::new();
 
     let is_root = |dir: &str| dir.is_empty() || dir == ".";
-    let under = |path: &str, dir: &str| path == dir || path.starts_with(&format!("{dir}/"));
-    // dir の 4 つは、どれも別々のディレクトリにする。同じか、どれかがどれかを含めば error。
-    // dir.index はルートだけを書け（スキーマで決める）、ほかの 4 つはルートを書けないので、比べない。
-    let mut dirs = vec![
-        ("free", config.free_dir()),
-        ("slot", config.slot_dir()),
-        ("html", config.html_dir()),
-    ];
-    dirs.extend(config.image_dir().map(|dir| ("image", dir)));
-    for (key, dir) in &dirs {
+    let under = |path: &str, dir: &str| path.starts_with(&format!("{dir}/"));
+    let document_root = config.document_root();
+    let output = config.output_dir();
+    for (key, dir) in [("document_root", &document_root), ("output", &output)] {
         if is_root(dir) {
             errors.push(format!("/dir/{key}: ルートは書けない"));
         }
     }
-    for (i, (a, dir_a)) in dirs.iter().enumerate() {
-        for (b, dir_b) in &dirs[i + 1..] {
-            if is_root(dir_a) || is_root(dir_b) {
-                continue;
-            }
-            if under(dir_a, dir_b) || under(dir_b, dir_a) {
-                errors.push(format!(
-                    "/dir/{b}: dir.{a} と同じか、含むか、含まれるディレクトリは書けない"
-                ));
-            }
+    if !is_root(&document_root) && !is_root(&output) {
+        // AI Agent が document_root を読むと、HTML に写した同じ内容がほぼ倍入る。
+        if output == document_root {
+            errors.push(
+                "/dir/output: dir.document_root と同じディレクトリは書けない。AI Agent が document_root を読むと、HTML に写した同じ内容がほぼ倍入るため"
+                    .to_string(),
+            );
+        } else if under(&output, &document_root) {
+            errors.push(
+                "/dir/output: dir.document_root の中は書けない。AI Agent が document_root を読むと、HTML に写した同じ内容がほぼ倍入るため"
+                    .to_string(),
+            );
+        } else if under(&document_root, &output) {
+            errors.push(
+                "/dir/document_root: dir.output の中は書けない。build が出力先を作り直すときに、ドキュメントを消してしまうため"
+                    .to_string(),
+            );
         }
     }
     let mut names = std::collections::BTreeSet::new();
@@ -259,9 +283,9 @@ fn validate_semantics(config: &Config) -> Result<()> {
             errors.push(format!("/tags/{i}: タグ {} が重なっている", tag.name));
         }
     }
-    for (i, pattern) in config.ignore.iter().enumerate() {
+    for (i, pattern) in config.docv_exclude.iter().enumerate() {
         if let Err(e) = glob(pattern) {
-            errors.push(format!("/ignore/{i}: glob として読めない: {e}"));
+            errors.push(format!("/docv_exclude/{i}: glob として読めない: {e}"));
         }
     }
     report("設定が正しくない", errors)
@@ -288,11 +312,14 @@ mod tests {
     #[test]
     fn fills_defaults() {
         let config = parse("{}\n").unwrap();
-        assert_eq!(config.free_dir(), "docs");
-        assert_eq!(config.slot_dir(), "docv");
+        assert_eq!(config.document_root(), "docv");
+        assert_eq!(config.output_dir(), "output/docv");
+        assert_eq!(config.free_dir(), "docv/free");
+        assert_eq!(config.slot_dir(), "docv/slot");
         assert_eq!(config.html_dir(), "output/docv/html");
         assert_eq!(config.image_dir(), None);
-        assert_eq!(config.index_dir(), None);
+        assert_eq!(config.index_path(), "docv/README.md");
+        assert!(config.docv_exclude.is_empty());
         assert!(!config.format.enabled);
         assert!(config.tags.is_empty());
     }
@@ -361,47 +388,67 @@ mod tests {
 
     #[test]
     fn reads_dirs() {
-        let config = parse("dir:\n  free: ./notes/\n  image: out/jpg\n").unwrap();
-        assert_eq!(config.free_dir(), "notes");
-        assert_eq!(config.image_dir().as_deref(), Some("out/jpg"));
-        let error = error_of("dir:\n  free: .\n");
-        assert!(error.contains("/dir/free: ルートは書けない"), "{error}");
-        assert!(parse("dir:\n  html: out/html\n  image: out/jpg\n").is_ok());
-    }
-
-    #[test]
-    fn reads_index_only_at_root() {
-        let config = parse("dir:\n  index: .\n").unwrap();
-        assert_eq!(config.index_dir().as_deref(), Some("."));
-        // ルートのほかは書けない。キーだけ（値なし）も書けない
-        for text in [
-            "dir:\n  index: docs\n",
-            "dir:\n  index: ./\n",
-            "dir:\n  index:\n",
-        ] {
-            let error = error_of(text);
-            assert!(error.contains("/dir/index"), "{text}: {error}");
+        let config =
+            parse("dir:\n  document_root: ./notes/\n  output: out\ngenerate:\n  image: true\n")
+                .unwrap();
+        assert_eq!(config.document_root(), "notes");
+        assert_eq!(config.free_dir(), "notes/free");
+        assert_eq!(config.slot_dir(), "notes/slot");
+        assert_eq!(config.index_path(), "notes/README.md");
+        assert_eq!(config.html_dir(), "out/html");
+        assert_eq!(config.image_dir().as_deref(), Some("out/image"));
+        for key in ["document_root", "output"] {
+            let error = error_of(&format!("dir:\n  {key}: .\n"));
+            assert!(
+                error.contains(&format!("/dir/{key}: ルートは書けない")),
+                "{error}"
+            );
         }
+        // 昔の項目は書けない
+        for key in ["free", "slot", "html", "image", "index"] {
+            let error = error_of(&format!("dir:\n  {key}: x\n"));
+            assert!(error.contains("スキーマに合わない"), "{key}: {error}");
+        }
+        let error = error_of("ignore:\n  - x\n");
+        assert!(error.contains("スキーマに合わない"), "{error}");
     }
 
     #[test]
-    fn rejects_nested_dirs() {
-        // 同じディレクトリ
-        let error = error_of("dir:\n  html: out\n  image: out\n");
+    fn rejects_output_inside_document_root() {
+        // 同じディレクトリと、document_root の中の output は、AI Agent が読む範囲に同じ内容が入るので書けない
+        let error = error_of("dir:\n  document_root: docv\n  output: docv\n");
         assert!(
-            error.contains("/dir/image: dir.html と同じか、含むか、含まれるディレクトリは書けない"),
+            error.contains(
+                "/dir/output: dir.document_root と同じディレクトリは書けない。AI Agent が"
+            ),
             "{error}"
         );
-        // 後ろの項目が前の項目を含む
-        let error = error_of("dir:\n  html: out/html\n  image: out\n");
-        assert!(error.contains("/dir/image: dir.html と同じか"), "{error}");
-        // 後ろの項目が前の項目の中にある
-        let error = error_of("dir:\n  slot: docv\n  html: docv/build\n");
-        assert!(error.contains("/dir/html: dir.slot と同じか"), "{error}");
-        let error = error_of("dir:\n  free: docs\n  slot: docs/docv\n");
-        assert!(error.contains("/dir/slot: dir.free と同じか"), "{error}");
+        let error = error_of("dir:\n  document_root: docv\n  output: docv/output\n");
+        assert!(
+            error.contains(
+                "/dir/output: dir.document_root の中は書けない。AI Agent が document_root を読むと"
+            ),
+            "{error}"
+        );
+        // output の中の document_root は、build が消してしまうので書けない
+        let error = error_of("dir:\n  document_root: out/docv\n  output: out\n");
+        assert!(
+            error.contains("/dir/document_root: dir.output の中は書けない。build が"),
+            "{error}"
+        );
         // 名前の頭が同じだけなら、含まない
-        assert!(parse("dir:\n  free: docs\n  slot: docs-slot\n").is_ok());
+        assert!(parse("dir:\n  document_root: docv\n  output: docv-output\n").is_ok());
+    }
+
+    #[test]
+    fn reads_docv_exclude() {
+        let config = parse("docv_exclude:\n  - docv/free/tmp/**\n").unwrap();
+        assert_eq!(config.docv_exclude, ["docv/free/tmp/**"]);
+        let error = error_of("docv_exclude:\n  - \"a[\"\n");
+        assert!(
+            error.contains("/docv_exclude/0: glob として読めない"),
+            "{error}"
+        );
     }
 
     #[test]

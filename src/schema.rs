@@ -1,7 +1,7 @@
-//! docv slot schema。yaml の Slot のスキーマを出す。docv/service/manual.md の docv slot schema。
+//! docv slot schema。yaml の Slot のスキーマを出す。docv/slot/service/manual.md の docv slot schema。
 //!
 //! md の Slot はスキーマを持たない。スキーマは JSON Schema で書き、GitHub の版のタグの URL で公開する。
-//! 同じスキーマと `docv.yaml` のスキーマを docs/schema/ の Markdown に写して公開する。
+//! 同じスキーマと `docv.yaml` のスキーマを docv/free/schema/ の Markdown に写して公開する。
 //! 写しが元と揃っていることは、このファイルのテストで確かめる。
 
 use anyhow::{Result, bail};
@@ -144,7 +144,7 @@ mod tests {
             copies.push((def.id, text(def.id).unwrap()));
         }
         for (name, schema) in copies {
-            let path = root.join(format!("docs/schema/{name}.md"));
+            let path = root.join(format!("docv/free/schema/{name}.md"));
             let published = fs::read_to_string(&path).unwrap_or_default();
             assert!(
                 published.contains(&format!("```json\n{schema}```\n")),

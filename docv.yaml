@@ -3,15 +3,15 @@ docv_version: 1.8.0
 title: docv
 
 dir:
-  free: docs
-  slot: docv
-  html: output/docv/html
-  image: output/docv/image
-  index: .
+  document_root: docv
+  output: output/docv
 
-ignore:
-  - docs/tmp/**
-  - docs/plan/**
+docv_exclude:
+  - docv/free/tmp/**
+  - docv/free/plan/**
+
+generate:
+  image: true
 
 tags:
   - name: スキーマ

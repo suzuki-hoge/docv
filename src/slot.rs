@@ -1,6 +1,6 @@
-//! Slot。どのプロジェクトにも要るドキュメントを、docv が決めたミッションと形で書くファイル。docv/service/service/slot.md。
+//! Slot。どのプロジェクトにも要るドキュメントを、docv が決めたミッションと形で書くファイル。docv/slot/service/service/slot.md。
 //!
-//! Slot ファイルは、dir.slot の下の、まとまりのディレクトリに `<まとまり>/<ID>.<拡張子>` の名前で置く。拡張子は Slot ごとに決まる（yaml か md）。
+//! Slot ファイルは、Slot のディレクトリ（document_root の下の slot/）の、まとまりのディレクトリに `<まとまり>/<ID>.<拡張子>` の名前で置く。拡張子は Slot ごとに決まる（yaml か md）。
 //! サービス仕様、システム仕様、開発コマンド、インフラと環境は、`<まとまり>/<ID>/` の直下に 1 ページ 1 つのファイルで置いて、ページに分けられる。
 //! md のページの名前は h1、並びは YAML front matter の order。YAML のページ（開発コマンド）は、項目の title と order。
 //! md の Slot（分けたページも）は、YAML front matter の mission に、docv が決めたミッションをそのまま書く。違えば check が error にする。
@@ -43,7 +43,7 @@ impl Group {
         }
     }
 
-    /// Slot ファイルを置くディレクトリの名前（dir.slot からの相対パス）。
+    /// Slot ファイルを置くディレクトリの名前（Slot のディレクトリからの相対パス）。
     pub fn dir(self) -> &'static str {
         match self {
             Group::Service => "service",
@@ -219,12 +219,12 @@ impl Def {
         }
     }
 
-    /// Slot ファイルの、dir.slot からの相対パス。
+    /// Slot ファイルの、Slot のディレクトリからの相対パス。
     pub fn file_name(&self) -> String {
         format!("{}/{}.{}", self.group.dir(), self.id, self.extension())
     }
 
-    /// ページに分けるときのディレクトリの、dir.slot からの相対パス。直下に 1 ページ 1 つの、Slot と同じ拡張子のファイルを置く。
+    /// ページに分けるときのディレクトリの、Slot のディレクトリからの相対パス。直下に 1 ページ 1 つの、Slot と同じ拡張子のファイルを置く。
     /// 分けられるのはサービス仕様、システム仕様、開発コマンド、インフラと環境だけで、ほかの Slot は None。
     pub fn pages_dir(&self) -> Option<String> {
         matches!(self.id, "service" | "system" | "develop" | "infrastructure")
@@ -232,12 +232,12 @@ impl Def {
     }
 }
 
-/// dir.slot からの相対パス（`service/words.yaml`）から Slot を引く。
+/// Slot のディレクトリからの相対パス（`service/words.yaml`）から Slot を引く。
 pub fn def_of_file(rel: &str) -> Option<&'static Def> {
     DEFS.iter().find(|d| d.file_name() == rel)
 }
 
-/// dir.slot からの相対パスが、分けた Slot のページ（`service/service/admin.md`、`guide/develop/web.yaml`）なら、その Slot を引く。
+/// Slot のディレクトリからの相対パスが、分けた Slot のページ（`service/service/admin.md`、`guide/develop/web.yaml`）なら、その Slot を引く。
 /// ページの拡張子は、分けないときの Slot と同じ。
 pub fn def_of_page(rel: &str) -> Option<&'static Def> {
     let (dir, name) = rel.rsplit_once('/')?;
@@ -262,7 +262,7 @@ pub fn file_names() -> String {
 
 /// Slot の名前に近いパス（ディレクトリが違う `words.yaml`、番号が付いた `service/03-words.yaml`、
 /// 拡張子が違う `service/service.yaml`）なら、正しいパスを返す。
-/// dir は dir.slot。返すパスはルートからの相対パス。
+/// dir は Slot のディレクトリ。返すパスはルートからの相対パス。
 pub fn suggest(dir: &str, rel: &str) -> Option<String> {
     let name = rel.rsplit('/').next().unwrap_or(rel);
     let (stem, _) = name.rsplit_once('.')?;
@@ -801,18 +801,14 @@ impl SlotFile {
 }
 
 /// 除外するファイルと、名前がドットで始まるファイルは含まない（Project::slot_dir_files）。
+/// 画像は Slot ではないので含まない。置き場所は layout::check が確かめる（docv/slot/service/service/free.md の「画像」）。
 fn slot_files(project: &Project) -> Result<Vec<SlotFile>> {
     let dir = project.slot_dir();
     let prefix = format!("{dir}/");
-    // adr/ と pdr/ は決定の記録のディレクトリ。Slot としては読まない（docv/service/service/adr.md、pdr.md）。
-    let decision_dirs: Vec<String> = crate::decision::Kind::ALL
-        .iter()
-        .map(|kind| format!("{prefix}{}/", kind.dir()))
-        .collect();
     Ok(project
         .slot_dir_files()?
         .into_iter()
-        .filter(|path| !decision_dirs.iter().any(|d| path.starts_with(d)))
+        .filter(|path| !crate::layout::is_image(path))
         .map(|path| {
             let rel = path.strip_prefix(&prefix).unwrap_or(&path);
             let (def, page) = match (def_of_file(rel), def_of_page(rel)) {
@@ -1137,9 +1133,9 @@ mod tests {
     #[test]
     fn loads_slots_in_definition_order() {
         let (_dir, project) = project(&[
-            ("docv/service/manual.md", "# マニュアル\n"),
-            ("docv/service/service.md", "# サービス\n\n本文\n"),
-            ("docv/system/api.md", "API\n"),
+            ("docv/slot/service/manual.md", "# マニュアル\n"),
+            ("docv/slot/service/service.md", "# サービス\n\n本文\n"),
+            ("docv/slot/system/api.md", "API\n"),
         ]);
         let slots = load(&project).unwrap();
         let ids: Vec<&str> = slots.iter().map(|s| s.def.id).collect();
@@ -1150,21 +1146,21 @@ mod tests {
     #[test]
     fn reports_problems_of_slot_files() {
         let (_dir, project) = project(&[
-            ("docv/unknown.yaml", "a: 1\n"),
-            ("docv/words.yaml", "groups: []\n"),
-            ("docv/service/03-words.yaml", "groups: []\n"),
-            ("docv/service/words.yaml", "groups: []\nextra: 1\n"),
-            ("docv/system/api.md", &md("api", "API\n")),
-            ("docv/system/api.yaml", "ref: openapi.yaml\n"),
+            ("docv/slot/unknown.yaml", "a: 1\n"),
+            ("docv/slot/words.yaml", "groups: []\n"),
+            ("docv/slot/service/03-words.yaml", "groups: []\n"),
+            ("docv/slot/service/words.yaml", "groups: []\nextra: 1\n"),
+            ("docv/slot/system/api.md", &md("api", "API\n")),
+            ("docv/slot/system/api.yaml", "ref: openapi.yaml\n"),
             (
-                "docv/service/install.yaml",
+                "docv/slot/service/install.yaml",
                 "steps:\n  - id: binary\n    name: a\n    items:\n      - os: macos\n      - body_markdown: m\n",
             ),
             (
-                "docv/guide/directory-tree.yaml",
+                "docv/slot/guide/directory-tree.yaml",
                 "entries:\n  - path: src/\n    desc_markdown: |\n      d\n",
             ),
-            ("docs/a.md", "# A\n\n## 1. ある\n"),
+            ("docv/free/a.md", "# A\n\n## 1. ある\n"),
         ]);
         let diagnostics = check(&project).unwrap();
         let result: Vec<String> = diagnostics
@@ -1174,40 +1170,51 @@ mod tests {
         assert_eq!(
             result,
             [
-                "docv/guide/directory-tree.yaml:2 slot-path-missing",
-                "docv/service/03-words.yaml:1 slot-unknown",
-                "docv/service/install.yaml:2 slot-invalid",
-                "docv/service/words.yaml:2 slot-invalid",
-                "docv/system/api.yaml:1 slot-unknown",
-                "docv/unknown.yaml:1 slot-unknown",
-                "docv/words.yaml:1 slot-unknown",
+                "docv/slot/guide/directory-tree.yaml:2 slot-path-missing",
+                "docv/slot/service/03-words.yaml:1 slot-unknown",
+                "docv/slot/service/install.yaml:2 slot-invalid",
+                "docv/slot/service/words.yaml:2 slot-invalid",
+                "docv/slot/system/api.yaml:1 slot-unknown",
+                "docv/slot/unknown.yaml:1 slot-unknown",
+                "docv/slot/words.yaml:1 slot-unknown",
             ]
         );
         // ディレクトリが違う名前、番号を付けた名前には、正しいパスを示す
-        assert!(diagnostics[1].message.contains("docv/service/words.yaml"));
-        assert!(diagnostics[6].message.contains("docv/service/words.yaml"));
+        assert!(
+            diagnostics[1]
+                .message
+                .contains("docv/slot/service/words.yaml")
+        );
+        assert!(
+            diagnostics[6]
+                .message
+                .contains("docv/slot/service/words.yaml")
+        );
         // API 仕様書は md だけ。yaml には、md のパスを示す
-        assert!(diagnostics[4].message.contains("docv/system/api.md"));
+        assert!(diagnostics[4].message.contains("docv/slot/system/api.md"));
     }
 
     #[test]
     fn reports_missions_of_md_slots() {
         let (_dir, project) = project(&[
             // docv が決めたミッションと同じなら、指摘しない
-            ("docv/service/manual.md", &md("manual", "# M\n")),
-            ("docv/system/api.md", "# API\n"),
+            ("docv/slot/service/manual.md", &md("manual", "# M\n")),
+            ("docv/slot/system/api.md", "# API\n"),
             (
-                "docv/system/db.md",
+                "docv/slot/system/db.md",
                 "---\nmission: 保存しているデータ\n---\n\n# DB\n",
             ),
-            ("docv/system/system.md", "---\ntags: [a]\n---\n\n# S\n"),
-            ("docv/guide/doc-guide.md", "---\n---\n\n# G\n"),
-            ("docv/operation/deploy.md", "---\nmission: x\n"),
+            ("docv/slot/system/system.md", "---\ntags: [a]\n---\n\n# S\n"),
+            ("docv/slot/guide/doc-guide.md", "---\n---\n\n# G\n"),
+            ("docv/slot/operation/deploy.md", "---\nmission: x\n"),
             (
-                "docv/service/service/a.md",
+                "docv/slot/service/service/a.md",
                 "---\norder: 1\nmission: 機能\n---\n\n# A\n",
             ),
-            ("docv/service/service/b.md", "---\norder: 2\n---\n\n# B\n"),
+            (
+                "docv/slot/service/service/b.md",
+                "---\norder: 2\n---\n\n# B\n",
+            ),
         ]);
         let diagnostics = check(&project).unwrap();
         let mut result: Vec<String> = diagnostics
@@ -1220,25 +1227,25 @@ mod tests {
             result,
             [
                 format!(
-                    "docv/guide/doc-guide.md:1 slot-mission YAML front matter に mission がない。mission: {} を書く",
+                    "docv/slot/guide/doc-guide.md:1 slot-mission YAML front matter に mission がない。mission: {} を書く",
                     def("doc-guide").unwrap().mission
                 ),
-                "docv/operation/deploy.md:1 slot-invalid YAML front matter を閉じる --- がない".to_string(),
+                "docv/slot/operation/deploy.md:1 slot-invalid YAML front matter を閉じる --- がない".to_string(),
                 format!(
-                    "docv/service/service/a.md:3 slot-mission mission が、サービス仕様のミッションと違う。mission: {service} にする"
+                    "docv/slot/service/service/a.md:3 slot-mission mission が、サービス仕様のミッションと違う。mission: {service} にする"
                 ),
                 format!(
-                    "docv/service/service/b.md:1 slot-mission YAML front matter に mission がない。mission: {service} を書く"
+                    "docv/slot/service/service/b.md:1 slot-mission YAML front matter に mission がない。mission: {service} を書く"
                 ),
                 format!(
-                    "docv/system/api.md:1 slot-mission YAML front matter がない。先頭に --- で囲んで mission: {} を書く",
+                    "docv/slot/system/api.md:1 slot-mission YAML front matter がない。先頭に --- で囲んで mission: {} を書く",
                     def("api").unwrap().mission
                 ),
                 format!(
-                    "docv/system/db.md:2 slot-mission mission が、DB 仕様書のミッションと違う。mission: {} にする",
+                    "docv/slot/system/db.md:2 slot-mission mission が、DB 仕様書のミッションと違う。mission: {} にする",
                     def("db").unwrap().mission
                 ),
-                "docv/system/system.md:2 slot-invalid システム仕様の YAML front matter の形に合わない: unknown field `tags`, expected `mission`".to_string(),
+                "docv/slot/system/system.md:2 slot-invalid システム仕様の YAML front matter の形に合わない: unknown field `tags`, expected `mission`".to_string(),
             ]
         );
         // 指摘があっても、HTML には本文を出す
@@ -1251,11 +1258,11 @@ mod tests {
         let system = def("system").unwrap().mission;
         let (_dir, project) = project(&[
             (
-                "docv/system/system/web.md",
+                "docv/slot/system/system/web.md",
                 &format!("---\norder: 1\nmission: {system}\n---\n\n# web\n"),
             ),
             (
-                "docv/system/system/batch.md",
+                "docv/slot/system/system/batch.md",
                 &format!("---\norder: 2\nmission: {system}\n---\n\n# batch\n"),
             ),
         ]);
@@ -1274,11 +1281,11 @@ mod tests {
         let infra = def("infrastructure").unwrap().mission;
         let (_dir, project) = project(&[
             (
-                "docv/operation/infrastructure/aws.md",
+                "docv/slot/operation/infrastructure/aws.md",
                 &format!("---\norder: 1\nmission: {infra}\n---\n\n# AWS\n"),
             ),
             (
-                "docv/operation/infrastructure/local.md",
+                "docv/slot/operation/infrastructure/local.md",
                 &format!("---\norder: 2\nmission: {infra}\n---\n\n# ローカル\n"),
             ),
         ]);
@@ -1302,22 +1309,25 @@ mod tests {
     fn splits_the_develop_commands_into_yaml_pages() {
         let (_dir, project) = project(&[
             (
-                "docv/guide/develop/web.yaml",
+                "docv/slot/guide/develop/web.yaml",
                 "order: 2\ntitle: Web\nsteps:\n  - id: test\n    name: テスト\n    items:\n      body_markdown: |\n        npm test\n",
             ),
             (
-                "docv/guide/develop/api.yaml",
+                "docv/slot/guide/develop/api.yaml",
                 "order: 1\ntitle: API\nrequirements:\n  - name: Go\n",
             ),
             // 分けたページの拡張子は、分けないときの Slot と同じ
-            ("docv/guide/develop/memo.md", "# メモ\n"),
+            ("docv/slot/guide/develop/memo.md", "# メモ\n"),
         ]);
         let diagnostics: Vec<String> = check(&project)
             .unwrap()
             .iter()
             .map(|d| format!("{}:{} {}", d.path, d.line, d.rule))
             .collect();
-        assert_eq!(diagnostics, ["docv/guide/develop/memo.md:1 slot-unknown"]);
+        assert_eq!(
+            diagnostics,
+            ["docv/slot/guide/develop/memo.md:1 slot-unknown"]
+        );
         let slots = load(&project).unwrap();
         let pages: Vec<(&str, Option<&str>)> = slots
             .iter()
@@ -1328,23 +1338,26 @@ mod tests {
         // YAML のページも、YAML の Slot として Markdown の項目を検査する
         assert_eq!(
             yaml_paths(&project).unwrap(),
-            ["docv/guide/develop/api.yaml", "docv/guide/develop/web.yaml"]
+            [
+                "docv/slot/guide/develop/api.yaml",
+                "docv/slot/guide/develop/web.yaml"
+            ]
         );
     }
 
     #[test]
     fn reports_problems_of_yaml_pages() {
         let (_dir, project) = project(&[
-            ("docv/guide/develop.yaml", "steps: []\n"),
-            ("docv/guide/develop/a.yaml", "order: 1\ntitle: A\n"),
-            ("docv/guide/develop/b.yaml", "title: A\norder: 1\n"),
-            ("docv/guide/develop/c.yaml", "steps: []\n"),
+            ("docv/slot/guide/develop.yaml", "steps: []\n"),
+            ("docv/slot/guide/develop/a.yaml", "order: 1\ntitle: A\n"),
+            ("docv/slot/guide/develop/b.yaml", "title: A\norder: 1\n"),
+            ("docv/slot/guide/develop/c.yaml", "steps: []\n"),
             (
-                "docv/guide/develop/d.yaml",
+                "docv/slot/guide/develop/d.yaml",
                 "order: 4\ntitle: D\nsteps:\n  - id: x\n    name: X\n  - id: x\n    name: Y\n",
             ),
             // 分けないときは、order と title を書かない
-            ("docv/guide/setup.yaml", "order: 1\n"),
+            ("docv/slot/guide/setup.yaml", "order: 1\n"),
         ]);
         let mut result: Vec<String> = check(&project)
             .unwrap()
@@ -1355,12 +1368,12 @@ mod tests {
         assert_eq!(
             result,
             [
-                "docv/guide/develop.yaml:1 slot-invalid 開発コマンドが docv/guide/develop.yaml と docv/guide/develop/ の両方にある。ページに分けるなら docv/guide/develop.yaml を消す",
-                "docv/guide/develop/b.yaml:1 slot-invalid title「A」が docv/guide/develop/a.yaml と重なっている。title はページの名前で、重ねない",
-                "docv/guide/develop/b.yaml:2 slot-invalid order 1 が docv/guide/develop/a.yaml と重なっている",
-                "docv/guide/develop/c.yaml:1 slot-invalid 開発コマンドのページの形に合わない。どのページにも order と title を書く: missing field `order`",
-                "docv/guide/develop/d.yaml:4 slot-invalid 手順の id x が重なっている",
-                "docv/guide/setup.yaml:1 slot-invalid 環境構築の Slot の形に合わない: unknown field `order`, expected one of `requirements`, `steps`, `appendix_markdown`",
+                "docv/slot/guide/develop.yaml:1 slot-invalid 開発コマンドが docv/slot/guide/develop.yaml と docv/slot/guide/develop/ の両方にある。ページに分けるなら docv/slot/guide/develop.yaml を消す",
+                "docv/slot/guide/develop/b.yaml:1 slot-invalid title「A」が docv/slot/guide/develop/a.yaml と重なっている。title はページの名前で、重ねない",
+                "docv/slot/guide/develop/b.yaml:2 slot-invalid order 1 が docv/slot/guide/develop/a.yaml と重なっている",
+                "docv/slot/guide/develop/c.yaml:1 slot-invalid 開発コマンドのページの形に合わない。どのページにも order と title を書く: missing field `order`",
+                "docv/slot/guide/develop/d.yaml:4 slot-invalid 手順の id x が重なっている",
+                "docv/slot/guide/setup.yaml:1 slot-invalid 環境構築の Slot の形に合わない: unknown field `order`, expected one of `requirements`, `steps`, `appendix_markdown`",
             ]
         );
     }
@@ -1369,9 +1382,9 @@ mod tests {
     fn compares_order_and_h1_only_within_the_same_slot() {
         let system = def("system").unwrap().mission;
         let (_dir, project) = project(&[
-            ("docv/service/service/a.md", &page(1, "# 概要\n")),
+            ("docv/slot/service/service/a.md", &page(1, "# 概要\n")),
             (
-                "docv/system/system/a.md",
+                "docv/slot/system/system/a.md",
                 &format!("---\norder: 1\nmission: {system}\n---\n\n# 概要\n"),
             ),
         ]);
@@ -1382,17 +1395,17 @@ mod tests {
     #[test]
     fn loads_pages_of_a_split_slot_in_order() {
         let (_dir, project) = project(&[
-            ("docv/service/manual.md", "# マニュアル\n"),
+            ("docv/slot/service/manual.md", "# マニュアル\n"),
             (
-                "docv/service/service/user.md",
+                "docv/slot/service/service/user.md",
                 "---\norder: 2\n---\n\n# 利用者向け機能\n\n本文\n",
             ),
             (
-                "docv/service/service/admin.md",
+                "docv/slot/service/service/admin.md",
                 "---\norder: 1\n---\n\n# 管理者向け機能\n",
             ),
             // 読めないページは飛ばす（check が報告する）
-            ("docv/service/service/memo.md", "# メモ\n"),
+            ("docv/slot/service/service/memo.md", "# メモ\n"),
         ]);
         let slots = load(&project).unwrap();
         let pages: Vec<(&str, Option<&str>)> = slots
@@ -1416,9 +1429,9 @@ mod tests {
     #[test]
     fn reads_the_whole_file_when_pages_also_exist() {
         let (_dir, project) = project(&[
-            ("docv/service/service.md", "# サービス仕様\n"),
+            ("docv/slot/service/service.md", "# サービス仕様\n"),
             (
-                "docv/service/service/user.md",
+                "docv/slot/service/service/user.md",
                 "---\norder: 1\n---\n\n# 利用者向け機能\n",
             ),
         ]);
@@ -1431,19 +1444,22 @@ mod tests {
     fn reports_problems_of_pages() {
         let (_dir, project) = project(&[
             (
-                "docv/service/service.md",
+                "docv/slot/service/service.md",
                 &md("service", "# サービス仕様\n"),
             ),
-            ("docv/service/service/a.md", &page(1, "# A\n")),
-            ("docv/service/service/b.md", &page(1, "# A\n")),
-            ("docv/service/service/c.md", "# C\n"),
+            ("docv/slot/service/service/a.md", &page(1, "# A\n")),
+            ("docv/slot/service/service/b.md", &page(1, "# A\n")),
+            ("docv/slot/service/service/c.md", "# C\n"),
             (
-                "docv/service/service/d.md",
+                "docv/slot/service/service/d.md",
                 "---\norder: 4\nname: D\n---\n\n# D\n",
             ),
-            ("docv/service/service/e.md", "---\norder: 5\n---\n\n本文\n"),
-            ("docv/service/service/sub/f.md", "# F\n"),
-            ("docv/system/api/a.md", "# A\n"),
+            (
+                "docv/slot/service/service/e.md",
+                "---\norder: 5\n---\n\n本文\n",
+            ),
+            ("docv/slot/service/service/sub/f.md", "# F\n"),
+            ("docv/slot/system/api/a.md", "# A\n"),
         ]);
         let diagnostics = check(&project).unwrap();
         let mut result: Vec<String> = diagnostics
@@ -1454,18 +1470,18 @@ mod tests {
         assert_eq!(
             result,
             [
-                "docv/service/service.md:1 slot-invalid サービス仕様が docv/service/service.md と docv/service/service/ の両方にある。ページに分けるなら docv/service/service.md を消す",
-                "docv/service/service/b.md:2 slot-invalid order 1 が docv/service/service/a.md と重なっている",
-                "docv/service/service/b.md:6 slot-invalid h1「A」が docv/service/service/a.md と重なっている。h1 はページの名前で、重ねない",
-                "docv/service/service/c.md:1 slot-invalid YAML front matter がない。ページに分けたサービス仕様には、どのページにも order と mission を書く",
-                "docv/service/service/d.md:3 slot-invalid YAML front matter がサービス仕様のページの形に合わない: unknown field `name`, expected `order` or `mission` at line 2 column 1",
-                "docv/service/service/e.md:4 slot-invalid h1 がない。h1 がページの名前になる",
+                "docv/slot/service/service.md:1 slot-invalid サービス仕様が docv/slot/service/service.md と docv/slot/service/service/ の両方にある。ページに分けるなら docv/slot/service/service.md を消す",
+                "docv/slot/service/service/b.md:2 slot-invalid order 1 が docv/slot/service/service/a.md と重なっている",
+                "docv/slot/service/service/b.md:6 slot-invalid h1「A」が docv/slot/service/service/a.md と重なっている。h1 はページの名前で、重ねない",
+                "docv/slot/service/service/c.md:1 slot-invalid YAML front matter がない。ページに分けたサービス仕様には、どのページにも order と mission を書く",
+                "docv/slot/service/service/d.md:3 slot-invalid YAML front matter がサービス仕様のページの形に合わない: unknown field `name`, expected `order` or `mission` at line 2 column 1",
+                "docv/slot/service/service/e.md:4 slot-invalid h1 がない。h1 がページの名前になる",
                 &format!(
-                    "docv/service/service/sub/f.md:1 slot-unknown Slot の名前ではない。Slot のディレクトリに置けるのは {}",
+                    "docv/slot/service/service/sub/f.md:1 slot-unknown Slot の名前ではない。Slot のディレクトリに置けるのは {}",
                     file_names()
                 ),
                 &format!(
-                    "docv/system/api/a.md:1 slot-unknown Slot の名前ではない。Slot のディレクトリに置けるのは {}",
+                    "docv/slot/system/api/a.md:1 slot-unknown Slot の名前ではない。Slot のディレクトリに置けるのは {}",
                     file_names()
                 ),
             ]
@@ -1481,7 +1497,7 @@ mod tests {
     #[test]
     fn needs_ja_or_en_for_each_word() {
         let (_dir, project) = project(&[(
-            "docv/service/words.yaml",
+            "docv/slot/service/words.yaml",
             "groups:\n  - name: g\n    items:\n      - en: Slot\n        desc_markdown: |\n          a\n      - desc_markdown: |\n          b\n",
         )]);
         let result: Vec<String> = check(&project)
@@ -1489,7 +1505,7 @@ mod tests {
             .iter()
             .map(|d| format!("{}:{} {}", d.path, d.line, d.rule))
             .collect();
-        assert_eq!(result, ["docv/service/words.yaml:8 slot-invalid"]);
+        assert_eq!(result, ["docv/slot/service/words.yaml:8 slot-invalid"]);
     }
 
     #[test]

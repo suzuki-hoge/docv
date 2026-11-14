@@ -1,4 +1,4 @@
-# 開発で使うコマンド。docv/guide/develop.yaml に載せる。
+# 開発で使うコマンド。docv/slot/guide/develop.yaml に載せる。
 
 DOCV := docv
 TEMPLATE := assets/template/doc-guide.md
@@ -22,13 +22,13 @@ check-doc-guide: install
 	@set -e; tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
 	printf 'docv_version: %s\nlint:\n  textlint: enable\nformat:\n  enabled: true\n' "$$($(DOCV) --version | cut -d ' ' -f 2)" > "$$tmp/docv.yaml"; \
 	(cd "$$tmp" && $(DOCV) slot gen doc-guide > /dev/null && $(DOCV) fix > /dev/null); \
-	if ! cmp -s "$$tmp/docv/guide/doc-guide.md" $(TEMPLATE); then \
-		cp "$$tmp/docv/guide/doc-guide.md" $(TEMPLATE); \
+	if ! cmp -s "$$tmp/docv/slot/guide/doc-guide.md" $(TEMPLATE); then \
+		cp "$$tmp/docv/slot/guide/doc-guide.md" $(TEMPLATE); \
 		echo "$(TEMPLATE) を整形した"; \
 		cargo install -q --path .; \
 	fi; \
 	status=0; out=$$(cd "$$tmp" && $(DOCV) check) || status=$$?; \
-	echo "$$out" | sed 's|^docv/guide/doc-guide.md|$(TEMPLATE)|'; \
+	echo "$$out" | sed 's|^docv/slot/guide/doc-guide.md|$(TEMPLATE)|'; \
 	exit $$status
 
 install:

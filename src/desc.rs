@@ -1,8 +1,8 @@
-//! docv desc。docv の概要を出す。docv/service/manual.md の docv desc。
+//! docv desc。docv の概要を出す。docv/slot/service/manual.md の docv desc。
 
 use crate::markdown;
 
-/// docv の概要の元のファイル。docv のサービス仕様の 1 ページ目（docv/service/service/desc.md）と同じファイル。バイナリに埋め込むので、CLI の版と内容が一致する。
+/// docv の概要の元のファイル。docv のサービス仕様の 1 ページ目（docv/slot/service/service/desc.md）と同じファイル。バイナリに埋め込むので、CLI の版と内容が一致する。
 const SOURCE: &str = include_str!("../assets/desc.md");
 
 /// docv の概要。元のファイルは md の Slot として YAML front matter の mission を持つので、それを除いた本文を出す。

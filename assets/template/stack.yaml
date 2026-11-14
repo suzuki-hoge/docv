@@ -3,7 +3,7 @@
 
 stack:
   - group: バックエンド
-    # image: docs/images/backend.svg
+    # image: docv/slot/system/stack_backend.svg
     items:
       - name: 言語やライブラリ
         version: "1.0"

@@ -1,4 +1,4 @@
-//! docv init。推奨する配置の docv.yaml を作る。docv/service/manual.md の docv init。
+//! docv init。docv.yaml を作る。docv/slot/service/manual.md の docv init。
 
 use std::fs;
 use std::path::Path;
@@ -7,7 +7,7 @@ use anyhow::{Context, Result, bail};
 
 use crate::schema;
 
-/// 推奨する配置（docv/service/service/config.md の 7 章）の docv.yaml。すべての項目を、既定の値でコメントに載せる。
+/// docv.yaml。すべての項目を、既定の値で載せる。配置は docv/slot/service/service/config.md の「配置」。
 pub fn config_text() -> String {
     format!(
         "{}# docv の設定。項目の型と意味は、1 行目の URL のスキーマにある。
@@ -20,22 +20,21 @@ docv_version: {}
 # HTML に出すプロジェクト名。省略するとルートのディレクトリ名
 # title: my-project
 
-# docv が読み書きするディレクトリ。どれもルートからの相対パス
+# docv が読み書きするディレクトリ。どちらもルートからの相対パス
 dir:
-  # 管理対象の Markdown（Free ファイル）を置くディレクトリ。各ファイルの YAML front matter に mission を書く
-  free: docs
-  # Slot ファイルを置くディレクトリ
-  slot: docv
-  # docv build が HTML を出すディレクトリ
-  html: output/docv/html
-  # docv build が Slot のページの JPG を出すディレクトリ。書かなければ JPG を作らない。JPG を作るには Chrome が要る
-  # image: output/docv/image
-  # docv build が、Slot ファイルへのリンクを並べたインデックス（docv-index.md）を書くディレクトリ。ルート（.）だけを書ける。書かなければ作らない
-  index: .
+  # ドキュメントを置くディレクトリ。この下に free/（Free ファイル）、slot/（Slot ファイル）、adr/、pdr/ を置く
+  # build が、Slot ファイルへのリンクを並べたインデックス（README.md）を直下に書く
+  document_root: docv
+  # docv build の出力先。この下に html/ と image/ を作る。document_root の中には置けない
+  output: output/docv
 
-# 管理対象にも管理外にもしないファイルの glob
-ignore:
-  - docs/tmp/**
+# docv が読まないファイルの glob。check、fix、HTML などのどれの対象にもならない
+docv_exclude:
+  - docv/free/tmp/**
+
+generate:
+  # docv build で、YAML の Slot のページを JPG にするか。JPG を作るには Chrome が要る
+  image: false
 
 # 使うタグの一覧。YAML front matter の tags には、ここにあるタグだけを書ける
 # color は HTML のタグの色（blue、green、yellow、red、purple、orange、teal、pink）
@@ -95,13 +94,13 @@ mod tests {
             config.docv_version.as_deref(),
             Some(env!("CARGO_PKG_VERSION"))
         );
-        assert_eq!(config.free_dir(), "docs");
-        assert_eq!(config.slot_dir(), "docv");
+        assert_eq!(config.document_root(), "docv");
+        assert_eq!(config.output_dir(), "output/docv");
+        assert_eq!(config.docv_exclude, ["docv/free/tmp/**"]);
         assert_eq!(config.image_dir(), None);
-        assert_eq!(config.index_dir().as_deref(), Some("."));
         let error = run(&path, false).unwrap_err().to_string();
         assert!(error.contains("すでにある"), "{error}");
-        fs::write(&path, "dir:\n  free: notes\n").unwrap();
+        fs::write(&path, "dir:\n  document_root: notes\n").unwrap();
         run(&path, true).unwrap();
         assert_eq!(fs::read_to_string(&path).unwrap(), config_text());
     }

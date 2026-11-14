@@ -1,11 +1,11 @@
-//! docv update-guide。docv を更新したときに、版ごとの変更点と対応を出す。docv/service/manual.md の docv update-guide。
+//! docv update-guide。docv を更新したときに、版ごとの変更点と対応を出す。docv/slot/service/manual.md の docv update-guide。
 
 use anyhow::{Result, bail};
 use serde::Deserialize;
 
 use crate::version::{self, Version};
 
-/// 版ごとの変更点と対応。新しい版を先頭に書き、版を上げるときに足す（docv/operation/release.md）。
+/// 版ごとの変更点と対応。新しい版を先頭に書き、版を上げるときに足す（docv/slot/operation/release.md）。
 /// バイナリに埋め込むので、CLI の版と内容が一致する。
 const SOURCE: &str = include_str!("../assets/update-guide.yaml");
 

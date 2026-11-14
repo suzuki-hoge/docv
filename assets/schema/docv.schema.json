@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "docv.yaml",
-  "description": "docv の設定ファイル。ツールの設定と、プロジェクト全体で共有する語彙を書く。ファイルごとの設定は YAML front matter に書く。項目の意味は `docv/service/service/config.md` を参照。",
+  "description": "docv の設定ファイル。ツールの設定と、プロジェクト全体で共有する語彙を書く。ファイルごとの設定は YAML front matter に書く。項目の意味は `docv/slot/service/service/config.md` を参照。",
   "type": "object",
   "additionalProperties": false,
   "properties": {
@@ -16,45 +16,42 @@
       "minLength": 1
     },
     "dir": {
-      "description": "docv が読み書きするディレクトリ。どれもルートからの相対パス。`index` を除くどの 2 つも、同じディレクトリにも、一方が他方を含む関係にもできない。",
+      "description": "docv が読み書きするディレクトリ。どちらもルートからの相対パスで、ルートは書けない。`output` は、`document_root` と同じにも、その中にもできない。`document_root` も、`output` の中にはできない。",
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "free": {
-          "description": "管理対象の Markdown（Free ファイル）を置くディレクトリ。この下の `.md` のファイルがすべて対象。",
-          "type": "string",
-          "minLength": 1,
-          "default": "docs"
-        },
-        "slot": {
-          "description": "Slot ファイルを置くディレクトリ。",
+        "document_root": {
+          "description": "ドキュメントを置くディレクトリ。この下に、`free/`（Free ファイル）、`slot/`（Slot ファイル）、`adr/`、`pdr/` と、docv build が作るインデックスの `README.md` を置く。直下にほかのものは置けない。",
           "type": "string",
           "minLength": 1,
           "default": "docv"
         },
-        "html": {
-          "description": "docv build が HTML を出すディレクトリ。",
+        "output": {
+          "description": "docv build の出力先。この下の `html/` に HTML を、`image/` に JPG を出す。AI Agent が `document_root` を読むときに同じ内容が倍入らないように、`document_root` の外に置く。",
           "type": "string",
           "minLength": 1,
-          "default": "output/docv/html"
-        },
-        "image": {
-          "description": "docv build が Slot のページの JPG を出すディレクトリ。書かなければ JPG を作らない。JPG を作るには Chrome が要る。",
-          "type": "string",
-          "minLength": 1
-        },
-        "index": {
-          "description": "docv build がインデックス（`docv-index.md`）を書くディレクトリ。`.`（ルート）だけを書ける。書かなければインデックスを作らない。",
-          "const": "."
+          "default": "output/docv"
         }
       }
     },
-    "ignore": {
-      "description": "管理対象にも管理外にもしないファイルの glob。",
+    "docv_exclude": {
+      "description": "docv が読まないファイルの glob。ルートからの相対パス。当てはまるファイルは、check（置き場所の検査も含む）、fix、整形、textlint、HTML、検索、インデックスのどれの対象にもならない。メモや下書きの置き場所に使う。",
       "type": "array",
       "items": {
         "type": "string",
         "minLength": 1
+      }
+    },
+    "generate": {
+      "description": "docv build が作るもの。",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "image": {
+          "description": "YAML の Slot のページを JPG にして、`dir.output` の下の `image/` に出すか。JPG を作るには Chrome が要る。",
+          "type": "boolean",
+          "default": false
+        }
       }
     },
     "tags": {
@@ -100,7 +97,7 @@
       }
     },
     "lint": {
-      "description": "check の規則。項目の意味は `docv/service/service/config.md` を参照。",
+      "description": "check の規則。項目の意味は `docv/slot/service/service/config.md` を参照。",
       "type": "object",
       "additionalProperties": false,
       "properties": {

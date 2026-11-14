@@ -12,6 +12,7 @@ pub mod generate;
 pub mod index;
 pub mod init;
 pub mod jpg;
+pub mod layout;
 pub mod markdown;
 pub mod meta;
 pub mod open;

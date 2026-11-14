@@ -1,6 +1,6 @@
 //! docv fix。textlint の自動修正と整形で、管理対象のファイルと Slot のディレクトリの中の .md のファイルを書き換える。
 //! YAML の Slot は、Markdown の項目（`_markdown` で終わる項目）の中身を直す。docv.yaml と YAML の Slot の末尾の改行も整える。
-//! docv/service/manual.md の docv fix。
+//! docv/slot/service/manual.md の docv fix。
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -133,46 +133,50 @@ mod tests {
     fn formats_targets_only() {
         let dir = tempfile::tempdir().unwrap();
         let root = dir.path();
-        write(root, "docv.yaml", "ignore: [docs/tmp/**]\n\n");
-        write(root, "docs/spec/a.md", "---\nmission: q\n---\n# A\n* x\n");
-        write(root, "docs/spec/b.md", "# B\n");
-        write(root, "docs/spec/c.md", "---\nmission: q\n");
-        write(root, "docs/tmp/e.md", "* x\n");
+        write(root, "docv.yaml", "docv_exclude: [docv/free/tmp/**]\n\n");
+        write(
+            root,
+            "docv/free/spec/a.md",
+            "---\nmission: q\n---\n# A\n* x\n",
+        );
+        write(root, "docv/free/spec/b.md", "# B\n");
+        write(root, "docv/free/spec/c.md", "---\nmission: q\n");
+        write(root, "docv/free/tmp/e.md", "* x\n");
         write(root, "notes.md", "* x\n");
         write(
             root,
-            "docv/service/manual.md",
+            "docv/slot/service/manual.md",
             "# M\n| a | bb |\n|---|---|\n| 種類 | c |\n",
         );
-        write(root, "docv/service/words.yaml", "groups: []");
-        write(root, "docv/service/install.yaml", "steps: []\n");
+        write(root, "docv/slot/service/words.yaml", "groups: []");
+        write(root, "docv/slot/service/install.yaml", "steps: []\n");
         let project = Project::open(&Locate::default(), root).unwrap();
 
         let report = run(&project, &[], true).unwrap();
         assert_eq!(
             report.changed,
             [
-                "docs/spec/a.md",
                 "docv.yaml",
-                "docv/service/manual.md",
-                "docv/service/words.yaml"
+                "docv/free/spec/a.md",
+                "docv/slot/service/manual.md",
+                "docv/slot/service/words.yaml"
             ]
         );
         assert_eq!(
-            fs::read_to_string(root.join("docv/service/words.yaml")).unwrap(),
+            fs::read_to_string(root.join("docv/slot/service/words.yaml")).unwrap(),
             "groups: []\n"
         );
         assert_eq!(report.failed.len(), 1);
-        assert_eq!(report.failed[0].0, "docs/spec/c.md");
+        assert_eq!(report.failed[0].0, "docv/free/spec/c.md");
         assert_eq!(
-            fs::read_to_string(root.join("docs/spec/a.md")).unwrap(),
+            fs::read_to_string(root.join("docv/free/spec/a.md")).unwrap(),
             "---\nmission: q\n---\n\n# A\n\n- x\n"
         );
         assert_eq!(
-            fs::read_to_string(root.join("docv/service/manual.md")).unwrap(),
+            fs::read_to_string(root.join("docv/slot/service/manual.md")).unwrap(),
             "# M\n\n| a    | bb |\n| ---- | -- |\n| 種類 | c  |\n"
         );
-        for path in ["docs/tmp/e.md", "notes.md"] {
+        for path in ["docv/free/tmp/e.md", "notes.md"] {
             assert_eq!(fs::read_to_string(root.join(path)).unwrap(), "* x\n");
         }
         assert_eq!(
@@ -188,15 +192,15 @@ mod tests {
         write(root, "docv.yaml", "title: t\n");
         write(
             root,
-            "docv/service/words.yaml",
+            "docv/slot/service/words.yaml",
             "groups:\n  - name: g\n    items:\n      - ja: a\n        desc_markdown: |\n          * x\n          * y\n      - ja: b\n        desc_markdown: 1 行\n",
         );
         let project = Project::open(&Locate::default(), root).unwrap();
         let report = run(&project, &[], true).unwrap();
-        assert_eq!(report.changed, ["docv/service/words.yaml"]);
+        assert_eq!(report.changed, ["docv/slot/service/words.yaml"]);
         // | のブロックの中身だけを整形し、字下げを付け直す。| でない項目は check が指摘するので、触らない
         assert_eq!(
-            fs::read_to_string(root.join("docv/service/words.yaml")).unwrap(),
+            fs::read_to_string(root.join("docv/slot/service/words.yaml")).unwrap(),
             "groups:\n  - name: g\n    items:\n      - ja: a\n        desc_markdown: |\n          - x\n          - y\n      - ja: b\n        desc_markdown: 1 行\n"
         );
     }
