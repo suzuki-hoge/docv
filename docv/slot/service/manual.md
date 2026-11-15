@@ -11,6 +11,7 @@ mission: 利用者の使い方（CLI のコマンド、GUI の操作など）
 | [`docv init`](#docv-init)                                  | `docv.yaml` を作る                      | 任意             |
 | [`docv desc`](#docv-desc)                                  | docv の概要を出す                       | 任意             |
 | [`docv update-guide --from <version>`](#docv-update-guide) | docv を更新したときの変更点と対応を出す | 任意             |
+| [`docv review-guide`](#docv-review-guide)                  | ドキュメントをレビューする手順を出す    | docv ルート      |
 | [`docv check [path...]`](#docv-check)                      | 管理対象のチェックを行う                | docv ルート      |
 | [`docv fix [path...]`](#docv-fix)                          | 管理対象のフォーマットとリントを行う    | docv ルート      |
 | [`docv build`](#docv-build)                                | 人間向けの HTML を作る                  | docv ルート      |
@@ -68,6 +69,23 @@ docv 1.5.0 で実行したときの出力は次のとおり（変更の一部を
 docv.yaml と YAML の Slot の 1 行目にあるスキーマの URL の版も、v1.5.0 にする
 最後に docv check で、残りがないかを確かめる
 ```
+
+### docv review-guide
+
+溜まったドキュメントをレビューする手順と、レビューするファイルの一覧を表示する。docv は指摘を出さない。出力を AI Agent に渡し、AI Agent が指摘を出す。
+
+```sh
+docv review-guide
+```
+
+1. AI Agent に「`docv review-guide` を実行し、その手順でドキュメントをレビューして」と頼む
+2. AI Agent が、番号付きの指摘と、選べる直し方を出す
+   - この時点では、ファイルを書き換えない
+3. 指摘ごとに、番号で直し方を選ぶ
+   - 直さないものは「このままでいい」と答える
+4. AI Agent が、選んだ直し方で直す
+
+手順は、`docv build` が作る HTML の Review Guide のページでも読める。
 
 ### docv check
 

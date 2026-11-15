@@ -286,6 +286,8 @@ supersedes: [ free-only ]
 
 新たに導入する場合は `docv init` し、`docv slot gen doc-guide` でガイドラインを作り、`docv slot gen` と `docv check` で作成・調整を進める
 
+溜まったドキュメントをレビューするときは、`docv review-guide` を実行し、出した手順に従う
+
 ## 7. スキーマ ( 設定ファイル )
 
 設定ファイル ( `docv.yaml` ) の項目は `docv init --print` で確認する

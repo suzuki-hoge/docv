@@ -18,6 +18,7 @@
 <li><a href="../PDR.html">PDR</a></li>
 <li class="separator" role="separator"></li>
 <li><a href="../インデックス.html">Index</a></li>
+<li><a href="../レビューガイド.html">Review Guide</a></li>
 <li><a href="../現在の設定.html">Config</a></li>
 <li class="separator" role="separator"></li>
 <li><a href="../検索.html">Search</a></li>
@@ -33,6 +34,7 @@
 <tr><td><a href="#docv-init"><code>docv init</code></a></td><td><code>docv.yaml</code> を作る</td><td>任意</td></tr>
 <tr><td><a href="#docv-desc"><code>docv desc</code></a></td><td>docv の概要を出す</td><td>任意</td></tr>
 <tr><td><a href="#docv-update-guide"><code>docv update-guide --from &lt;version&gt;</code></a></td><td>docv を更新したときの変更点と対応を出す</td><td>任意</td></tr>
+<tr><td><a href="#docv-review-guide"><code>docv review-guide</code></a></td><td>ドキュメントをレビューする手順を出す</td><td>docv ルート</td></tr>
 <tr><td><a href="#docv-check"><code>docv check [path...]</code></a></td><td>管理対象のチェックを行う</td><td>docv ルート</td></tr>
 <tr><td><a href="#docv-fix"><code>docv fix [path...]</code></a></td><td>管理対象のフォーマットとリントを行う</td><td>docv ルート</td></tr>
 <tr><td><a href="#docv-build"><code>docv build</code></a></td><td>人間向けの HTML を作る</td><td>docv ルート</td></tr>
@@ -76,6 +78,25 @@
 docv.yaml と YAML の Slot の 1 行目にあるスキーマの URL の版も、v1.5.0 にする
 最後に docv check で、残りがないかを確かめる
 </code></pre>
+<h3 id="docv-review-guide">docv review-guide</h3>
+<p>溜まったドキュメントをレビューする手順と、レビューするファイルの一覧を表示する。docv は指摘を出さない。出力を AI Agent に渡し、AI Agent が指摘を出す。</p>
+<pre><code class="language-sh"><span style="color:#323232;">docv review-guide
+</span></code></pre>
+<ol>
+<li>AI Agent に「<code>docv review-guide</code> を実行し、その手順でドキュメントをレビューして」と頼む</li>
+<li>AI Agent が、番号付きの指摘と、選べる直し方を出す
+<ul>
+<li>この時点では、ファイルを書き換えない</li>
+</ul>
+</li>
+<li>指摘ごとに、番号で直し方を選ぶ
+<ul>
+<li>直さないものは「このままでいい」と答える</li>
+</ul>
+</li>
+<li>AI Agent が、選んだ直し方で直す</li>
+</ol>
+<p>手順は、<code>docv build</code> が作る HTML の Review Guide のページでも読める。</p>
 <h3 id="docv-check">docv check</h3>
 <p>ドキュメントファイルを検査する。</p>
 <div class="table-scroll"><table><thead><tr><th>オプション</th><th>意味</th></tr></thead><tbody>
@@ -174,6 +195,7 @@ docv.yaml と YAML の Slot の 1 行目にあるスキーマの URL の版も�
 <li class="h3"><a href="#docv-init">docv init</a></li>
 <li class="h3"><a href="#docv-desc">docv desc</a></li>
 <li class="h3"><a href="#docv-update-guide">docv update-guide</a></li>
+<li class="h3"><a href="#docv-review-guide">docv review-guide</a></li>
 <li class="h3"><a href="#docv-check">docv check</a></li>
 <li class="h3"><a href="#docv-fix">docv fix</a></li>
 <li class="h3"><a href="#docv-build">docv build</a></li>

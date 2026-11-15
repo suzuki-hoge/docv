@@ -8,7 +8,7 @@ use clap::{Parser, Subcommand};
 
 use crate::check::Options;
 use crate::workspace::{Locate, Project};
-use crate::{build, check, desc, fix, generate, init, open, schema, update_guide};
+use crate::{build, check, desc, fix, generate, init, open, review_guide, schema, update_guide};
 
 /// 終了コード。docv/slot/service/service/cli.md の「終了コード」。
 pub const EXIT_FAILURE: u8 = 1;
@@ -47,6 +47,8 @@ enum Command {
         #[arg(long, value_name = "version")]
         from: String,
     },
+    /// ドキュメントをレビューする手順と、レビューするファイルの一覧を出す。確かめて指摘するのは、これを読んだ AI Agent
+    ReviewGuide,
     /// 管理対象のファイルと Slot がルールに沿っているかを確かめる
     Check {
         /// 確かめるファイル。省略すると管理対象のファイルをすべて確かめる
@@ -204,6 +206,10 @@ fn execute_in_project(project: &Project, command: Command) -> Result<ExitCode> {
             build::run(project, &out, image.as_deref())?;
             println!("{} に出力した", out.display());
             println!("{} を書いた", crate::index::path(project).display());
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::ReviewGuide => {
+            print!("{}", review_guide::text(project)?);
             Ok(ExitCode::SUCCESS)
         }
         Command::Open => {

@@ -1,8 +1,9 @@
 //! docv build。人間向けの HTML と、設定で有効なら Slot のページの JPG を生成する。docv/slot/service/service/html.md。
 //!
-//! トップは 7 ページに分け、サイドバーで行き来する。ルートに README.md があれば、README のページをサイドバーの先頭に足す。
+//! トップは 8 ページに分け、サイドバーで行き来する。ルートに README.md があれば、README のページをサイドバーの先頭に足す。
 //! index.html（Slot）に Slot ファイルのページへのカード、プロジェクト詳細.html（Free）に Free ファイルのツリー、
 //! ADR.html と PDR.html に決定のつながりの図、インデックス.html（Index）にインデックス（README.md）と同じ並びのページへのリンク、
+//! レビューガイド.html（Review Guide）に docv review-guide と同じレビューの手順、
 //! 現在の設定.html（Config）に docv.yaml のすべての項目と今の値、検索.html（Search）に Slot ファイル、ADR、PDR、Free ファイルの中身を探す入力欄を置く。
 //! ADR と PDR のページは、決定があるときだけ作る。
 //! Slot は 1 つずつ独立したページにし、`<まとまり>/<Slot>.html` に置く。
@@ -37,6 +38,7 @@ use crate::index;
 use crate::jpg;
 use crate::markdown::{self, relative_path, slug};
 use crate::meta;
+use crate::review_guide;
 use crate::slot::{self, Content, DEFS, Group, Slot};
 use crate::textlint;
 use crate::workspace::Project;
@@ -56,12 +58,13 @@ const MARKER_TEXT: &str = "docv build の出力。このディレクトリは do
 const README_SOURCE: &str = "README.md";
 const README_PAGE: &str = "README.html";
 
-/// トップの 7 ページ。サイドバーの並びは Nav::SIDEBAR。
+/// トップの 8 ページ。サイドバーの並びは Nav::SIDEBAR。
 pub const PAGE: &str = "index.html";
 const INDEX_PAGE: &str = "インデックス.html";
 const ADR_PAGE: &str = "ADR.html";
 const PDR_PAGE: &str = "PDR.html";
 pub(crate) const DETAIL_PAGE: &str = "プロジェクト詳細.html";
+const REVIEW_PAGE: &str = "レビューガイド.html";
 const CONFIG_PAGE: &str = "現在の設定.html";
 const SEARCH_PAGE: &str = "検索.html";
 
@@ -74,6 +77,7 @@ enum Nav {
     Pdr,
     Detail,
     Index,
+    Review,
     Config,
     Search,
 }
@@ -81,7 +85,7 @@ enum Nav {
 /// サイドバーの段。ドキュメント、docv が作るもの、検索に分け、間に横線を引く。
 const SIDEBAR: [&[Nav]; 3] = [
     &[Nav::Readme, Nav::Overview, Nav::Detail, Nav::Adr, Nav::Pdr],
-    &[Nav::Index, Nav::Config],
+    &[Nav::Index, Nav::Review, Nav::Config],
     &[Nav::Search],
 ];
 
@@ -103,6 +107,7 @@ impl Nav {
             Nav::Pdr => "PDR",
             Nav::Detail => "Free",
             Nav::Index => "Index",
+            Nav::Review => "Review Guide",
             Nav::Config => "Config",
             Nav::Search => "Search",
         }
@@ -124,6 +129,7 @@ impl Nav {
             Nav::Pdr => PDR_PAGE,
             Nav::Detail => DETAIL_PAGE,
             Nav::Index => INDEX_PAGE,
+            Nav::Review => REVIEW_PAGE,
             Nav::Config => CONFIG_PAGE,
             Nav::Search => SEARCH_PAGE,
         }
@@ -230,6 +236,7 @@ fn render(project: &Project, out: &Path, index: &Path) -> Result<Vec<Slot>> {
         &out.join(INDEX_PAGE),
         &site.render_index_page(!pages.is_empty(), &kinds),
     )?;
+    write(&out.join(REVIEW_PAGE), &site.render_review_guide())?;
     write(&out.join(CONFIG_PAGE), &site.render_config())?;
     write(&out.join(SEARCH_PAGE), &site.render_search()?)?;
     for slot in &slots {
@@ -468,6 +475,28 @@ impl Site<'_> {
         )
     }
 
+    /// レビューガイド.html。docv review-guide と同じファイルから作った、レビューの手順を出す。人間と AI Agent が同じものを読むため。
+    /// 一覧は出さない（review_guide::page）。手順の h1 は、ページの h1（Review Guide）と重なるので除く。
+    /// h1 の下に、docv review-guide が出す手順と同じであることを書く。
+    fn render_review_guide(&self) -> String {
+        *self.dir.borrow_mut() = self.out.to_path_buf();
+        let text = review_guide::page();
+        let html = self.markdown_with_ids(&text, Path::new(""), true, 2);
+        let body = format!(
+            "<section class=\"doc\">\n<h1>{}</h1>\n<p class=\"note\"><code>docv review-guide</code> が出す手順と同じ内容。</p>\n{html}</section>\n",
+            Nav::Review.heading()
+        );
+        self.page(
+            &format!(
+                "{} - {}",
+                Nav::Review.label(),
+                escape(&self.project.title())
+            ),
+            Nav::Review,
+            &body,
+        )
+    }
+
     /// 現在の設定.html。docv.yaml のすべての項目と今の値を、1 つの表に並べる。
     fn render_config(&self) -> String {
         *self.dir.borrow_mut() = self.out.to_path_buf();
@@ -637,7 +666,7 @@ impl Site<'_> {
         )
     }
 
-    /// HTML の全体。左に README とトップの 7 ページへのサイドバーを、右に h2 と h3 の目次を置く。印刷の表示（JPG）では、どちらも出さない。
+    /// HTML の全体。左に README とトップの 8 ページへのサイドバーを、右に h2 と h3 の目次を置く。印刷の表示（JPG）では、どちらも出さない。
     /// サイドバーは SIDEBAR の段ごとに並べ、段の間に横線を引く。
     /// README、ADR、PDR は、そのページがあるときだけ出す。サイドバーの一番下に、作った docv の版を出す。
     fn page(&self, title: &str, current: Nav, body: &str) -> String {
@@ -2080,7 +2109,7 @@ mod tests {
         let config = fs::read_to_string(out.join(CONFIG_PAGE)).unwrap();
         // サイドバーで README とトップのページを行き来する。描いているページの項目に印を付ける。段の間に横線を引く
         assert!(
-            index.contains("<li><a href=\"README.html\">README</a></li>\n<li><a href=\"index.html\" aria-current=\"page\">Slot</a></li>\n<li><a href=\"プロジェクト詳細.html\">Free</a></li>\n<li><a href=\"ADR.html\">ADR</a></li>\n<li class=\"separator\" role=\"separator\"></li>\n<li><a href=\"インデックス.html\">Index</a></li>\n<li><a href=\"現在の設定.html\">Config</a></li>\n<li class=\"separator\" role=\"separator\"></li>\n<li><a href=\"検索.html\">Search</a></li>"),
+            index.contains("<li><a href=\"README.html\">README</a></li>\n<li><a href=\"index.html\" aria-current=\"page\">Slot</a></li>\n<li><a href=\"プロジェクト詳細.html\">Free</a></li>\n<li><a href=\"ADR.html\">ADR</a></li>\n<li class=\"separator\" role=\"separator\"></li>\n<li><a href=\"インデックス.html\">Index</a></li>\n<li><a href=\"レビューガイド.html\">Review Guide</a></li>\n<li><a href=\"現在の設定.html\">Config</a></li>\n<li class=\"separator\" role=\"separator\"></li>\n<li><a href=\"検索.html\">Search</a></li>"),
             "{index}"
         );
         // インデックス.html に、インデックスと同じ並びで、md や JPG ではなく HTML のページへのリンクを並べる
@@ -2097,6 +2126,28 @@ mod tests {
             index_page.contains("<h2 id=\"free-ファイル\">Free ファイル</h2>\n<ul>\n<li><a href=\"プロジェクト詳細.html\">Free</a></li>\n</ul>\n<h2 id=\"adr\">ADR</h2>\n<ul>\n<li><a href=\"ADR.html\">ADR</a></li>"),
             "{index_page}"
         );
+        // レビューガイド.html に、docv review-guide と同じ手順を出し、一覧は出さない。手順の h1 は除き、ページの h1 を Review Guide にする
+        let review = fs::read_to_string(out.join(REVIEW_PAGE)).unwrap();
+        assert!(
+            review
+                .contains("<a href=\"レビューガイド.html\" aria-current=\"page\">Review Guide</a>"),
+            "{review}"
+        );
+        assert!(
+            review.contains("<main>\n<section class=\"doc\">\n<h1>Review Guide</h1>\n<p class=\"note\"><code>docv review-guide</code> が出す手順と同じ内容。</p>\n"),
+            "{review}"
+        );
+        assert!(!review.contains("<h1>レビューガイド</h1>"), "{review}");
+        assert!(
+            review.contains("<h2 id=\"レビュー手順\">レビュー手順</h2>"),
+            "{review}"
+        );
+        assert!(
+            review.contains("<h2 id=\"一覧\">一覧</h2>\n<p>一覧は、<code>docv review-guide</code> を実行したときに、その時点のファイルから作る。</p>\n</section>"),
+            "{review}"
+        );
+        assert!(!review.contains("install.yaml"), "{review}");
+        assert_headings(&review);
         // 検索.html に、Slot ファイル、ADR、Free ファイルの順で、中身を行ごとに索引にして書く。< は書き換え、</script> で閉じない
         let search = fs::read_to_string(out.join(SEARCH_PAGE)).unwrap();
         assert!(

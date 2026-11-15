@@ -26,6 +26,7 @@ Rust で書いたバイナリに、次のものを埋め込む。1 つのバイ�
 - YAML の Slot と `docv.yaml` のスキーマ（`assets/schema/`）
 - docv の概要（`docv desc` が出す `assets/desc.md`）。サービス仕様の 1 ページ目（`docv/slot/service/service/desc.md`）は、このファイルへのシンボリックリンク
 - 版ごとの変更点と対応（`docv update-guide` が出す `assets/update-guide.yaml`）。手元の docv の版と、出す内容を一致させるため
+- ドキュメントをレビューする手順（`docv review-guide` が出す `assets/review-guide.md`）
 - HTML の CSS（`assets/docv.css`）と JS（`assets/docv.js`）。build が、出力先の直下にそのまま書く
 - Markdown の整形に使う dprint-plugin-markdown
 - コードブロックの色付けに使う syntect と、その構文の定義とテーマ
