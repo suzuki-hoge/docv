@@ -80,6 +80,12 @@
 </li>
 <li>まだ git に追加していないファイルは、<code>git ls-files</code> で取り、新規として扱う。行数は、ファイルの行を数える</li>
 <li>消したファイルは、<code>git show</code> で <code>--from</code> での中身を読み、題や ADR と PDR の <code>group</code> を出す</li>
+<li>書き換えた YAML のファイルは、<code>git show</code> で <code>--from</code> での中身を読み、docv の版を伏せて今の中身と比べる
+<ul>
+<li>伏せるのは、docv check が版を確かめる行（1 行目のスキーマの URL の版と、<code>docv_version</code> の値）だけ</li>
+<li>伏せて同じなら、変わっていないとみなす。違えば、版だけが違う行を、足した行数と消した行数から引く</li>
+</ul>
+</li>
 <li>比べるのは <code>--from</code> のコミットそのもので、ブランチの分かれ目（merge-base）ではない</li>
 <li>git が見つからないとき、ルートが git の管理下にないとき、<code>--from</code> がコミットを指さないときは、error で終わる</li>
 </ul>

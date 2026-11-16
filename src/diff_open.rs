@@ -9,6 +9,8 @@ use std::process::Command;
 use anyhow::{Context, Result, bail};
 
 use crate::build;
+use crate::schema;
+use crate::version::Version;
 use crate::workspace::Project;
 
 /// ファイルの変わり方。
@@ -89,6 +91,7 @@ impl Changes {
             let text = git(root, &["show", &format!("{from}:./{path}")]).unwrap_or_default();
             changes.deleted.insert(path, text);
         }
+        changes.ignore_version_bumps(root, from);
         for path in untracked.split('\0').filter(|p| !p.is_empty() && keep(p)) {
             // git の行数がないので、ファイルの行を数える。読めなければバイナリとみなす。
             let lines = std::fs::read_to_string(root.join(path))
@@ -104,6 +107,36 @@ impl Changes {
             changes.untracked.insert(path.to_string());
         }
         Ok(changes)
+    }
+
+    /// docv の版を上げただけの行（docv.yaml と YAML の Slot の 1 行目のスキーマの URL、docv.yaml の docv_version）を、差分から除く。
+    /// 版のほかに変わっていないファイルは、変わっていないとみなす。ほかも変わったファイルは、版の行を行数から引く。
+    /// 版を書くのは YAML だけなので、書き換えた YAML のファイルだけを、--from の中身と比べる。
+    fn ignore_version_bumps(&mut self, root: &Path, from: &str) {
+        let yaml: Vec<String> = self
+            .files
+            .iter()
+            .filter(|(p, c)| {
+                c.status == Status::Modified && (p.ends_with(".yaml") || p.ends_with(".yml"))
+            })
+            .map(|(p, _)| p.clone())
+            .collect();
+        for path in yaml {
+            let (Ok(old), Ok(new)) = (
+                git(root, &["show", &format!("{from}:./{path}")]),
+                std::fs::read_to_string(root.join(&path)),
+            ) else {
+                continue;
+            };
+            let bump = version_bump(&old, &new);
+            if bump.only {
+                self.files.remove(&path);
+            } else if let Some(change) = self.files.get_mut(&path) {
+                change.lines = change
+                    .lines
+                    .map(|(a, r)| (a.saturating_sub(bump.lines), r.saturating_sub(bump.lines)));
+            }
+        }
     }
 
     pub fn is_empty(&self) -> bool {
@@ -153,6 +186,68 @@ fn files_of(name_status: &str, numstat: &str) -> BTreeMap<String, Change> {
         files.insert(path.to_string(), Change { status, lines });
     }
     files
+}
+
+/// 2 つの中身の、docv の版を上げただけの行。
+#[derive(Debug, PartialEq, Eq)]
+struct VersionBump {
+    /// 版だけが違う行の数。
+    lines: u64,
+    /// 版を伏せると、2 つが同じ中身になるか。
+    only: bool,
+}
+
+/// old と new を、docv の版を伏せて比べる。docv check が版を確かめる行（docv/slot/service/service/config.md の「docv の版」）だけを伏せる。
+fn version_bump(old: &str, new: &str) -> VersionBump {
+    // 末尾の改行の違いも差分にするため、lines ではなく改行で分ける。
+    let old: Vec<&str> = old.split('\n').collect();
+    let new: Vec<&str> = new.split('\n').collect();
+    let masked = |lines: &[&str]| -> Vec<String> {
+        lines
+            .iter()
+            .enumerate()
+            .map(|(i, l)| without_version(i, l))
+            .collect()
+    };
+    // 1 行目のスキーマの URL と、docv_version の行のうち、版だけが違うもの。
+    fn first<'a>(lines: &[&'a str]) -> Option<(usize, &'a str)> {
+        lines.first().map(|l| (0, *l))
+    }
+    fn declared<'a>(lines: &[&'a str]) -> Option<(usize, &'a str)> {
+        lines
+            .iter()
+            .enumerate()
+            .find(|(_, l)| l.starts_with("docv_version:"))
+            .map(|(i, l)| (i, *l))
+    }
+    let mut count = 0;
+    for pick in [first, declared] {
+        if let (Some((i, a)), Some((j, b))) = (pick(&old), pick(&new))
+            && a != b
+            && without_version(i, a) == without_version(j, b)
+        {
+            count += 1;
+        }
+    }
+    VersionBump {
+        lines: count,
+        only: masked(&old) == masked(&new),
+    }
+}
+
+/// 1 行の、docv の版を伏せた形。1 行目のスキーマの URL の版と、docv_version の値を伏せる。ほかの行は、そのまま。
+fn without_version(index: usize, line: &str) -> String {
+    if index == 0
+        && let Some((head, rest)) = line.split_once(schema::URL_BASE)
+        && let Some((version, tail)) = rest.split_once('/')
+        && version.parse::<Version>().is_ok()
+    {
+        return format!("{head}{}*/{tail}", schema::URL_BASE);
+    }
+    if line.starts_with("docv_version:") {
+        return "docv_version:".to_string();
+    }
+    line.to_string()
 }
 
 /// `git diff --numstat -z` の出力を読む。1 つのファイルは「足した行数 TAB 消した行数 TAB パス NUL」。
@@ -251,6 +346,40 @@ mod tests {
             files.get("g.md").copied(),
             change(Status::Modified, Some((1, 1)))
         );
+    }
+
+    #[test]
+    fn ignores_version_bumps() {
+        let schema = |v: &str| {
+            format!(
+                "# yaml-language-server: $schema={}{v}/assets/schema/words.schema.json",
+                schema::URL_BASE
+            )
+        };
+        let bump = |lines, only| VersionBump { lines, only };
+        // 版は、過ぎた版で書く。今の版を書くと、make new-version が古い版の残りとして見つけるため
+        // YAML の Slot の 1 行目のスキーマの URL の版だけ
+        let old = format!("{}\ngroups: []\n", schema("1.0.0"));
+        let new = format!("{}\ngroups: []\n", schema("1.0.1"));
+        assert_eq!(version_bump(&old, &new), bump(1, true));
+        // docv.yaml のスキーマの URL と docv_version。docv_version は引用符で囲んでもよい
+        let old = format!("{}\n# 設定\ndocv_version: 1.0.0\n", schema("1.0.0"));
+        let new = format!("{}\n# 設定\ndocv_version: \"1.0.1\"\n", schema("1.0.1"));
+        assert_eq!(version_bump(&old, &new), bump(2, true));
+        // 版のほかも変わっていれば、版の行の数だけを返す
+        let old = format!("{}\ngroups: []\n", schema("1.0.0"));
+        let new = format!("{}\ngroups: [a]\n", schema("1.0.1"));
+        assert_eq!(version_bump(&old, &new), bump(1, false));
+        // 版のタグでない URL から変えたのは、版の行ではない
+        let old = format!("{}\ngroups: []\n", schema("main"));
+        let new = format!("{}\ngroups: []\n", schema("1.0.1"));
+        assert_eq!(version_bump(&old, &new), bump(0, false));
+        // 2 行目より後のスキーマの URL は、docv check が見ないので伏せない
+        let old = format!("groups: []\n{}\n", schema("1.0.0"));
+        let new = format!("groups: []\n{}\n", schema("1.0.1"));
+        assert_eq!(version_bump(&old, &new), bump(0, false));
+        // 末尾の改行だけの違いは、版を上げただけではない
+        assert_eq!(version_bump("a: 1", "a: 1\n"), bump(0, false));
     }
 
     #[test]
