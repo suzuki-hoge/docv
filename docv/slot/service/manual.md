@@ -164,7 +164,6 @@ Slot ( yaml ) の markdown 部は、名前が `_markdown` で終わる項目。�
   - インデックス（`document_root` の `README.md`）と、`docv_exclude` に当たるファイルは比べない
   - まだ git に追加していないファイルも、新しく足したファイルとして比べる
   - docv の版を上げただけの行（`docv.yaml` と YAML の Slot の 1 行目のスキーマの URL、`docv_version`）は、差分に数えない。版のほかに変わっていないファイルには、印を付けない
-- 印の付け方は、[ビジュアライズ](service/html.md) の「diff-open の HTML」の章
 - ページの中には差分を出さない
   - 元のファイルのパスの代わりに `git diff` のコマンドを出すので、詳しい差分はそれを実行して見る
 - HTML は OS のキャッシュのディレクトリに書き、`dir.output` には書かない。実行するたびに作り直す

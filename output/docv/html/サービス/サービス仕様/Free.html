@@ -30,7 +30,7 @@
 <section class="slot" id="service">
 <h1><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M3 7l9 5 9-5"/><path d="M12 12v10"/></svg>サービス仕様</h1>
 <nav class="page-tabs"><a href="概要.html">概要</a><a href="Slot.html">Slot</a><a href="Free.html" aria-current="page">Free</a><a href="ADR.html">ADR</a><a href="PDR.html">PDR</a><a href="設定ファイル.html">設定ファイル</a><a href="コマンド.html">コマンド</a><a href="ビジュアライズ.html">ビジュアライズ</a></nav>
-<p>docv が管理する Free ファイル（<code>docv.yaml</code> の <code>dir.document_root</code> の下の <code>free/</code> にある Markdown）のルールと、ドキュメントで使う画像のルール。何をどう書くかはガイドライン（Slot の Doc ガイド、<code>guide/doc-guide.md</code>）で、プロジェクトが決める。Slot のルールは <a href="Slot.html">Slot</a>、ADR と PDR のルールは <a href="ADR.html">ADR</a> と <a href="PDR.html">PDR</a>、<code>docv.yaml</code> は <a href="%E8%A8%AD%E5%AE%9A%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB.html">設定ファイル</a> のページに書く。</p>
+<p>docv が管理する Free ファイル（<code>docv.yaml</code> の <code>dir.document_root</code> の下の <code>free/</code> にある Markdown）のルールと、ドキュメントで使う画像のルール。何をどう書くかはガイドライン（Slot の Doc ガイド、<code>guide/doc-guide.md</code>）で、プロジェクトが決める。</p>
 <hr />
 <h2 id="1-yaml-front-matter">1. YAML front matter</h2>
 <div class="table-scroll"><table><thead><tr><th>key</th><th>必須</th><th>中身</th></tr></thead><tbody>
@@ -64,7 +64,7 @@
 </span></code></pre>
 <hr />
 <h2 id="3-check-のルール">3. check のルール</h2>
-<p><code>docv check</code> が Free ファイルで確かめるルール。<code>docv.yaml</code> で使うと決めたときだけ確かめるもの（太字などの書式の規則、整形、textlint）は <a href="%E8%A8%AD%E5%AE%9A%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB.html">設定ファイル</a> のページに書く。</p>
+<p><code>docv check</code> が Free ファイルで確かめるルール。</p>
 <h3 id="yaml-front-matter">YAML front matter</h3>
 <div class="table-scroll"><table><thead><tr><th>ID</th><th>内容</th></tr></thead><tbody>
 <tr><td>frontmatter-invalid</td><td>YAML front matter が読めない。<code>mission</code>、<code>tags</code> の型が違う</td></tr>

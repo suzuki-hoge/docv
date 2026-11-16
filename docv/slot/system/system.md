@@ -4,8 +4,6 @@ mission: 部品ごとの振る舞いと、部品の間の流れ
 
 # システム仕様
 
-部品の全体像は、[システム概要](system-overview.md)。コマンドから見た振る舞いは、サービス仕様に書く。読み書きするファイルと終了コードは [コマンド](../service/service/cli.md)、HTML と JPG は [ビジュアライズ](../service/service/html.md) のページ。
-
 ## 処理の流れ
 
 1. `docv.yaml` を読み、スキーマで確かめる。init、desc、update-guide、slot list、slot schema と、`--print` を付けた slot gen は、`docv.yaml` を読まない
@@ -21,7 +19,7 @@ mission: 部品ごとの振る舞いと、部品の間の流れ
 
 ## バイナリに埋め込むもの
 
-Rust で書いたバイナリに、次のものを埋め込む。1 つのバイナリにする方式は、[アーキテクチャ](../guide/architecture.md)。
+Rust で書いたバイナリに、次のものを埋め込む。
 
 - Slot のテンプレ（`assets/template/`。YAML の Slot の項目のサンプルと、ドキュメントのガイドラインの雛形）
 - YAML の Slot と `docv.yaml` のスキーマ（`assets/schema/`）

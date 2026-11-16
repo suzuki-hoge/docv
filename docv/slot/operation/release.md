@@ -4,7 +4,7 @@ mission: 版の決め方と、利用者への届け方
 
 # リリース
 
-版は `Cargo.toml` の `version` で決め、版のタグを push する。バイナリは配らず、利用者は GitHub のソースから cargo で入れる（[インストール](../service/install.yaml)）。
+版は `Cargo.toml` の `version` で決め、版のタグを push する。バイナリは配らず、利用者は GitHub のソースから cargo で入れる。
 
 ## 手順
 

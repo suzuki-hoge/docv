@@ -42,7 +42,7 @@ steps:
         make new-version V=x.y.z
         ```
 
-        版を書き換えて `make fix` を通し、「版を x.y.z にする」のコミット、タグ、push までを行う。行うことと、止まったときの直し方は [リリース](../operation/release.md)。
+        版を書き換えて `make fix` を通し、「版を x.y.z にする」のコミット、タグ、push までを行う。
   - id: install-tag
     name: 任意の版の docv を入れる
     items:

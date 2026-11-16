@@ -5,7 +5,7 @@ mission: 外から見た機能と、それぞれの振る舞いと決まり
 
 # Free
 
-docv が管理する Free ファイル（`docv.yaml` の `dir.document_root` の下の `free/` にある Markdown）のルールと、ドキュメントで使う画像のルール。何をどう書くかはガイドライン（Slot の Doc ガイド、`guide/doc-guide.md`）で、プロジェクトが決める。Slot のルールは [Slot](slot.md)、ADR と PDR のルールは [ADR](adr.md) と [PDR](pdr.md)、`docv.yaml` は [設定ファイル](config.md) のページに書く。
+docv が管理する Free ファイル（`docv.yaml` の `dir.document_root` の下の `free/` にある Markdown）のルールと、ドキュメントで使う画像のルール。何をどう書くかはガイドライン（Slot の Doc ガイド、`guide/doc-guide.md`）で、プロジェクトが決める。
 
 ---
 
@@ -49,7 +49,7 @@ tags:
 
 ## 3. check のルール
 
-`docv check` が Free ファイルで確かめるルール。`docv.yaml` で使うと決めたときだけ確かめるもの（太字などの書式の規則、整形、textlint）は [設定ファイル](config.md) のページに書く。
+`docv check` が Free ファイルで確かめるルール。
 
 ### YAML front matter
 

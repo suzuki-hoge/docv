@@ -4,7 +4,7 @@ mission: テストの範囲と方法（自動テストの範囲、E2E テスト�
 
 # テスト方針
 
-自動テストは `cargo test` で、`make fix` の中で実行する（[開発コマンド](develop.yaml)）。
+自動テストは `cargo test` で、`make fix` の中で実行する。
 
 ## 自動テストで確かめること
 

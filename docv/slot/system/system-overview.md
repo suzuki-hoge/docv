@@ -17,5 +17,3 @@ docv は、利用者のリポジトリの中で動く単一の CLI で、サー�
 | git                      | 比べるリビジョンと作業ツリーの差分を取る。diff-open のときだけ呼ぶ。diff-open は、変わったファイルに印を付けた HTML を、OS のキャッシュのディレクトリに書いて開く                                                                                                        |
 | HTML、JPG                | build の出力。人間が全体像を掴むために見る。HTML はローカルで開き、検索したりリンクを辿れる。JPG は git で管理すれば GitHub で見られ、clone しなくても概要を把握できる。GitHub で Slot ファイルと JPG を辿る入り口のインデックス（`document_root` の `README.md`）も書く |
 | GitHub                   | ソースを置き、スキーマを版のタグごとに公開する。利用者は、ソースから cargo で docv を入れる。YAML の Slot と `docv.yaml` の 1 行目が、スキーマを指す                                                                                                                     |
-
-部品ごとの振る舞いと部品の間の流れは [システム仕様](system.md)、全体で採る方式と決まりは [アーキテクチャ](../guide/architecture.md)。使っている言語とライブラリは、[技術スタック](stack.yaml)。

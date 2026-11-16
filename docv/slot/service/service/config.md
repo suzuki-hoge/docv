@@ -134,7 +134,6 @@ output/docv/         # dir.output
 - `--no-textlint` で、textlint だけを飛ばせる
 - プロジェクトに `package.json` はいらない。初めて実行するときは、textlint を取ってくるのにネットワークが必要
 - 使うルールとその値は、docv の版ごとに固定する。同じ docv なら同じ結果になる
-- docv が textlint をどう動かすかは、[システム仕様](../../system/system.md) の「textlint とのやりとり」の章に書く
 
 ### 検査項目
 
