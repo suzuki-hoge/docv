@@ -3,6 +3,17 @@
 # change は何が変わったか、action はそれへの対応。対応は、要る（〜する）、選ぶ（〜なら〜できる）、要らない（対応は要らない）のどれかで書く
 # docv update-guide が出す 1 行（「- change: action」）は 100 文字以内にする。収まらなければ、変更を分ける。cargo test で確かめる
 
+- version: 2.2.0
+  changes:
+    - change: docv review-guide を追加
+      action: ドキュメントが溜まったら、AI Agent に docv review-guide の手順でレビューさせられる
+    - change: HTML のサイドバーに、Review Guide のページを追加
+      action: 対応は要らない
+    - change: Doc ガイドの雛形に、レビューの基準と、レビューを提案する指示を追加
+      action: docv slot gen doc-guide --print と見比べ、取り入れるものを選ぶ
+    - change: Markdown の中の <details> を、HTML で閉じて出し、枠を付けるように変更
+      action: 対応は要らない
+
 - version: 2.1.0
   changes:
     - change: ディレクトリの Slot（guide/directory-tree.yaml）を廃止
