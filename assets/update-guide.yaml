@@ -3,6 +3,11 @@
 # change は何が変わったか、action はそれへの対応。対応は、要る（〜する）、選ぶ（〜なら〜できる）、要らない（対応は要らない）のどれかで書く
 # docv update-guide が出す 1 行（「- change: action」）は 100 文字以内にする。収まらなければ、変更を分ける。cargo test で確かめる
 
+- version: 2.3.1
+  changes:
+    - change: docv diff-open で、docv の版を上げただけの行を差分に数えないように変更
+      action: 対応は要らない
+
 - version: 2.3.0
   changes:
     - change: docv diff-open を追加
