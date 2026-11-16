@@ -12,8 +12,8 @@ mission: 外から見た機能と、それぞれの振る舞いと決まり
 ## 1. 例
 
 ```yaml
-# yaml-language-server: $schema=https://raw.githubusercontent.com/suzuki-hoge/docv/v2.3.1/assets/schema/docv.schema.json
-docv_version: 2.3.1
+# yaml-language-server: $schema=https://raw.githubusercontent.com/suzuki-hoge/docv/v2.3.2/assets/schema/docv.schema.json
+docv_version: 2.3.2
 title: shop-app
 
 dir:
