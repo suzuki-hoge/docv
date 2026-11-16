@@ -36,7 +36,7 @@ steps:
     name: 版を上げる
     items:
       body_markdown: |
-        人間が実行する。前もって、`assets/update-guide.yaml` の先頭にその版の変更点と対応を書いておく。
+        人間が実行する。前もって、`assets/update-guide.yaml` の先頭にその版の変更点と対応を書いておく。コミットはしない（版上げのコミットに入れる）。
 
         ```sh
         make new-version V=x.y.z

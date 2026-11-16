@@ -55,7 +55,7 @@
 <pre><code class="language-sh"><span style="color:#323232;">make install
 </span></code></pre>
 <h2 id="new-version">版を上げる</h2>
-<p>人間が実行する。前もって、<code>assets/update-guide.yaml</code> の先頭にその版の変更点と対応を書いておく。</p>
+<p>人間が実行する。前もって、<code>assets/update-guide.yaml</code> の先頭にその版の変更点と対応を書いておく。コミットはしない（版上げのコミットに入れる）。</p>
 <pre><code class="language-sh"><span style="color:#323232;">make new-version V=x.y.z
 </span></code></pre>
 <p>版を書き換えて <code>make fix</code> を通し、「版を x.y.z にする」のコミット、タグ、push までを行う。</p>

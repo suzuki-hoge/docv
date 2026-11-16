@@ -35,6 +35,7 @@
 <li>
 <p><code>assets/update-guide.yaml</code> の先頭に、その版の変更点と対応を足す。コミットはしない</p>
 <ul>
+<li>版上げのコミットに入れる。コミットしてあると、<code>make new-version</code> が止まる</li>
 <li>対応のない版も書く</li>
 <li>docv update-guide が出す 1 行は 100 文字以内にし、収まらない変更は分ける。長すぎると、次の手順の途中の cargo test が落ちる</li>
 </ul>
@@ -52,6 +53,7 @@
 <ul>
 <li>main にいて、origin の main を取り込んである</li>
 <li>手元の変更が <code>assets/update-guide.yaml</code> だけで、その先頭が渡した版になっている</li>
+<li>渡した版の変更点と対応を、まだコミットしていない</li>
 <li>渡した版が今の版より新しく、その版のタグがまだない</li>
 </ul>
 </li>

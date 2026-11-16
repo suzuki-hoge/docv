@@ -125,6 +125,12 @@ others=$(changed_paths | grep -v -x -F "$GUIDE" || true)
 
 top=$(awk '/^- version: / { print $3; exit }' "$GUIDE")
 [[ $top == "$NEW" ]] || fail "$GUIDE の先頭の版が $top になっている。先頭に $NEW の変更点と対応を書いてから実行する"
+# 変更点と対応は、版上げのコミットに入れる。ほかのコミットに入れると、どの版で何が変わったかをコミットから辿れない
+committed=$(git show "HEAD:$GUIDE" | awk '/^- version: / { print $3 }')
+if grep -q -x -F "$NEW" <<<"$committed"; then
+    fail "$GUIDE の $NEW の変更点と対応が、もうコミットしてある" \
+        "版上げのコミットに入れるため、そのコミットから外し、手元の変更に戻してから実行する"
+fi
 
 if git rev-parse -q --verify "refs/tags/v$NEW" >/dev/null; then
     fail "タグ v$NEW が手元にもうある"
