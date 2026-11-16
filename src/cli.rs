@@ -8,7 +8,9 @@ use clap::{Parser, Subcommand};
 
 use crate::check::Options;
 use crate::workspace::{Locate, Project};
-use crate::{build, check, desc, fix, generate, init, open, review_guide, schema, update_guide};
+use crate::{
+    build, check, desc, diff_open, fix, generate, init, open, review_guide, schema, update_guide,
+};
 
 /// 終了コード。docv/slot/service/service/cli.md の「終了コード」。
 pub const EXIT_FAILURE: u8 = 1;
@@ -75,6 +77,12 @@ enum Command {
     },
     /// docv build が作った HTML（Slot のページ）を、既定のブラウザで開く
     Open,
+    /// git のリビジョンと作業ツリーで変わったファイルに印を付けた HTML を作り、既定のブラウザで開く
+    DiffOpen {
+        /// 比べる git のリビジョン（ブランチ、タグ、コミット）
+        #[arg(long, value_name = "rev", default_value = "HEAD")]
+        from: String,
+    },
     /// Slot の一覧を出し、Slot ファイルを作り、YAML の Slot のスキーマを出す
     #[command(subcommand)]
     Slot(SlotCommand),
@@ -218,6 +226,21 @@ fn execute_in_project(project: &Project, command: Command) -> Result<ExitCode> {
                 return Ok(ExitCode::from(EXIT_FAILURE));
             };
             open::run(program, &project.out_dir())?;
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::DiffOpen { from } => {
+            let Some(program) = open::opener() else {
+                eprintln!(
+                    "docv: docv diff-open は、この OS に対応していない（macOS と Windows だけ）"
+                );
+                return Ok(ExitCode::from(EXIT_FAILURE));
+            };
+            let Some(out) = diff_open::run(project, &from)? else {
+                println!("{from} との差分がない");
+                return Ok(ExitCode::SUCCESS);
+            };
+            println!("{} に出力した", out.display());
+            open::run(program, &out)?;
             Ok(ExitCode::SUCCESS)
         }
         Command::Init { .. }

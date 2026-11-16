@@ -6,19 +6,20 @@ mission: 利用者の使い方（CLI のコマンド、GUI の操作など）
 
 ## コマンド一覧
 
-| コマンド                                                   | 説明                                    | 実行ディレクトリ |
-| ---------------------------------------------------------- | --------------------------------------- | ---------------- |
-| [`docv init`](#docv-init)                                  | `docv.yaml` を作る                      | 任意             |
-| [`docv desc`](#docv-desc)                                  | docv の概要を出す                       | 任意             |
-| [`docv update-guide --from <version>`](#docv-update-guide) | docv を更新したときの変更点と対応を出す | 任意             |
-| [`docv review-guide`](#docv-review-guide)                  | ドキュメントをレビューする手順を出す    | docv ルート      |
-| [`docv check [path...]`](#docv-check)                      | 管理対象のチェックを行う                | docv ルート      |
-| [`docv fix [path...]`](#docv-fix)                          | 管理対象のフォーマットとリントを行う    | docv ルート      |
-| [`docv build`](#docv-build)                                | 人間向けの HTML を作る                  | docv ルート      |
-| [`docv open`](#docv-open)                                  | 作った HTML をブラウザで開く            | docv ルート      |
-| [`docv slot list`](#docv-slot-list)                        | Slot の一覧を出す                       | 任意             |
-| [`docv slot schema <slot>`](#docv-slot-schema)             | YAML の Slot のスキーマを出す           | 任意             |
-| [`docv slot gen <slot>`](#docv-slot-gen)                   | Slot ファイルを、決まったパスに作る     | docv ルート      |
+| コマンド                                                   | 説明                                                                         | 実行ディレクトリ |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------- | ---------------- |
+| [`docv init`](#docv-init)                                  | `docv.yaml` を作る                                                           | 任意             |
+| [`docv desc`](#docv-desc)                                  | docv の概要を出す                                                            | 任意             |
+| [`docv update-guide --from <version>`](#docv-update-guide) | docv を更新したときの変更点と対応を出す                                      | 任意             |
+| [`docv review-guide`](#docv-review-guide)                  | ドキュメントをレビューする手順を出す                                         | docv ルート      |
+| [`docv check [path...]`](#docv-check)                      | 管理対象のチェックを行う                                                     | docv ルート      |
+| [`docv fix [path...]`](#docv-fix)                          | 管理対象のフォーマットとリントを行う                                         | docv ルート      |
+| [`docv build`](#docv-build)                                | 人間向けの HTML を作る                                                       | docv ルート      |
+| [`docv open`](#docv-open)                                  | 作った HTML をブラウザで開く                                                 | docv ルート      |
+| [`docv diff-open [--from <rev>]`](#docv-diff-open)         | git のリビジョンから変わったファイルに印を付けた HTML を作り、ブラウザで開く | docv ルート      |
+| [`docv slot list`](#docv-slot-list)                        | Slot の一覧を出す                                                            | 任意             |
+| [`docv slot schema <slot>`](#docv-slot-schema)             | YAML の Slot のスキーマを出す                                                | 任意             |
+| [`docv slot gen <slot>`](#docv-slot-gen)                   | Slot ファイルを、決まったパスに作る                                          | docv ルート      |
 
 docv ルート: `docv.yaml` のあるディレクトリ。
 
@@ -154,6 +155,25 @@ Slot ( yaml ) の markdown 部は、名前が `_markdown` で終わる項目。�
 - macOS は `open`、Windows は `explorer` で開く
 - ほかの OS には対応しない。対応していないと表示し、終了コード 1 で終わる
 - まだ `docv build` していなければ、何も開かずにエラーで終わる
+
+### docv diff-open
+
+`--from` のリビジョンと作業ツリーを git で比べ、変わったファイルに印を付けた HTML を作って、既定のブラウザで開く。このままコミットしたら、ドキュメントのどこが変わるかを見るために使う。
+
+- 比べるのは、`docv.yaml`、ルートの `README.md`、`document_root` の中のファイル
+  - インデックス（`document_root` の `README.md`）と、`docv_exclude` に当たるファイルは比べない
+  - まだ git に追加していないファイルも、新しく足したファイルとして比べる
+- 印の付け方は、[ビジュアライズ](service/html.md) の「diff-open の HTML」の章
+- ページの中には差分を出さない
+  - 元のファイルのパスの代わりに `git diff` のコマンドを出すので、詳しい差分はそれを実行して見る
+- HTML は OS のキャッシュのディレクトリに書き、`dir.output` には書かない。実行するたびに作り直す
+- 差分がなければ、何も作らずに、差分がないと表示して終わる
+- git の管理下にないときと、`--from` がリビジョンでないときは、エラーで終わる
+- `docv open` と同じく、macOS と Windows だけに対応する
+
+| オプション     | 意味                                                                            |
+| -------------- | ------------------------------------------------------------------------------- |
+| `--from <rev>` | 比べる git のリビジョン（ブランチ、タグ、コミット）。省略すると `HEAD` と比べる |
 
 ### docv slot list
 

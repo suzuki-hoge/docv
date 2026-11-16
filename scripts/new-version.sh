@@ -2,6 +2,7 @@
 # 版を上げる。人間が make new-version V=x.y.z で実行する（docv/slot/operation/release.md）
 # 版の書き換え、make fix、「版を x.y.z にする」のコミット、タグ、push までを行う
 # 版を書く場所が増えたり、書き方が変わったりしたら、targets か KEEP を直す
+# 使い方の例に、実際の版を書かない（x.y.z と書く）。その版から上げるときに、古い版の残りとして見つかるため
 # macOS の /bin/bash（3.2）で動くように書く
 set -euo pipefail
 
@@ -107,9 +108,9 @@ trap on_exit EXIT
 
 # 1. 始める前に確かめる。ここで止まれば、何も書き換えていない
 
-[[ $# == 1 && -n $1 ]] || fail "版を渡す。例: make new-version V=2.2.0"
+[[ $# == 1 && -n $1 ]] || fail "版を渡す。例: make new-version V=x.y.z"
 NEW=$1
-[[ $NEW =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || fail "版は x.y.z の形で渡す（例: 2.2.0）。渡したのは $NEW"
+[[ $NEW =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || fail "版は x.y.z の形の数で渡す。渡したのは $NEW"
 
 OLD=$(awk -F'"' '/^version = / { print $2; exit }' Cargo.toml)
 [[ $OLD =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "Cargo.toml から今の版を読めない"

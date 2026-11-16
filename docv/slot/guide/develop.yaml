@@ -39,7 +39,7 @@ steps:
         人間が実行する。前もって、`assets/update-guide.yaml` の先頭にその版の変更点と対応を書いておく。
 
         ```sh
-        make new-version V=2.2.0
+        make new-version V=x.y.z
         ```
 
         版を書き換えて `make fix` を通し、「版を x.y.z にする」のコミット、タグ、push までを行う。行うことと、止まったときの直し方は [リリース](../operation/release.md)。

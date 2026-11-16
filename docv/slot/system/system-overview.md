@@ -14,6 +14,7 @@ docv は、利用者のリポジトリの中で動く単一の CLI で、サー�
 | リポジトリのドキュメント | `docv.yaml`、Slot ファイル、Free ファイル、ADR、PDR。AI Agent と人間が書き、docv が読む。fix は書き直す                                                                                                                                                                  |
 | textlint                 | 日本語の文章を検査する。`docv.yaml` で使うと決めたときだけ、check と fix が npx で呼ぶ                                                                                                                                                                                   |
 | Chrome                   | HTML のページを JPG にする。`docv.yaml` の `generate.image` が true のときだけ、build が動かす                                                                                                                                                                           |
+| git                      | 比べるリビジョンと作業ツリーの差分を取る。diff-open のときだけ呼ぶ。diff-open は、変わったファイルに印を付けた HTML を、OS のキャッシュのディレクトリに書いて開く                                                                                                        |
 | HTML、JPG                | build の出力。人間が全体像を掴むために見る。HTML はローカルで開き、検索したりリンクを辿れる。JPG は git で管理すれば GitHub で見られ、clone しなくても概要を把握できる。GitHub で Slot ファイルと JPG を辿る入り口のインデックス（`document_root` の `README.md`）も書く |
 | GitHub                   | ソースを置き、スキーマを版のタグごとに公開する。利用者は、ソースから cargo で docv を入れる。YAML の Slot と `docv.yaml` の 1 行目が、スキーマを指す                                                                                                                     |
 

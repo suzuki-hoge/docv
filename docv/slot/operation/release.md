@@ -14,7 +14,7 @@ mission: 版の決め方と、利用者への届け方
 2. 人間が `make new-version` を実行する
 
    ```sh
-   make new-version V=2.2.0
+   make new-version V=x.y.z
    ```
 
 版を手で書き換えない。版上げのコミットとタグを、毎回同じ形にするため。

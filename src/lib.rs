@@ -6,6 +6,7 @@ pub mod config_view;
 pub mod decision;
 pub mod desc;
 pub mod diagnostic;
+pub mod diff_open;
 pub mod fix;
 pub mod format;
 pub mod generate;

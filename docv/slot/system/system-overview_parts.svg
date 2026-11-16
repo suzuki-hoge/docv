@@ -44,6 +44,9 @@
   <rect x="330" y="430" width="200" height="56" rx="8" fill="#fff8c5" stroke="#9a6700" stroke-width="1.5"/>
   <text x="430" y="454" font-size="15" text-anchor="middle" fill="#1f2328">textlint（npx）</text>
   <text x="430" y="474" font-size="12" text-anchor="middle" fill="#57606a">使うと決めたときだけ</text>
+  <rect x="600" y="430" width="200" height="56" rx="8" fill="#fff8c5" stroke="#9a6700" stroke-width="1.5"/>
+  <text x="700" y="454" font-size="15" text-anchor="middle" fill="#1f2328">git</text>
+  <text x="700" y="474" font-size="12" text-anchor="middle" fill="#57606a">diff-open のときだけ</text>
   <rect x="30" y="430" width="220" height="56" rx="8" fill="#f6f8fa" stroke="#57606a" stroke-width="1.5"/>
   <text x="140" y="454" font-size="15" text-anchor="middle" fill="#1f2328">GitHub</text>
   <text x="140" y="474" font-size="12" text-anchor="middle" fill="#57606a">ソースとスキーマの公開</text>
@@ -61,6 +64,7 @@
     <polyline points="1030,288 1030,342 802,342" marker-end="url(#arrow)"/>
     <line x1="430" y1="370" x2="430" y2="428" marker-end="url(#arrow)"/>
     <line x1="140" y1="370" x2="140" y2="428" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+    <polyline points="530,350 565,350 565,458 598,458" marker-end="url(#arrow)"/>
   </g>
   <g font-size="12" fill="#57606a">
     <text x="150" y="122">書く</text>
@@ -75,6 +79,7 @@
     <text x="915" y="362" text-anchor="middle">GitHub で見る</text>
     <text x="915" y="378" text-anchor="middle">（clone しなくても概要を把握できる）</text>
     <text x="440" y="404">check、fix</text>
+    <text x="573" y="404">diff-open</text>
     <text x="150" y="404">スキーマを参照（版のタグの URL）</text>
   </g>
 </svg>

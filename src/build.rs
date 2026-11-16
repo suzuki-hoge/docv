@@ -33,7 +33,8 @@ use syntect::parsing::SyntaxSet;
 use syntect::util::LinesWithEndings;
 
 use crate::config_view::{self, Cell};
-use crate::decision::{self, Decision, Kind};
+use crate::decision::{self, Decision, Kind, Record};
+use crate::diff_open::{Change, Changes, Status};
 use crate::index;
 use crate::jpg;
 use crate::markdown::{self, relative_path, slug};
@@ -41,7 +42,7 @@ use crate::meta;
 use crate::review_guide;
 use crate::slot::{self, Content, DEFS, Group, Slot};
 use crate::textlint;
-use crate::workspace::Project;
+use crate::workspace::{Class, Project};
 
 /// すべてのページが読む CSS と JS。出力先の直下に書き、各ページから相対パスで読む。
 /// ページに埋め込まないのは、出力先をコミットするリポジトリで、CSS と JS を変えたときの差分を 1 ファイルに収めるため。
@@ -173,7 +174,7 @@ pub fn run(project: &Project, out: &Path, image: Option<&Path>) -> Result<()> {
     let index = index::path(project);
     index::ensure_writable(&index)?;
     let out = prepare_out(out)?;
-    let slots = render(project, &out, &index)?;
+    let slots = render(project, &out, Some(&index), None)?;
     write(&out.join(CSS_FILE), CSS)?;
     write(&out.join(JS_FILE), JS)?;
     write(&out.join(MARKER), MARKER_TEXT)?;
@@ -190,8 +191,79 @@ pub fn run(project: &Project, out: &Path, image: Option<&Path>) -> Result<()> {
     Ok(())
 }
 
-/// out にすべてのページを書き、index にインデックスを書いて、読み込んだ Slot を返す。
-fn render(project: &Project, out: &Path, index: &Path) -> Result<Vec<Slot>> {
+/// docv diff-open。build と同じページを out に書き、変わったファイルに + と − の印を付ける。
+/// --from にあって作業ツリーにないファイルも、カードや行にして、消したことを見せる。インデックスと JPG は作らない。
+pub fn run_diff(project: &Project, out: &Path, changes: &Changes) -> Result<()> {
+    let out = prepare_out(out)?;
+    // 途中で止まっても、次の diff-open で作り直せるように、先に目印を書く。
+    write(&out.join(MARKER), MARKER_TEXT)?;
+    render(project, &out, None, Some(changes))?;
+    write(&out.join(CSS_FILE), CSS)?;
+    write(&out.join(JS_FILE), JS)?;
+    Ok(())
+}
+
+/// diff-open で、--from にあって作業ツリーにないもの。
+#[derive(Default)]
+struct Deleted {
+    /// 消した Slot ファイル（Slot の id、パス）。
+    slots: Vec<(&'static str, String)>,
+    decisions: Vec<Decision>,
+    /// 消した Free ファイル。中身は --from のもの。
+    pages: Vec<Page>,
+}
+
+impl Deleted {
+    /// 消したファイルを、Slot、ADR と PDR、Free ファイルに分ける。どれでもないファイルは捨てる。
+    fn collect(project: &Project, changes: &Changes) -> Deleted {
+        let mut deleted = Deleted::default();
+        let slot_dir = format!("{}/", project.slot_dir());
+        for (path, text) in changes.deleted() {
+            if let Some(rel) = path.strip_prefix(&slot_dir) {
+                if let Some(def) = slot::def_of_file(rel).or_else(|| slot::def_of_page(rel)) {
+                    deleted.slots.push((def.id, path.to_string()));
+                }
+                continue;
+            }
+            let decision = Kind::ALL.into_iter().find_map(|kind| {
+                let name = path.strip_prefix(&format!("{}/", decision::dir(project, kind)))?;
+                let id = name.strip_suffix(".md").filter(|id| !id.contains('/'))?;
+                Some((kind, id))
+            });
+            if let Some((kind, id)) = decision {
+                // 今の docv で読めない決定も、カードは出す。題はファイル名にする。
+                let record = decision::parse(kind, id, text).unwrap_or_else(|_| Record {
+                    id: id.to_string(),
+                    title: id.to_string(),
+                    group: None,
+                    date: String::new(),
+                    supersedes: Vec::new(),
+                    body: String::new(),
+                });
+                deleted.decisions.push(Decision {
+                    kind,
+                    path: path.to_string(),
+                    record,
+                    superseded_by: Vec::new(),
+                });
+                continue;
+            }
+            if path.ends_with(".md") && project.classify(path) == Some(Class::Managed) {
+                deleted.pages.push(page_of_text(path, text));
+            }
+        }
+        deleted
+    }
+}
+
+/// out にすべてのページを書き、index があればインデックスを書いて、読み込んだ Slot を返す。
+/// changes があれば（diff-open）、変わったファイルに印を付け、消したファイルのページも書く。
+fn render(
+    project: &Project,
+    out: &Path,
+    index: Option<&Path>,
+    changes: Option<&Changes>,
+) -> Result<Vec<Slot>> {
     let mut pages = Vec::new();
     for path in project.managed()? {
         pages.push(read_page(project, &path)?);
@@ -206,6 +278,9 @@ fn render(project: &Project, out: &Path, index: &Path) -> Result<Vec<Slot>> {
     let slots = slot::load(project)?;
     let adrs = decision::load(project, Kind::Adr)?;
     let pdrs = decision::load(project, Kind::Pdr)?;
+    let deleted = changes
+        .map(|c| Deleted::collect(project, c))
+        .unwrap_or_default();
 
     let site = Site {
         project,
@@ -216,6 +291,8 @@ fn render(project: &Project, out: &Path, index: &Path) -> Result<Vec<Slot>> {
         slots: &slots,
         adrs: &adrs,
         pdrs: &pdrs,
+        changes,
+        deleted: &deleted,
     };
     if let Some(readme) = &readme {
         write(&out.join(README_PAGE), &site.render_readme(readme))?;
@@ -223,7 +300,7 @@ fn render(project: &Project, out: &Path, index: &Path) -> Result<Vec<Slot>> {
     write(&out.join(PAGE), &site.render_index())?;
     let kinds: Vec<Kind> = Kind::ALL
         .into_iter()
-        .filter(|kind| !site.decisions(*kind).is_empty())
+        .filter(|kind| site.has_decisions(*kind))
         .collect();
     for kind in &kinds {
         write(
@@ -248,8 +325,29 @@ fn render(project: &Project, out: &Path, index: &Path) -> Result<Vec<Slot>> {
     for page in &pages {
         write(&out.join(doc_page(&page.source)), &site.render_doc(page))?;
     }
-    let text = index::render(project, index, &slots, !pages.is_empty(), &kinds);
-    write(index, &text)?;
+    for (id, path) in &deleted.slots {
+        let label = DEFS.iter().find(|d| d.id == *id).map_or("", |d| d.label);
+        write(
+            &out.join(deleted_page(path)),
+            &site.render_deleted(path, label, Nav::Overview),
+        )?;
+    }
+    for d in &deleted.decisions {
+        write(
+            &out.join(deleted_page(&d.path)),
+            &site.render_deleted(&d.path, &d.record.title, Nav::of(d.kind)),
+        )?;
+    }
+    for page in &deleted.pages {
+        write(
+            &out.join(deleted_page(&page.source)),
+            &site.render_deleted(&page.source, &page.title, Nav::Detail),
+        )?;
+    }
+    if let Some(index) = index {
+        let text = index::render(project, index, &slots, !pages.is_empty(), &kinds);
+        write(index, &text)?;
+    }
     Ok(slots)
 }
 
@@ -292,15 +390,28 @@ pub(crate) fn jpg_path(slot: &Slot) -> String {
 fn read_page(project: &Project, path: &str) -> Result<Page> {
     let text = fs::read_to_string(project.root.join(path))
         .with_context(|| format!("{path} を読めない"))?;
-    let document = markdown::split(&text);
+    Ok(page_of_text(path, &text))
+}
+
+fn page_of_text(path: &str, text: &str) -> Page {
+    let document = markdown::split(text);
     let meta = meta::read(&document, &markdown::outline(&document));
-    Ok(Page {
+    Page {
         source: path.to_string(),
         title: meta.title.unwrap_or_else(|| path.to_string()),
         mission: meta.mission,
         tags: meta.tags,
         body: document.body.clone(),
-    })
+    }
+}
+
+/// diff-open で、消したファイルのページを置くディレクトリ（出力先からの相対パス）。
+const DELETED_DIR: &str = "削除";
+
+/// 消したファイルのページの、出力先からの相対パス。`削除/docv/adr/go.html`。今のページと重ならないように、分けて置く。
+fn deleted_page(source: &str) -> String {
+    let stem = source.rsplit_once('.').map_or(source, |(stem, _)| stem);
+    format!("{DELETED_DIR}/{}.html", no_space(stem))
 }
 
 /// Free ファイルのページの、出力先からの相対パス。`プロジェクト詳細/docv/free/order.html`。
@@ -358,6 +469,10 @@ struct Site<'a> {
     slots: &'a [Slot],
     adrs: &'a [Decision],
     pdrs: &'a [Decision],
+    /// diff-open のときだけ、--from と作業ツリーの差分。
+    changes: Option<&'a Changes>,
+    /// diff-open で、--from にあって作業ツリーにないもの。build では空。
+    deleted: &'a Deleted,
 }
 
 impl Site<'_> {
@@ -369,12 +484,158 @@ impl Site<'_> {
         }
     }
 
+    /// 一覧のページを作る決定があるか。diff-open では、消した決定だけでも作る。
+    fn has_decisions(&self, kind: Kind) -> bool {
+        !self.decisions(kind).is_empty() || self.deleted.decisions.iter().any(|d| d.kind == kind)
+    }
+
+    // ---- diff-open の印 ----
+
+    /// ファイルの差分。build では None。
+    fn change(&self, path: &str) -> Option<Change> {
+        self.changes.and_then(|c| c.change(path))
+    }
+
+    /// ファイルをまとめた印。すべて新しく足したファイルなら新規、すべて消したファイルなら削除、ほかに変わったファイルがあれば変更。
+    /// 変わっていないファイルも渡す。今あるページに足しただけの Slot を、新規でなく変更にするため。
+    fn look<'p>(&self, paths: impl IntoIterator<Item = &'p str>) -> Look {
+        let changes: Vec<Option<Change>> = paths.into_iter().map(|p| self.change(p)).collect();
+        let all = |status| {
+            changes
+                .iter()
+                .all(|c| c.is_some_and(|c| c.status == status))
+        };
+        if changes.iter().all(Option::is_none) {
+            Look::Plain
+        } else if all(Status::Added) {
+            Look::Added
+        } else if all(Status::Deleted) {
+            Look::Deleted
+        } else {
+            Look::Edited(lines_tip(changes.iter().flatten()))
+        }
+    }
+
+    /// サイドバーの項目に属するファイル。消したファイルも含める。
+    fn nav_paths(&self, nav: Nav) -> Vec<String> {
+        match nav {
+            Nav::Readme => vec![README_SOURCE.to_string()],
+            Nav::Overview => self
+                .slots
+                .iter()
+                .map(|s| s.path.clone())
+                .chain(self.deleted.slots.iter().map(|(_, p)| p.clone()))
+                .collect(),
+            Nav::Detail => self
+                .pages
+                .iter()
+                .chain(&self.deleted.pages)
+                .map(|p| p.source.clone())
+                .collect(),
+            Nav::Adr | Nav::Pdr => {
+                let kind = if nav == Nav::Adr {
+                    Kind::Adr
+                } else {
+                    Kind::Pdr
+                };
+                self.decisions(kind)
+                    .iter()
+                    .chain(self.deleted.decisions.iter().filter(|d| d.kind == kind))
+                    .map(|d| d.path.clone())
+                    .collect()
+            }
+            Nav::Config => self.config_source().into_iter().collect(),
+            Nav::Index | Nav::Review | Nav::Search => Vec::new(),
+        }
+    }
+
+    /// サイドバーの項目の鉛筆。中のファイルが 1 つでも変わっていれば出し、マウスを乗せると変わったファイルの数を出す。
+    /// README と Config は 1 つのファイルで、数がいつも 1 になるので、代わりに行数を出す。2 つにはカードがなく、ほかに行数を見る場所がないため。
+    fn nav_pencil(&self, nav: Nav) -> String {
+        let changes: Vec<Change> = self
+            .nav_paths(nav)
+            .iter()
+            .filter_map(|p| self.change(p))
+            .collect();
+        if changes.is_empty() {
+            return String::new();
+        }
+        if matches!(nav, Nav::Readme | Nav::Config) {
+            return pencil_html(&lines_tip(&changes));
+        }
+        let count = |status| changes.iter().filter(|c| c.status == status).count();
+        pencil_html(&format!(
+            "差分ファイル数\n新規: {}\n変更: {}\n削除: {}",
+            count(Status::Added),
+            count(Status::Modified),
+            count(Status::Deleted)
+        ))
+    }
+
+    /// 元のファイルのパスの行。diff-open で変わったファイルは、パスの代わりに git diff のコマンドを出し、ボタンでコマンドをコピーする。
+    fn source(&self, path: &str, mission: Option<&str>) -> String {
+        match self.changes.and_then(|c| c.command(path)) {
+            Some(command) => source_line(&command, mission, "コマンドをコピーする"),
+            None => source(path, mission),
+        }
+    }
+
+    /// README と Config のページの、git diff のコマンドの行。2 つは通常の build ではパスの行を出さないので、diff-open で変わったときだけ出す。
+    fn command_line(&self, path: &str) -> String {
+        self.changes
+            .and_then(|c| c.command(path))
+            .map(|command| source_line(&command, None, "コマンドをコピーする"))
+            .unwrap_or_default()
+    }
+
+    /// docv.yaml のルートからの相対パス。ルートの外に置いていれば None。
+    fn config_source(&self) -> Option<String> {
+        self.project
+            .config_path
+            .strip_prefix(&self.project.root)
+            .ok()
+            .map(markdown::slash_path)
+    }
+
+    /// diff-open で、消したファイルのページ。元のファイルのパスの行に git diff のコマンドを出す。中身は出さない。
+    fn render_deleted(&self, path: &str, title: &str, nav: Nav) -> String {
+        let page = deleted_page(path);
+        let dir = Path::new(&page).parent().unwrap_or(Path::new(""));
+        *self.dir.borrow_mut() = self.out.join(dir);
+        let from = self.changes.map_or("", |c| c.from.as_str());
+        let body = format!(
+            "{}<section class=\"doc\">\n<h1>{}</h1>\n<p class=\"status\">{} にあり、作業ツリーにはない。</p>\n</section>\n",
+            self.source(path, None),
+            escape(title),
+            escape(from)
+        );
+        self.page(
+            &format!(
+                "{} - {} - {}",
+                escape(title),
+                nav.label(),
+                escape(&self.project.title())
+            ),
+            nav,
+            &body,
+        )
+    }
+
+    /// 消したファイルのページへのリンク。描いているページのディレクトリからの相対パス。
+    fn deleted_href(&self, path: &str) -> String {
+        encode_path(&relative_path(
+            &self.dir.borrow(),
+            &self.out.join(deleted_page(path)),
+        ))
+    }
+
     /// README.html。ルートの README.md を Markdown のまま HTML にする。
     fn render_readme(&self, readme: &Page) -> String {
         *self.dir.borrow_mut() = self.out.to_path_buf();
         let html = self.markdown_with_ids(&readme.body, Path::new(""), true, 2);
         let body = format!(
-            "<section class=\"doc\">\n<h1>{}</h1>\n{html}</section>\n",
+            "{}<section class=\"doc\">\n<h1>{}</h1>\n{html}</section>\n",
+            self.command_line(README_SOURCE),
             escape(&readme.title)
         );
         self.page(
@@ -440,6 +701,8 @@ impl Site<'_> {
                 link(nav.label(), nav.path())
             );
         }
+        // インデックス（README.md）と同じく、末尾に作った docv の版を出す。
+        let _ = writeln!(out, "<hr>\n<p class=\"note\">{}</p>", generated_by());
         self.page(
             &format!("{} - {}", Nav::Index.label(), escape(&self.project.title())),
             Nav::Index,
@@ -500,7 +763,10 @@ impl Site<'_> {
     /// 現在の設定.html。docv.yaml のすべての項目と今の値を、1 つの表に並べる。
     fn render_config(&self) -> String {
         *self.dir.borrow_mut() = self.out.to_path_buf();
-        let mut out = String::new();
+        let mut out = self
+            .config_source()
+            .map(|rel| self.command_line(&rel))
+            .unwrap_or_default();
         self.config(&mut out);
         self.page(
             &format!(
@@ -651,7 +917,7 @@ impl Site<'_> {
         let html = self.markdown_with_ids(&page.body, &base, true, 2);
         let body = format!(
             "{}<section class=\"doc\">\n<h1>{}</h1>\n{html}</section>\n",
-            source(&page.source, None),
+            self.source(&page.source, None),
             escape(&page.title)
         );
         self.page(
@@ -671,9 +937,18 @@ impl Site<'_> {
     /// README、ADR、PDR は、そのページがあるときだけ出す。サイドバーの一番下に、作った docv の版を出す。
     fn page(&self, title: &str, current: Nav, body: &str) -> String {
         let mut nav = format!(
-            "<nav class=\"sidebar\">\n<p class=\"project\">{}</p>\n<ul>\n",
+            "<nav class=\"sidebar\">\n<p class=\"project\">{}</p>\n",
             escape(&self.project.title())
         );
+        // diff-open では、何と比べたページかを、プロジェクトの名前の下に出す。
+        if let Some(changes) = self.changes {
+            let _ = writeln!(
+                nav,
+                "<p class=\"diff-from\"><code>{}</code> との差分</p>",
+                escape(&changes.from)
+            );
+        }
+        nav.push_str("<ul>\n");
         for (i, item) in SIDEBAR
             .iter()
             .enumerate()
@@ -684,8 +959,8 @@ impl Site<'_> {
                 nav.push_str("<li class=\"separator\" role=\"separator\"></li>\n");
             }
             if (item == Nav::Readme && self.readme.is_none())
-                || (item == Nav::Adr && self.adrs.is_empty())
-                || (item == Nav::Pdr && self.pdrs.is_empty())
+                || (item == Nav::Adr && !self.has_decisions(Kind::Adr))
+                || (item == Nav::Pdr && !self.has_decisions(Kind::Pdr))
             {
                 continue;
             }
@@ -695,19 +970,20 @@ impl Site<'_> {
             ));
             let _ = writeln!(
                 nav,
-                "<li><a href=\"{href}\"{}>{}</a></li>",
+                "<li><a href=\"{href}\"{}>{}{}</a></li>",
                 if item == current {
                     " aria-current=\"page\""
                 } else {
                     ""
                 },
-                item.label()
+                item.label(),
+                self.nav_pencil(item)
             );
         }
         let _ = write!(
             nav,
             "</ul>\n<p class=\"generated\">{}</p>\n</nav>\n",
-            escape(&index::generated_by())
+            generated_by()
         );
         let (body, aside) = outline(&wrap_tables(body));
         let root = |name: &str| relative_path(&self.dir.borrow(), &self.out.join(name));
@@ -719,7 +995,7 @@ impl Site<'_> {
         let path = page_path(slot);
         let dir = Path::new(&path).parent().unwrap_or(Path::new(""));
         *self.dir.borrow_mut() = self.out.join(dir);
-        let mut out = source(&slot.path, Some(slot.def.mission));
+        let mut out = self.source(&slot.path, Some(slot.def.mission));
         self.slot(&mut out, slot);
         let title = match &slot.page {
             Some(page) => format!("{} - {}", escape(&page.title), slot.def.label),
@@ -751,13 +1027,42 @@ impl Site<'_> {
                 group.label()
             );
             for def in DEFS.iter().filter(|d| d.group == group) {
+                let gone: Vec<&str> = self
+                    .deleted
+                    .slots
+                    .iter()
+                    .filter(|(id, _)| *id == def.id)
+                    .map(|(_, p)| p.as_str())
+                    .collect();
+                let look = self.look(
+                    self.slots
+                        .iter()
+                        .filter(|s| s.def.id == def.id)
+                        .map(|s| s.path.as_str())
+                        .chain(gone.iter().copied()),
+                );
+                let (class, pencil) = (look.class(), look.pencil());
                 let Some(slot) = self.slots.iter().find(|s| s.def.id == def.id) else {
-                    let _ = writeln!(
-                        out,
-                        "<span class=\"card missing\">{}{}<span class=\"state\">未作成</span></span>",
-                        icon(def.id),
-                        def.label
-                    );
+                    // diff-open で消した Slot のカードは、消したファイルのページへリンクする。
+                    match gone.first() {
+                        Some(path) => {
+                            let _ = writeln!(
+                                out,
+                                "<a class=\"card missing{class}\" href=\"{}\">{}{}{pencil}<span class=\"state\">未作成</span></a>",
+                                self.deleted_href(path),
+                                icon(def.id),
+                                def.label
+                            );
+                        }
+                        None => {
+                            let _ = writeln!(
+                                out,
+                                "<span class=\"card missing\">{}{}<span class=\"state\">未作成</span></span>",
+                                icon(def.id),
+                                def.label
+                            );
+                        }
+                    }
                     continue;
                 };
                 let href = encode_path(&page_path(slot));
@@ -768,7 +1073,7 @@ impl Site<'_> {
                 };
                 let _ = writeln!(
                     out,
-                    "<a class=\"card\" href=\"{href}\">{}{}{tabs}</a>",
+                    "<a class=\"card{class}\" href=\"{href}\">{}{}{pencil}{tabs}</a>",
                     icon(def.id),
                     def.label
                 );
@@ -782,7 +1087,20 @@ impl Site<'_> {
     fn decision_lanes(&self, out: &mut String, kind: Kind) {
         let decisions = self.decisions(kind);
         let _ = writeln!(out, "<h1>{}</h1>", Nav::of(kind).heading());
-        for group in decision::groups(decisions) {
+        // diff-open で消した決定は、まとまりのつながりの後ろに、箱を並べる。
+        let deleted: Vec<&Decision> = self
+            .deleted
+            .decisions
+            .iter()
+            .filter(|d| d.kind == kind)
+            .collect();
+        let mut groups = decision::groups(decisions);
+        for d in &deleted {
+            if !groups.contains(&d.group()) {
+                groups.push(d.group());
+            }
+        }
+        for group in groups {
             let members: Vec<&Decision> = decisions.iter().filter(|a| a.group() == group).collect();
             let _ = writeln!(out, "<h2 class=\"group\">{}</h2>", escape(group));
             let (chains, singles): (Vec<_>, Vec<_>) = decision::lanes(&members)
@@ -800,9 +1118,14 @@ impl Site<'_> {
                 }
                 let _ = writeln!(out, "</div>");
             }
-            if !singles.is_empty() {
+            let gone: String = deleted
+                .iter()
+                .filter(|d| d.group() == group)
+                .map(|d| self.deleted_box(d))
+                .collect();
+            if !singles.is_empty() || !gone.is_empty() {
                 let boxes: String = singles.iter().map(|l| self.decision_box(l[0])).collect();
-                let _ = writeln!(out, "<div class=\"decision-grid\">{boxes}</div>");
+                let _ = writeln!(out, "<div class=\"decision-grid\">{boxes}{gone}</div>");
             }
         }
     }
@@ -810,7 +1133,7 @@ impl Site<'_> {
     /// 決定 1 つのページ。
     fn render_decision(&self, a: &Decision) -> String {
         *self.dir.borrow_mut() = self.out.join(a.kind.label()).join(file_name(a.group()));
-        let mut out = source(&a.path, None);
+        let mut out = self.source(&a.path, None);
         let _ = writeln!(out, "<section class=\"slot\">");
         self.decision_detail(&mut out, a);
         let _ = writeln!(out, "</section>");
@@ -833,14 +1156,27 @@ impl Site<'_> {
     }
 
     fn decision_box(&self, a: &Decision) -> String {
+        let look = self.look([a.path.as_str()]);
         format!(
-            "<a class=\"decision-box{}\" href=\"{}\">{}</a>",
+            "<a class=\"decision-box{}{}\" href=\"{}\">{}{}</a>",
             if a.superseded_by.is_empty() {
                 ""
             } else {
                 " superseded"
             },
+            look.class(),
             self.decision_href(a),
+            escape(&a.record.title),
+            look.pencil()
+        )
+    }
+
+    /// diff-open で消した決定の箱。消したファイルのページへリンクする。
+    fn deleted_box(&self, a: &Decision) -> String {
+        format!(
+            "<a class=\"decision-box{}\" href=\"{}\">{}</a>",
+            self.look([a.path.as_str()]).class(),
+            self.deleted_href(&a.path),
             escape(&a.record.title)
         )
     }
@@ -925,16 +1261,34 @@ impl Site<'_> {
         let _ = write!(out, "<nav class=\"page-tabs\">");
         for s in self.slots.iter().filter(|s| s.def.id == slot.def.id) {
             let Some(page) = &s.page else { continue };
+            let look = self.look([s.path.as_str()]);
             let _ = write!(
                 out,
-                "<a href=\"{}\"{}>{}</a>",
+                "<a{} href=\"{}\"{}>{}{}</a>",
+                class_attr(look.class()),
                 self.link(&s.path, "").unwrap_or_default(),
                 if s.path == slot.path {
                     " aria-current=\"page\""
                 } else {
                     ""
                 },
-                escape(&page.title)
+                escape(&page.title),
+                look.pencil()
+            );
+        }
+        // diff-open で消したページは、ファイルの名前のタブにして、消したファイルのページへリンクする。
+        for (_, path) in self
+            .deleted
+            .slots
+            .iter()
+            .filter(|(id, _)| *id == slot.def.id)
+        {
+            let _ = write!(
+                out,
+                "<a{} href=\"{}\">{}</a>",
+                class_attr(self.look([path.as_str()]).class()),
+                self.deleted_href(path),
+                escape(path.rsplit('/').next().unwrap_or(path))
             );
         }
         let _ = writeln!(out, "</nav>");
@@ -1182,12 +1536,13 @@ impl Site<'_> {
             "<h1>{}</h1>\n<h2 class=\"group\">ドキュメント</h2>",
             Nav::Detail.label()
         );
-        if self.pages.is_empty() {
+        if self.pages.is_empty() && self.deleted.pages.is_empty() {
             let _ = writeln!(out, "<p class=\"note\">管理対象のファイルがない。</p>");
             return;
         }
         let mut root = Dir::default();
-        for page in self.pages {
+        // diff-open で消した Free ファイルも、ツリーの行にする。
+        for page in self.pages.iter().chain(&self.deleted.pages) {
             root.insert(page);
         }
         // すべての Free ファイルが 1 つのディレクトリ（docv/free/ など）の中にあるときは、そのディレクトリの行を出さない。
@@ -1213,16 +1568,27 @@ impl Site<'_> {
 
     /// Free ファイルをディレクトリのツリーにして出す。ディレクトリの中は、ファイル、ディレクトリの順。
     fn docs_tree(&self, out: &mut String, dir: &Dir, path: &str, depth: usize) {
-        for page in &dir.files {
+        let mut files = dir.files.clone();
+        files.sort_by(|a, b| a.source.cmp(&b.source));
+        for page in files {
             let mission = escape(page.mission.as_deref().unwrap_or(""));
+            let gone = self.deleted.pages.iter().any(|p| std::ptr::eq(p, page));
+            let href = if gone {
+                self.deleted_href(&page.source)
+            } else {
+                self.link(&page.source, "").unwrap_or_default()
+            };
+            let look = self.look([page.source.as_str()]);
             let _ = writeln!(
                 out,
-                "<tr data-path=\"{}\" data-tags=\"{}\"><td style=\"padding-left:{}px\"><a href=\"{}\">{}</a></td><td title=\"{mission}\">{mission}</td><td>{}</td></tr>",
+                "<tr{} data-path=\"{}\" data-tags=\"{}\"><td style=\"padding-left:{}px\"><a href=\"{}\">{}</a>{}</td><td title=\"{mission}\">{mission}</td><td>{}</td></tr>",
+                class_attr(look.class()),
                 escape(&page.source),
                 escape(&serde_json::to_string(&page.tags).unwrap_or_default()),
                 10 + depth * 20,
-                escape(&self.link(&page.source, "").unwrap_or_default()),
+                escape(&href),
                 escape(&page.title),
+                look.pencil(),
                 self.tags(page)
             );
         }
@@ -1671,15 +2037,92 @@ fn page(title: &str, css: &str, js: &str, nav: &str, body: &str, aside: &str) ->
 /// Slot のページでは、同じ行の左に、docv が決めたミッション（mission）を置き、パスを右に寄せる。何を書くページかを、ページの中で分かるようにするため。
 /// md の Slot の YAML front matter の mission は、check で同じ文だと確かめるので読まない。YAML の Slot にも出す。
 fn source(path: &str, mission: Option<&str>) -> String {
-    let path = escape(path);
+    source_line(path, mission, "パスをコピーする")
+}
+
+/// 元のファイルのパスの行。text をボタンでコピーする。diff-open では、パスの代わりに git diff のコマンドを出す。
+fn source_line(text: &str, mission: Option<&str>, label: &str) -> String {
+    let path = escape(text);
     let mission = mission
         .map(|m| format!("<span class=\"mission\">{}</span>", escape(m)))
         .unwrap_or_default();
     format!(
-        "<p class=\"source\">{mission}<code>{path}</code><button type=\"button\" class=\"copy\" data-path=\"{path}\" title=\"パスをコピーする\" aria-label=\"パスをコピーする\" hidden>\
+        "<p class=\"source\">{mission}<code>{path}</code><button type=\"button\" class=\"copy\" data-path=\"{path}\" title=\"{label}\" aria-label=\"{label}\" hidden>\
 <svg class=\"ready\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"9\" y=\"9\" width=\"11\" height=\"11\" rx=\"2\"/><path d=\"M5 15V6a2 2 0 0 1 2-2h9\"/></svg>\
 <svg class=\"done\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12.5l4.5 4.5L19 7.5\"/></svg>\
 </button></p>\n"
+    )
+}
+
+/// diff-open の印。新しく足したものは緑、消したものは赤で、カードと箱は枠、タブと Free の行は背景に色を付ける。
+/// 書き換えたものは鉛筆を出し、マウスを乗せると行数を出す。
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Look {
+    Plain,
+    Added,
+    Deleted,
+    /// マウスを乗せたときに出す文。
+    Edited(String),
+}
+
+impl Look {
+    /// 色を付ける class。前に空白を付ける。
+    fn class(&self) -> &'static str {
+        match self {
+            Look::Added => " added",
+            Look::Deleted => " deleted",
+            Look::Plain | Look::Edited(_) => "",
+        }
+    }
+
+    /// 書き換えたときの鉛筆。
+    fn pencil(&self) -> String {
+        match self {
+            Look::Edited(tip) => pencil_html(tip),
+            _ => String::new(),
+        }
+    }
+}
+
+/// class の値（前に空白を付けたもの）を、class 属性にする。空なら空。
+fn class_attr(class: &str) -> String {
+    if class.is_empty() {
+        String::new()
+    } else {
+        format!(" class=\"{}\"", class.trim_start())
+    }
+}
+
+/// 変わったファイルの、足した行数と消した行数の合計。見出しの下に 1 行ずつ出す。行数のないバイナリだけなら「バイナリ」。
+fn lines_tip<'c>(changes: impl IntoIterator<Item = &'c Change>) -> String {
+    let counted: Vec<(u64, u64)> = changes.into_iter().filter_map(|c| c.lines).collect();
+    if counted.is_empty() {
+        return "差分行数\nバイナリ".to_string();
+    }
+    let (added, removed) = counted.iter().fold((0, 0), |(a, r), (x, y)| (a + x, r + y));
+    format!("差分行数\n追加: {added}\n削除: {removed}")
+}
+
+/// 書き換えた印の鉛筆。tip は、マウスを乗せたときに docv.js が鉛筆の右に出す文。改行で行を分ける。
+/// 鉛筆は、芯と削った先を線で描き、持ち手を塗り、消しゴムを線で描く。
+fn pencil_html(tip: &str) -> String {
+    let label = escape(&tip.replace('\n', "、"));
+    let tip = escape(tip).replace('\n', "&#10;");
+    format!(
+        "<span class=\"diff-edit\" data-tip=\"{tip}\" role=\"img\" aria-label=\"{label}\">\
+<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><g transform=\"rotate(-45 12 12)\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linejoin=\"round\">\
+<path d=\"M2.5 12L7 9v6z\" fill=\"none\"/><path d=\"M2.5 12l1.8-1.2v2.4z\" fill=\"currentColor\"/>\
+<rect x=\"7\" y=\"9\" width=\"11\" height=\"6\" fill=\"currentColor\"/>\
+<path d=\"M18 9h2a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-2z\" fill=\"none\"/></g></svg></span>"
+    )
+}
+
+/// 「Generated by docv <版>」。docv はリポジトリへ、版はその版のタグのソースへリンクする。
+fn generated_by() -> String {
+    let (docv, version) = index::generated_by_links();
+    format!(
+        "Generated by <a href=\"{docv}\">docv</a> <a href=\"{version}\">{}</a>",
+        env!("CARGO_PKG_VERSION")
     )
 }
 
@@ -2692,8 +3135,8 @@ mod tests {
         // サイドバーの一番下に、作った docv の版を出す
         assert!(
             readme.contains(&format!(
-                "</ul>\n<p class=\"generated\">Generated by docv {}</p>\n</nav>",
-                env!("CARGO_PKG_VERSION")
+                "</ul>\n<p class=\"generated\">Generated by <a href=\"https://github.com/suzuki-hoge/docv\">docv</a> <a href=\"https://github.com/suzuki-hoge/docv/tree/v{v}\">{v}</a></p>\n</nav>",
+                v = env!("CARGO_PKG_VERSION")
             )),
             "{readme}"
         );

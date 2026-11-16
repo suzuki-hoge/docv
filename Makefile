@@ -35,6 +35,6 @@ install:
 	cargo install --path .
 
 # 版を上げる。人間が実行する。版の書き換え、make fix、コミット、タグ、push までを行う（docv/slot/operation/release.md）
-# 例: make new-version V=2.2.0
+# 例: make new-version V=x.y.z
 new-version:
 	@scripts/new-version.sh "$(V)"

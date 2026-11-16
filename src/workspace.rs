@@ -209,6 +209,22 @@ impl Project {
         Some(Class::Unmanaged)
     }
 
+    /// docv diff-open で印を付けるファイルか。document_root の中（インデックスと docv_exclude に当てはまるものを除く）、
+    /// ルートの README.md、設定ファイル。
+    pub fn shows_changes_of(&self, rel: &str) -> bool {
+        let config = self
+            .config_path
+            .strip_prefix(&self.root)
+            .map(crate::markdown::slash_path)
+            .unwrap_or_default();
+        if rel == "README.md" || rel == config {
+            return true;
+        }
+        is_under(rel, &self.config.document_root())
+            && rel != self.config.index_path()
+            && !self.exclude.is_match(rel)
+    }
+
     /// 管理対象のファイルのパス。
     pub fn managed(&self) -> Result<Vec<String>> {
         Ok(self

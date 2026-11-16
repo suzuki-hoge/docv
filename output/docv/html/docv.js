@@ -214,3 +214,43 @@
   window.addEventListener('pageshow', search);
   search();
 })();
+
+// docv diff-open のページ。鉛筆のあるカード、箱、タブ、Free の行、サイドバーの項目にマウスを乗せると、
+// 鉛筆の data-tip（行数か、変わったファイルの数）を鉛筆の右に出す。ほかの要素に埋もれないように、body の直下に置く。
+(function () {
+  if (!document.querySelector('.diff-edit')) return;
+  var tip = document.createElement('div');
+  tip.className = 'diff-tip';
+  tip.hidden = true;
+  document.body.appendChild(tip);
+
+  // マウスの下の、鉛筆を持つリンクか行。Free の行では、リンクは鉛筆を持たないので、行まで上る。
+  function pencilOf(el) {
+    for (; el && el !== document.body; el = el.parentElement) {
+      if (el.tagName !== 'A' && el.tagName !== 'TR') continue;
+      var pencil = el.querySelector('.diff-edit');
+      if (pencil) return pencil;
+    }
+    return null;
+  }
+
+  function hide() {
+    tip.hidden = true;
+  }
+
+  document.addEventListener('mouseover', function (e) {
+    var pencil = pencilOf(e.target);
+    if (!pencil) return hide();
+    tip.textContent = pencil.getAttribute('data-tip');
+    tip.hidden = false;
+    // 鉛筆の右に、高さの中央をそろえて出す。右に収まらなければ、鉛筆の左に出す。
+    var r = pencil.getBoundingClientRect();
+    var x = r.right + 6;
+    if (x + tip.offsetWidth > window.innerWidth - 4) x = r.left - 6 - tip.offsetWidth;
+    tip.style.left = x + 'px';
+    tip.style.top = r.top + r.height / 2 - tip.offsetHeight / 2 + 'px';
+  });
+  document.documentElement.addEventListener('mouseleave', hide);
+  // 吹き出しは画面に固定して置くので、スクロールしたら消す。
+  window.addEventListener('scroll', hide, true);
+})();
