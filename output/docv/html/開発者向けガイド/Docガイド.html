@@ -30,7 +30,7 @@
 <section class="slot" id="doc-guide">
 <h1><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/></svg>Doc ガイド</h1>
 <p>人間と AI Agent の両方が、このページに従う。</p>
-<p>本ファイルは <code>docv slot gen doc-guide</code> が作った雛形で、プロジェクトに合わせて調整し利用する。</p>
+<p>本ファイルは <code>docv gen doc-guide</code> が作った雛形で、プロジェクトに合わせて調整し利用する。</p>
 <p><code>docv desc</code> で定義されるルール、設定、ガイドラインのうち、このページはガイドラインについての指示ファイルである。</p>
 <h2 id="書くか書かないか">書くか書かないか</h2>
 <p>書くのは、読者が困る前に、自分では知れないことだけ。読者は、次の手段なら自分で知れる。</p>
@@ -305,8 +305,8 @@
 </tbody></table></div>
 <h2 id="ai-agent-への指示">AI Agent への指示</h2>
 <ul>
-<li>セッション開始時に <code>docv desc</code> を実行し、本ファイルの指示に従いドキュメント管理をすること</li>
-<li>Slot ファイルのスキーマは <code>docv slot</code> 系コマンドで確認すること</li>
+<li>セッション開始時に <code>docv desc</code> と <code>docv list</code> を実行し、本ファイルの指示に従いドキュメント管理をすること</li>
+<li>YAML の Slot のスキーマは <code>docv slot schema</code> で確認すること</li>
 <li>ドキュメント変更時は <code>docv fix</code> を通すこと</li>
 <li>ドキュメントを書き足すときは、増えた情報を適切な量で反映すること</li>
 <li>実装は、指示がない限り書かないこと</li>
@@ -315,7 +315,7 @@
 <li>手順を書いたら読者としてなぞり、戻せないこと、戻している間の振る舞い、気づけないことが書いてあるかを確かめること</li>
 <li>長い手順や注意を書く前に、製品やスクリプトに言わせられないかを人間に提案すること</li>
 <li>決まりを変える前に、関わる ADR と PDR を探すこと</li>
-<li>Free ファイルを足す前に、その mission がどれかの Slot のミッションに当たらないかを確かめること
+<li>Free ファイルを足す前に、<code>docv list</code> で、その mission がどれかの Slot のミッションに当たらないかを確かめること
 <ul>
 <li>当たるなら、その Slot に書き、長くなるならページに分けること</li>
 </ul>

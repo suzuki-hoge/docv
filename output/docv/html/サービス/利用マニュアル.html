@@ -33,6 +33,7 @@
 <div class="table-scroll"><table><thead><tr><th>コマンド</th><th>説明</th><th>実行ディレクトリ</th></tr></thead><tbody>
 <tr><td><a href="#docv-init"><code>docv init</code></a></td><td><code>docv.yaml</code> を作る</td><td>任意</td></tr>
 <tr><td><a href="#docv-desc"><code>docv desc</code></a></td><td>docv の概要を出す</td><td>任意</td></tr>
+<tr><td><a href="#docv-list"><code>docv list</code></a></td><td>Slot と Free ファイルの一覧を出す</td><td>任意</td></tr>
 <tr><td><a href="#docv-update-guide"><code>docv update-guide --from &lt;version&gt;</code></a></td><td>docv を更新したときの変更点と対応を出す</td><td>任意</td></tr>
 <tr><td><a href="#docv-review-guide"><code>docv review-guide</code></a></td><td>ドキュメントをレビューする手順を出す</td><td>docv ルート</td></tr>
 <tr><td><a href="#docv-check"><code>docv check [path...]</code></a></td><td>管理対象のチェックを行う</td><td>docv ルート</td></tr>
@@ -40,9 +41,8 @@
 <tr><td><a href="#docv-build"><code>docv build</code></a></td><td>人間向けの HTML を作る</td><td>docv ルート</td></tr>
 <tr><td><a href="#docv-open"><code>docv open</code></a></td><td>作った HTML をブラウザで開く</td><td>docv ルート</td></tr>
 <tr><td><a href="#docv-diff-open"><code>docv diff-open [--from &lt;rev&gt;]</code></a></td><td>git のリビジョンから変わったファイルに印を付けた HTML を作り、ブラウザで開く</td><td>docv ルート</td></tr>
-<tr><td><a href="#docv-slot-list"><code>docv slot list</code></a></td><td>Slot の一覧を出す</td><td>任意</td></tr>
 <tr><td><a href="#docv-slot-schema"><code>docv slot schema &lt;slot&gt;</code></a></td><td>YAML の Slot のスキーマを出す</td><td>任意</td></tr>
-<tr><td><a href="#docv-slot-gen"><code>docv slot gen &lt;slot&gt;</code></a></td><td>Slot ファイルを、決まったパスに作る</td><td>docv ルート</td></tr>
+<tr><td><a href="#docv-gen"><code>docv gen &lt;slot&gt;</code></a></td><td>Slot ファイルを、決まったパスに作る</td><td>docv ルート</td></tr>
 </tbody></table></div>
 <p>docv ルート: <code>docv.yaml</code> のあるディレクトリ。</p>
 <h2 id="コマンド詳細">コマンド詳細</h2>
@@ -55,6 +55,43 @@
 <h3 id="docv-desc">docv desc</h3>
 <p>docv の概要を表示する。</p>
 <p>AI Agent にはこれを入力にして進めさせる。</p>
+<h3 id="docv-list">docv list</h3>
+<p>Slot と Free ファイルの一覧を表示する。AI Agent が、どこに何が書いてあり、何をどこに書くかを決めるのに使う。</p>
+<pre><code class="language-sh"><span style="color:#323232;">docv list
+</span></code></pre>
+<pre><code>Slot
+* overview         docv/slot/service/overview.md          サービス概要  : 利用者に向けた、これが何で、誰の何を解決し、何ができるかの説明
+* service          docv/slot/service/service/             サービス仕様  : 外から見た機能と、それぞれの振る舞いと決まり
+                                                                          desc.md（概要）
+                                                                          slot.md（Slot）
+  deploy           docv/slot/operation/deploy.md          デプロイ      : 作ったものを環境に反映する手順
+
+Free
+  docv/free/schema/config.md  docv.yaml の項目と、それぞれの形（タグ: スキーマ）
+</code></pre>
+<ul>
+<li>Slot は、プロジェクトに置いたかどうかによらず、docv の Slot をすべて、<a href="%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E4%BB%95%E6%A7%98/Slot.html">Slot</a> のページの「一覧」の章の順に出す
+<ul>
+<li>置いた Slot には、行の頭に <code>*</code> を付ける</li>
+<li>Slot ごとに、名前（<code>docv gen</code> と <code>docv slot schema</code> に渡す名前）、パス、Slot の名前とミッションを出す。Slot の名前とミッションの間の <code>:</code> は、縦に揃える</li>
+<li>ページに分けた Slot は、パスにディレクトリを出し、その下に、ページのファイルとページの名前を <code>order</code> の順に出す。ページの行は、ミッションの頭に揃える</li>
+<li>置いていない Slot のパスは、分けないときのファイルを出す</li>
+</ul>
+</li>
+<li>Free ファイルは、パス、ミッション、タグを出す。<code>docv_exclude</code> に当たるファイルは出さない
+<ul>
+<li><code>mission</code> のないファイルは、ミッションの代わりに「（mission がない）」と出す</li>
+<li>Free ファイルがなければ、「なし」と出す</li>
+</ul>
+</li>
+<li>ADR と PDR は出さない</li>
+<li>パスは、ルートからの相対パスで出す。開くときに、そのまま使えるようにするため</li>
+<li><code>docv.yaml</code> のないディレクトリでは、Slot をすべて <code>*</code> なしで出し、Free ファイルは出さない
+<ul>
+<li>docv を入れる前に、どんな Slot があるかを見るのにも使える</li>
+</ul>
+</li>
+</ul>
 <h3 id="docv-update-guide">docv update-guide</h3>
 <p>docv を更新したときに、版ごとの変更点と対応を表示する。</p>
 <div class="table-scroll"><table><thead><tr><th>オプション</th><th>意味</th></tr></thead><tbody>
@@ -80,7 +117,7 @@ docv.yaml と YAML の Slot の 1 行目にあるスキーマの URL の版も�
 最後に docv check で、残りがないかを確かめる
 </code></pre>
 <h3 id="docv-review-guide">docv review-guide</h3>
-<p>溜まったドキュメントをレビューする手順と、レビューするファイルの一覧を表示する。docv は指摘を出さない。出力を AI Agent に渡し、AI Agent が指摘を出す。</p>
+<p>溜まったドキュメントをレビューする手順と、ADR と PDR の一覧を表示する。Slot ファイルと Free ファイルは、手順の中で <code>docv list</code> を実行して読む。docv は指摘を出さない。出力を AI Agent に渡し、AI Agent が指摘を出す。</p>
 <pre><code class="language-sh"><span style="color:#323232;">docv review-guide
 </span></code></pre>
 <ol>
@@ -121,7 +158,7 @@ docv.yaml と YAML の Slot の 1 行目にあるスキーマの URL の版も�
 <tr><td>format ( 設定次第 )</td><td>✅</td><td>✅ ( markdown 部のみ )</td><td>✅</td><td>✅</td></tr>
 <tr><td>textlint ( 設定次第 )</td><td>✅</td><td>✅ ( markdown 部のみ )</td><td>✅</td><td>✅</td></tr>
 </tbody></table></div>
-<p>Slot ( md ) の YAML front matter は、<code>mission</code> が <code>docv slot list</code> のミッションと同じかを検査する。ページに分けた Slot は、<code>order</code> とページの名前（md は h1、YAML は <code>title</code>）があるかと、同じ Slot のページどうしの重なりも検査する。</p>
+<p>Slot ( md ) の YAML front matter は、<code>mission</code> が <code>docv list</code> のミッションと同じかを検査する。ページに分けた Slot は、<code>order</code> とページの名前（md は h1、YAML は <code>title</code>）があるかと、同じ Slot のページどうしの重なりも検査する。</p>
 <p>Slot ( yaml ) の markdown 部は、名前が <code>_markdown</code> で終わる項目。値は <code>|</code> のブロックで書く。<code>|</code> で書いていない項目と、それ以外の項目を複数行で書いたものは、スキーマの検査で error にする。</p>
 <p>あわせて、<code>docv.yaml</code> の <code>docv_version</code> を docv の版と比べる。<code>docv.yaml</code> と YAML の Slot の 1 行目にあるスキーマの URL の版も、<code>docv_version</code> と比べる（<a href="%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E4%BB%95%E6%A7%98/%E8%A8%AD%E5%AE%9A%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB.html">設定ファイル</a> の「docv の版」の章）。</p>
 <p>パスを渡しても、検査するファイルが絞られるだけで、検査内容は変わらない。</p>
@@ -183,9 +220,7 @@ docv.yaml と YAML の Slot の 1 行目にあるスキーマの URL の版も�
 <div class="table-scroll"><table><thead><tr><th>オプション</th><th>意味</th></tr></thead><tbody>
 <tr><td><code>--from &lt;rev&gt;</code></td><td>比べる git のリビジョン（ブランチ、タグ、コミット）。省略すると <code>HEAD</code> と比べる</td></tr>
 </tbody></table></div>
-<h3 id="docv-slot-list">docv slot list</h3>
-<p>Slot の名前、作るファイル、ミッションの一覧を表示する。</p>
-<h3 id="docv-slot-gen">docv slot gen</h3>
+<h3 id="docv-gen">docv gen</h3>
 <p>Slot ファイルを、決まったパスに作る。</p>
 <p>YAML の Slot には、1 行目にスキーマの URL を書く。yaml-language-server に対応したエディタ（VS Code の YAML の拡張など）で、項目の補完と検証が効く。</p>
 <p>md の Slot には、YAML front matter の <code>mission</code> にミッションを書く。</p>
@@ -193,11 +228,11 @@ docv.yaml と YAML の Slot の 1 行目にあるスキーマの URL の版も�
 <tr><td><code>--print</code></td><td>Slot ファイルを作らずに、書く中身を出す</td></tr>
 <tr><td><code>--force</code></td><td>Slot ファイルがすでにあっても書き直す</td></tr>
 </tbody></table></div>
-<pre><code class="language-sh"><span style="color:#323232;">docv slot gen manual               </span><span style="font-style:italic;color:#969896;"># docv/slot/service/manual.md を作る
-</span><span style="color:#323232;">docv slot gen doc-guide            </span><span style="font-style:italic;color:#969896;"># docv/slot/guide/doc-guide.md に、ガイドラインの雛形を作る
-</span><span style="color:#323232;">docv slot gen doc-guide --print    </span><span style="font-style:italic;color:#969896;"># 運用中のファイルと雛形を見比べる
+<pre><code class="language-sh"><span style="color:#323232;">docv gen manual               </span><span style="font-style:italic;color:#969896;"># docv/slot/service/manual.md を作る
+</span><span style="color:#323232;">docv gen doc-guide            </span><span style="font-style:italic;color:#969896;"># docv/slot/guide/doc-guide.md に、ガイドラインの雛形を作る
+</span><span style="color:#323232;">docv gen doc-guide --print    </span><span style="font-style:italic;color:#969896;"># 運用中のファイルと雛形を見比べる
 </span></code></pre>
-<p>Slot をページに分けるときは、<code>docv/slot/service/service/</code> などのページのディレクトリの下にページを手で置く（<a href="%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E4%BB%95%E6%A7%98/%E6%A6%82%E8%A6%81.html#%E3%83%9A%E3%83%BC%E3%82%B8%E5%88%86%E3%81%91">ページ分け</a>）。ページがあるときは、<code>docv slot gen service</code> などは、1 つのファイルを作らずにエラーで終わる。</p>
+<p>Slot をページに分けるときは、<code>docv/slot/service/service/</code> などのページのディレクトリの下にページを手で置く（<a href="%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E4%BB%95%E6%A7%98/%E6%A6%82%E8%A6%81.html#%E3%83%9A%E3%83%BC%E3%82%B8%E5%88%86%E3%81%91">ページ分け</a>）。ページがあるときは、<code>docv gen service</code> などは、1 つのファイルを作らずにエラーで終わる。</p>
 <h3 id="docv-slot-schema">docv slot schema</h3>
 <p>YAML の Slot のスキーマ（JSON Schema）を表示する。</p>
 <pre><code class="language-sh"><span style="color:#323232;">docv slot schema words </span><span style="font-style:italic;color:#969896;"># 用語集のスキーマを表示
@@ -223,6 +258,7 @@ docv.yaml と YAML の Slot の 1 行目にあるスキーマの URL の版も�
 <li class="h2"><a href="#コマンド詳細">コマンド詳細</a></li>
 <li class="h3"><a href="#docv-init">docv init</a></li>
 <li class="h3"><a href="#docv-desc">docv desc</a></li>
+<li class="h3"><a href="#docv-list">docv list</a></li>
 <li class="h3"><a href="#docv-update-guide">docv update-guide</a></li>
 <li class="h3"><a href="#docv-review-guide">docv review-guide</a></li>
 <li class="h3"><a href="#docv-check">docv check</a></li>
@@ -230,8 +266,7 @@ docv.yaml と YAML の Slot の 1 行目にあるスキーマの URL の版も�
 <li class="h3"><a href="#docv-build">docv build</a></li>
 <li class="h3"><a href="#docv-open">docv open</a></li>
 <li class="h3"><a href="#docv-diff-open">docv diff-open</a></li>
-<li class="h3"><a href="#docv-slot-list">docv slot list</a></li>
-<li class="h3"><a href="#docv-slot-gen">docv slot gen</a></li>
+<li class="h3"><a href="#docv-gen">docv gen</a></li>
 <li class="h3"><a href="#docv-slot-schema">docv slot schema</a></li>
 <li class="h2"><a href="#スキーマ一覧">スキーマ一覧</a></li>
 </ul>

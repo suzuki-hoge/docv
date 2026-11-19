@@ -365,6 +365,7 @@ dependencies = [
  "syntect",
  "tempfile",
  "tungstenite",
+ "unicode-width",
  "yaml-rust2",
 ]
 

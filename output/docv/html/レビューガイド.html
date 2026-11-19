@@ -74,10 +74,10 @@
 <li>Doc ガイドを読む
 <ul>
 <li>この手順と Doc ガイドが食い違うときは、Doc ガイドに従う</li>
-<li>Doc ガイドがなければ、<code>docv slot gen doc-guide --print</code> が出す雛形を読む</li>
+<li>Doc ガイドがなければ、<code>docv gen doc-guide --print</code> が出す雛形を読む</li>
 </ul>
 </li>
-<li>一覧の Slot ファイルと Free ファイルを、すべて読む</li>
+<li><code>docv list</code> を実行し、置いた Slot（行の頭に <code>*</code> があるもの）と Free ファイルを、すべて読む</li>
 <li>一覧の ADR と PDR から、題で関わりのあるものを選んで読む
 <ul>
 <li>ADR と PDR はレビューの対象にせず、書き換えも削除も提案しない</li>
@@ -118,7 +118,7 @@
 </tbody></table></div>
 <h3 id="置き場所に関するもの">置き場所に関するもの</h3>
 <div class="table-scroll"><table><thead><tr><th>観点</th><th>指摘する状態</th><th>直し方</th></tr></thead><tbody>
-<tr><td>ミッションに合わない記述</td><td>一覧に出したミッションに合わないことが書かれている</td><td>ミッションに合うファイルへ移す</td></tr>
+<tr><td>ミッションに合わない記述</td><td><code>docv list</code> に出たミッションに合わないことが書かれている</td><td>ミッションに合うファイルへ移す</td></tr>
 <tr><td>読者の違う記述</td><td>ページの読者ではなく、その事柄を変える人に向けた決まりや理由がある</td><td>ドキュメントの外（その値の隣のコメントなど）へ移す。移す先に同じことがあれば、消す</td></tr>
 <tr><td>内容の重複</td><td>同じことが、複数のファイルに書かれている</td><td>ミッションに合う 1 か所に残し、ほかは消す</td></tr>
 <tr><td>方針の言い直し</td><td>同じ方針を、分類やページごとに言い直している。方針を具体にして、情報が増えているものは当たらない</td><td>1 か所に残し、ほかは消す</td></tr>

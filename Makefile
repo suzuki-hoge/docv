@@ -21,7 +21,7 @@ fix:
 check-doc-guide: install
 	@set -e; tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
 	printf 'docv_version: %s\nlint:\n  textlint: enable\nformat:\n  enabled: true\n' "$$($(DOCV) --version | cut -d ' ' -f 2)" > "$$tmp/docv.yaml"; \
-	(cd "$$tmp" && $(DOCV) slot gen doc-guide > /dev/null && $(DOCV) fix > /dev/null); \
+	(cd "$$tmp" && $(DOCV) gen doc-guide > /dev/null && $(DOCV) fix > /dev/null); \
 	if ! cmp -s "$$tmp/docv/slot/guide/doc-guide.md" $(TEMPLATE); then \
 		cp "$$tmp/docv/slot/guide/doc-guide.md" $(TEMPLATE); \
 		echo "$(TEMPLATE) を整形した"; \

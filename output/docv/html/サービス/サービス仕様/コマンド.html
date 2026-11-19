@@ -41,7 +41,7 @@
 <h2 id="2-ファイルを書くコマンド">2. ファイルを書くコマンド</h2>
 <div class="table-scroll"><table><thead><tr><th>コマンド</th><th>書くもの</th></tr></thead><tbody>
 <tr><td>init</td><td><code>docv.yaml</code> だけ。<code>--print</code> のときは書かない</td></tr>
-<tr><td>slot gen</td><td>指定した Slot ファイルだけ。<code>--print</code> のときは書かない</td></tr>
+<tr><td>gen</td><td>指定した Slot ファイルだけ。<code>--print</code> のときは書かない</td></tr>
 <tr><td>fix</td><td>管理対象のファイル、md の Slot、ADR、PDR、YAML の Slot だけ。整形と textlint の自動修正だけをする。YAML の Slot は、Markdown の項目の中身だけを直す。<code>docv.yaml</code> と YAML の Slot は、末尾の改行も整える</td></tr>
 <tr><td>build</td><td><code>dir.output</code> の下の <code>html/</code> と <code>image/</code> の中と、<code>document_root</code> の直下の <code>README.md</code> だけ。出力先は、目印の <code>.docv</code> を残して中を消し、作り直す。<code>generate.image</code> が false のときと、<code>--no-image</code> のときは <code>image/</code> に触れない</td></tr>
 <tr><td>diff-open</td><td>OS のキャッシュのディレクトリの下の <code>docv/diff-open/</code> の中だけ（macOS は <code>~/Library/Caches/docv/diff-open/</code>、Windows は <code>%LOCALAPPDATA%\docv\diff-open\</code>）。build の出力先と同じく、目印の <code>.docv</code> を残して中を消し、作り直す。差分がないときは書かない</td></tr>

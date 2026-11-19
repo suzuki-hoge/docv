@@ -31,7 +31,7 @@
 <h1><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>システム仕様</h1>
 <h2 id="処理の流れ">処理の流れ</h2>
 <ol>
-<li><code>docv.yaml</code> を読み、スキーマで確かめる。init、desc、update-guide、slot list、slot schema と、<code>--print</code> を付けた slot gen は、<code>docv.yaml</code> を読まない</li>
+<li><code>docv.yaml</code> を読み、スキーマで確かめる。init、desc、update-guide、slot schema と、<code>--print</code> を付けた gen は、<code>docv.yaml</code> を読まない。list は、<code>docv.yaml</code> があれば読み、なければ Slot の一覧だけを出す</li>
 <li>ルート以下のファイルを分類し、Slot、ADR、PDR、Free ファイルを読む</li>
 <li>コマンドに応じて、次の部品を使う</li>
 </ol>
@@ -55,7 +55,7 @@
 </ul>
 <p>textlint を使うときだけ Node.js が、JPG を作るときだけ Chrome が、diff-open を使うときだけ git が要る。どれもバイナリには入れない。</p>
 <h2 id="スキーマの公開">スキーマの公開</h2>
-<p><code>docv.yaml</code> と YAML の Slot の JSON Schema（<code>assets/schema/</code>）は、埋め込むほかにリポジトリでも公開する。<code>docv init</code> と <code>docv slot gen</code> は、ファイルの 1 行目に、版のタグを含む URL を書いて参照させる。新しい版の docv が書く URL は、その版のタグを push するまで開けない。</p>
+<p><code>docv.yaml</code> と YAML の Slot の JSON Schema（<code>assets/schema/</code>）は、埋め込むほかにリポジトリでも公開する。<code>docv init</code> と <code>docv gen</code> は、ファイルの 1 行目に、版のタグを含む URL を書いて参照させる。新しい版の docv が書く URL は、その版のタグを push するまで開けない。</p>
 <h2 id="textlint-とのやりとり">textlint とのやりとり</h2>
 <p>check と fix は、<code>lint.textlint</code> が enable のときだけ textlint を動かす。textlint と 2 つのプリセット（ja-technical-writing、ja-spacing）は、npx で取ってくる。それぞれの版は、docv の版ごとに決める。</p>
 <ul>

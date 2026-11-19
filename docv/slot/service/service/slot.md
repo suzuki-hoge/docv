@@ -20,7 +20,7 @@ mission: 外から見た機能と、それぞれの振る舞いと決まり
 - Slot のミッションに当たる詳しいことも、Slot の中に書く。Free ファイルへのリンクで済ませない
 - ファイルの中のパスは、すべてルートからの相対パスで書く。md の Slot の中のリンクは、ほかの Markdown と同じく、ファイルの場所からの相対パスで書く
 - YAML の文字列の項目には Markdown を書ける
-- `docv slot gen <slot>` で、Slot ファイルを決まったパスに作れる。YAML の Slot には項目のサンプルを書き、md の Slot には YAML front matter の `mission` だけを書く（`docv slot list` で一覧とミッションを出す）
+- `docv gen <slot>` で、Slot ファイルを決まったパスに作れる。YAML の Slot には項目のサンプルを書き、md の Slot には YAML front matter の `mission` だけを書く（`docv list` で一覧とミッションを出す）
 
 ---
 
@@ -67,7 +67,7 @@ HTML には、この表の順に、まとまりごとに並べる。
 ## 3. YAML の Slot の項目
 
 - 項目の形と意味は、Slot ごとのスキーマ（JSON Schema）で決める。`docv slot schema <slot>` で出す。元のファイルは `assets/schema/<ID>.schema.json` で、`docv/free/schema/` に写しを置く
-- `docv slot gen` は、YAML の Slot の 1 行目に、yaml-language-server の書式でスキーマの URL を書く。URL は、実行した CLI の版のタグの `assets/schema/` を指す。エディタで項目の補完と検証が効く。URL の版は `docv.yaml` の `docv_version` と揃える（[設定ファイル](config.md) の「docv の版」の章）
+- `docv gen` は、YAML の Slot の 1 行目に、yaml-language-server の書式でスキーマの URL を書く。URL は、実行した CLI の版のタグの `assets/schema/` を指す。エディタで項目の補完と検証が効く。URL の版は `docv.yaml` の `docv_version` と揃える（[設定ファイル](config.md) の「docv の版」の章）
 - 名前が `_markdown` で終わる項目は Markdown。値は、1 行でも必ず `|` のブロックで書く。`|-`、`|+`、字下げの数を付けた `|2` などは使わない。それ以外の文字列の項目は、Markdown として扱わず、1 行で書く
 - Markdown の項目の中のリンクは、ルートからの相対パスで書く
 - どの YAML の Slot にも、`appendix_markdown` を書ける。項目に収まらない補足を書く
@@ -86,9 +86,9 @@ groups:
 ## 4. md の Slot
 
 - 中身の形は決めない
-- YAML front matter には `mission` だけを書き、`docv slot list` のミッションと同じ文にする。ミッションは docv が決めるもので、プロジェクトでは変えない。ないか違えば、check が slot-mission の error にする。docv の版を上げてミッションが変わったときも、check で気づいて直す。ファイルを開けば、何を書く Slot かが分かるようにするため
+- YAML front matter には `mission` だけを書き、`docv list` のミッションと同じ文にする。ミッションは docv が決めるもので、プロジェクトでは変えない。ないか違えば、check が slot-mission の error にする。docv の版を上げてミッションが変わったときも、check で気づいて直す。ファイルを開けば、何を書く Slot かが分かるようにするため
 - `mission` がないか違っても、HTML には本文を出す
-- `docv slot gen` は、YAML front matter の `mission` だけを書いたファイルを作り、中身の形は自由だと表示する。Doc ガイド（`guide/doc-guide.md`）だけは、docv が勧めるガイドラインを書いた雛形を作る。雛形にも `mission` を書いてある。作った雛形はプロジェクトのもので、自由に直してよい。docv の版を上げても書き換えない
+- `docv gen` は、YAML front matter の `mission` だけを書いたファイルを作り、中身の形は自由だと表示する。Doc ガイド（`guide/doc-guide.md`）だけは、docv が勧めるガイドラインを書いた雛形を作る。雛形にも `mission` を書いてある。作った雛形はプロジェクトのもので、自由に直してよい。docv の版を上げても書き換えない
 
 ---
 
@@ -109,7 +109,7 @@ groups:
 - 分けるときは、1 つのファイルの代わりに、ページのディレクトリの直下に 1 ページ 1 つのファイルで置く。拡張子は、分けないときと同じ。ファイル名は自由。両方に置くと check の error になる
 - どのページにも、並びの `order`（整数）とページの名前を書く。ページは `order` の順に並べる。`order` もページの名前も、同じ Slot のページどうしで重ねない。ほかの Slot のページとは比べない
 - 分けないときは、今までどおり 1 つのファイルに書く
-- `docv slot gen` は、1 つのファイルを作り、分けるときの置き場所も表示する。ページがあるときは、1 つのファイルを作らずに error で終わる。ページは手で置く
+- `docv gen` は、1 つのファイルを作り、分けるときの置き場所も表示する。ページがあるときは、1 つのファイルを作らずに error で終わる。ページは手で置く
 
 md のページ（開発コマンドのほかの Slot のページ）は、YAML front matter に `order` と `mission` を書く。`mission` は、分けないときと同じく、その Slot のミッションと同じ文にする。本文の h1 が、ページの名前になる。
 
@@ -147,7 +147,7 @@ steps:
 |                     | md の Slot の YAML front matter に、知らない項目がある。閉じる `---` がない                                                |
 |                     | 同じ Slot が、1 つのファイル（`service/service.md` など）と、ページのディレクトリ（`service/service/` など）の両方にある   |
 |                     | 分けないときの開発コマンド（`guide/develop.yaml`）に、`order` か `title` がある                                            |
-| slot-mission        | md の Slot の YAML front matter に `mission` がないか、`docv slot list` のミッションと違う                                 |
+| slot-mission        | md の Slot の YAML front matter に `mission` がないか、`docv list` のミッションと違う                                      |
 | slot-path-missing   | パスの先がない                                                                                                             |
 | slot-markdown-style | `_markdown` で終わる項目を、`\|` のブロックで書いていない                                                                  |
 | slot-text-multiline | `_markdown` で終わらない文字列の項目が、複数行になっている                                                                 |

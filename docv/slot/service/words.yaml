@@ -23,7 +23,7 @@ groups:
       - ja: ガイドライン
         en: Guideline
         desc_markdown: |
-          利用側がドキュメントを書くときの方針。調整の余地があり、利用側が自由に直す。Slot の Doc ガイドに書き、`docv slot gen doc-guide` で雛形を作る
+          利用側がドキュメントを書くときの方針。調整の余地があり、利用側が自由に直す。Slot の Doc ガイドに書き、`docv gen doc-guide` で雛形を作る
       - ja: 設定
         en: Config
         desc_markdown: |

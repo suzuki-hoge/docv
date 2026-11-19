@@ -6,7 +6,7 @@ mission: 部品ごとの振る舞いと、部品の間の流れ
 
 ## 処理の流れ
 
-1. `docv.yaml` を読み、スキーマで確かめる。init、desc、update-guide、slot list、slot schema と、`--print` を付けた slot gen は、`docv.yaml` を読まない
+1. `docv.yaml` を読み、スキーマで確かめる。init、desc、update-guide、slot schema と、`--print` を付けた gen は、`docv.yaml` を読まない。list は、`docv.yaml` があれば読み、なければ Slot の一覧だけを出す
 2. ルート以下のファイルを分類し、Slot、ADR、PDR、Free ファイルを読む
 3. コマンドに応じて、次の部品を使う
 
@@ -34,7 +34,7 @@ textlint を使うときだけ Node.js が、JPG を作るときだけ Chrome �
 
 ## スキーマの公開
 
-`docv.yaml` と YAML の Slot の JSON Schema（`assets/schema/`）は、埋め込むほかにリポジトリでも公開する。`docv init` と `docv slot gen` は、ファイルの 1 行目に、版のタグを含む URL を書いて参照させる。新しい版の docv が書く URL は、その版のタグを push するまで開けない。
+`docv.yaml` と YAML の Slot の JSON Schema（`assets/schema/`）は、埋め込むほかにリポジトリでも公開する。`docv init` と `docv gen` は、ファイルの 1 行目に、版のタグを含む URL を書いて参照させる。新しい版の docv が書く URL は、その版のタグを push するまで開けない。
 
 ## textlint とのやりとり
 

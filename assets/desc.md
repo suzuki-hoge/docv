@@ -78,9 +78,9 @@ Free ファイル、Slot ファイル、ADR、PDR で使う画像の置き方
 
 ## 2. Slot
 
-`docv slot list` で一覧と、それぞれの Slot のミッションを確認でき、作成したい場合は `docv slot gen <slot>` で作成する
+`docv list` で一覧と、それぞれの Slot のミッションを確認でき、作成したい場合は `docv gen <slot>` で作成する
 
-md の Slot には、YAML front matter の `mission` に、その Slot のミッションを `docv slot list` のとおりに書く
+md の Slot には、YAML front matter の `mission` に、その Slot のミッションを `docv list` のとおりに書く
 
 - ミッションは docv が決めるもので、プロジェクトでは変えられない
 - `mission` がないか、ミッションと違えば、`docv check` が error にする。docv の版を上げてミッションが変わったときも、check で気づいて直す
@@ -291,7 +291,7 @@ supersedes: [ free-only ]
 
 すべてのコマンドは `docv --help` と `docv <sub-command> --help` で確認する
 
-新たに導入する場合は `docv init` し、`docv slot gen doc-guide` でガイドラインを作り、`docv slot gen` と `docv check` で作成・調整を進める
+新たに導入する場合は `docv init` し、`docv gen doc-guide` でガイドラインを作り、`docv gen` と `docv check` で作成・調整を進める
 
 溜まったドキュメントをレビューするときは、`docv review-guide` を実行し、出した手順に従う
 
@@ -303,14 +303,14 @@ supersedes: [ free-only ]
 
 ## 8. スキーマ ( docv ファイル )
 
-YAML の Slot は `docv slot list` で確認し、そのスキーマは `docv slot schema <slot>` で確認する
+YAML の Slot は `docv list` で確認し、そのスキーマは `docv slot schema <slot>` で確認する
 
 ## 9. ルール、ガイドライン、設定
 
 docv の決まりは、次の 3 つに分かれる
 
 - ルール: docv の仕組みが決める決まり。Slot と `docv.yaml` のスキーマ、YAML front matter の key、check が確かめることなど。利用側は変えられない。この概要と `docv slot schema <slot>` で確認する
-- ガイドライン: ドキュメントを書くときの方針。`docv slot gen doc-guide` で Doc ガイド（`docv/slot/guide/doc-guide.md`）に雛形を作り、プロジェクトに合わせて自由に直す
+- ガイドライン: ドキュメントを書くときの方針。`docv gen doc-guide` で Doc ガイド（`docv/slot/guide/doc-guide.md`）に雛形を作り、プロジェクトに合わせて自由に直す
 - 設定: `docv.yaml` で切り替えること。check のルールや textlint を使うか、出力を git で管理するかなど。`docv init --print` で確認する
 
 ## 10. docv の更新

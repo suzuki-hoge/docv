@@ -1,4 +1,4 @@
-//! docv slot list と docv slot gen。Slot の一覧を出し、Slot ファイルを決まったパスに作る。docv/slot/service/manual.md の docv slot。
+//! docv gen。Slot ファイルを決まったパスに作る。docv/slot/service/manual.md の docv gen。
 //!
 //! パスは docv が Slot ごとに決めていて、選ぶ余地はない。yaml の Slot には項目のサンプル（テンプレ）を書く。
 //! md の Slot は、YAML front matter の mission にミッションを書き、中身の形は自由だと伝える。Doc ガイドの Slot（doc-guide）だけは、ガイドラインの雛形を書く。
@@ -10,31 +10,13 @@ use std::fs;
 use anyhow::{Context, Result, bail};
 
 use crate::schema;
-use crate::slot::{self, DEFS, Def, Format};
+use crate::slot::{self, Def, Format};
 use crate::workspace::Project;
-
-/// docv slot list の出力。名前、作るファイル（Slot のディレクトリからの相対パス）、Slot の名前とミッションを 1 行ずつ並べる。
-pub fn list() -> String {
-    let name_width = DEFS.iter().map(|d| d.id.len()).max().unwrap_or(0);
-    let file_width = DEFS.iter().map(|d| d.file_name().len()).max().unwrap_or(0);
-    let mut out = String::new();
-    for def in DEFS {
-        let _ = writeln!(
-            out,
-            "{:<name_width$}  {:<file_width$}  {}: {}",
-            def.id,
-            def.file_name(),
-            def.label,
-            def.mission
-        );
-    }
-    out
-}
 
 pub fn find(slot: &str) -> Result<&'static Def> {
     match slot::def(slot) {
         Some(def) => Ok(def),
-        None => bail!("{slot} は Slot の名前ではない。docv slot list で Slot の一覧を出す"),
+        None => bail!("{slot} は Slot の名前ではない。docv list で Slot の一覧を出す"),
     }
 }
 
@@ -78,7 +60,7 @@ fn note(def: &Def) -> Option<String> {
     (!note.is_empty()).then_some(note)
 }
 
-/// docv slot gen --print の出力。Slot ファイルを作らずに、書く中身だけを出す。
+/// docv gen --print の出力。Slot ファイルを作らずに、書く中身だけを出す。
 pub fn print(slot: &str) -> Result<String> {
     Ok(text(find(slot)?))
 }
@@ -130,6 +112,7 @@ mod tests {
     use std::path::Path;
 
     use super::*;
+    use crate::slot::DEFS;
     use crate::workspace::Locate;
 
     fn write(root: &Path, path: &str, text: &str) {
@@ -277,16 +260,5 @@ mod tests {
                 ),
             }
         }
-    }
-
-    #[test]
-    fn lists_every_slot_with_its_mission() {
-        let list = list();
-        assert!(list.starts_with("overview "), "{list}");
-        assert!(
-            list.contains("service/manual.md            利用マニュアル: 利用者の使い方"),
-            "{list}"
-        );
-        assert_eq!(list.lines().count(), DEFS.len());
     }
 }

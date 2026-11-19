@@ -816,6 +816,15 @@ fn slot_files(project: &Project) -> Result<Vec<SlotFile>> {
         .collect())
 }
 
+/// 置いた Slot の名前。1 つのファイルか、ページのどちらかがあれば、置いたとみなす。
+/// 読めないファイルや形の合わないファイルも、置いたことに数える。形の誤りは check が報告する。
+pub fn placed(project: &Project) -> Result<Vec<&'static str>> {
+    Ok(slot_files(project)?
+        .into_iter()
+        .filter_map(|f| f.def.map(|d| d.id))
+        .collect())
+}
+
 /// YAML の Slot ファイルのパス（ルートからの相対パス）。
 pub fn yaml_paths(project: &Project) -> Result<Vec<String>> {
     Ok(slot_files(project)?
@@ -1027,7 +1036,7 @@ fn key_line(text: &str, key: &str) -> usize {
         .map_or(1, |i| i + 1)
 }
 
-/// yaml の Slot のテンプレ。docv slot gen で書く、項目のサンプル。
+/// yaml の Slot のテンプレ。docv gen で書く、項目のサンプル。
 pub fn template(id: &str) -> Option<&'static str> {
     Some(match id {
         "install" => include_str!("../assets/template/install.yaml"),
@@ -1041,7 +1050,7 @@ pub fn template(id: &str) -> Option<&'static str> {
     })
 }
 
-/// md の Slot のテンプレ。docv slot gen で書く雛形。Doc ガイドの Slot（doc-guide）だけがガイドラインの雛形を持ち、ほかの md の Slot は、YAML front matter の mission だけを書いたファイルを作る。
+/// md の Slot のテンプレ。docv gen で書く雛形。Doc ガイドの Slot（doc-guide）だけがガイドラインの雛形を持ち、ほかの md の Slot は、YAML front matter の mission だけを書いたファイルを作る。
 pub fn md_template(id: &str) -> Option<&'static str> {
     match id {
         "doc-guide" => Some(include_str!("../assets/template/doc-guide.md")),

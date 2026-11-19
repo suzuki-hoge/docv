@@ -10,6 +10,7 @@ mission: 利用者の使い方（CLI のコマンド、GUI の操作など）
 | ---------------------------------------------------------- | ---------------------------------------------------------------------------- | ---------------- |
 | [`docv init`](#docv-init)                                  | `docv.yaml` を作る                                                           | 任意             |
 | [`docv desc`](#docv-desc)                                  | docv の概要を出す                                                            | 任意             |
+| [`docv list`](#docv-list)                                  | Slot と Free ファイルの一覧を出す                                            | 任意             |
 | [`docv update-guide --from <version>`](#docv-update-guide) | docv を更新したときの変更点と対応を出す                                      | 任意             |
 | [`docv review-guide`](#docv-review-guide)                  | ドキュメントをレビューする手順を出す                                         | docv ルート      |
 | [`docv check [path...]`](#docv-check)                      | 管理対象のチェックを行う                                                     | docv ルート      |
@@ -17,9 +18,8 @@ mission: 利用者の使い方（CLI のコマンド、GUI の操作など）
 | [`docv build`](#docv-build)                                | 人間向けの HTML を作る                                                       | docv ルート      |
 | [`docv open`](#docv-open)                                  | 作った HTML をブラウザで開く                                                 | docv ルート      |
 | [`docv diff-open [--from <rev>]`](#docv-diff-open)         | git のリビジョンから変わったファイルに印を付けた HTML を作り、ブラウザで開く | docv ルート      |
-| [`docv slot list`](#docv-slot-list)                        | Slot の一覧を出す                                                            | 任意             |
 | [`docv slot schema <slot>`](#docv-slot-schema)             | YAML の Slot のスキーマを出す                                                | 任意             |
-| [`docv slot gen <slot>`](#docv-slot-gen)                   | Slot ファイルを、決まったパスに作る                                          | docv ルート      |
+| [`docv gen <slot>`](#docv-gen)                             | Slot ファイルを、決まったパスに作る                                          | docv ルート      |
 
 docv ルート: `docv.yaml` のあるディレクトリ。
 
@@ -39,6 +39,39 @@ docv ルート: `docv.yaml` のあるディレクトリ。
 docv の概要を表示する。
 
 AI Agent にはこれを入力にして進めさせる。
+
+### docv list
+
+Slot と Free ファイルの一覧を表示する。AI Agent が、どこに何が書いてあり、何をどこに書くかを決めるのに使う。
+
+```sh
+docv list
+```
+
+```
+Slot
+* overview         docv/slot/service/overview.md          サービス概要  : 利用者に向けた、これが何で、誰の何を解決し、何ができるかの説明
+* service          docv/slot/service/service/             サービス仕様  : 外から見た機能と、それぞれの振る舞いと決まり
+                                                                          desc.md（概要）
+                                                                          slot.md（Slot）
+  deploy           docv/slot/operation/deploy.md          デプロイ      : 作ったものを環境に反映する手順
+
+Free
+  docv/free/schema/config.md  docv.yaml の項目と、それぞれの形（タグ: スキーマ）
+```
+
+- Slot は、プロジェクトに置いたかどうかによらず、docv の Slot をすべて、[Slot](service/slot.md) のページの「一覧」の章の順に出す
+  - 置いた Slot には、行の頭に `*` を付ける
+  - Slot ごとに、名前（`docv gen` と `docv slot schema` に渡す名前）、パス、Slot の名前とミッションを出す。Slot の名前とミッションの間の `:` は、縦に揃える
+  - ページに分けた Slot は、パスにディレクトリを出し、その下に、ページのファイルとページの名前を `order` の順に出す。ページの行は、ミッションの頭に揃える
+  - 置いていない Slot のパスは、分けないときのファイルを出す
+- Free ファイルは、パス、ミッション、タグを出す。`docv_exclude` に当たるファイルは出さない
+  - `mission` のないファイルは、ミッションの代わりに「（mission がない）」と出す
+  - Free ファイルがなければ、「なし」と出す
+- ADR と PDR は出さない
+- パスは、ルートからの相対パスで出す。開くときに、そのまま使えるようにするため
+- `docv.yaml` のないディレクトリでは、Slot をすべて `*` なしで出し、Free ファイルは出さない
+  - docv を入れる前に、どんな Slot があるかを見るのにも使える
 
 ### docv update-guide
 
@@ -73,7 +106,7 @@ docv.yaml と YAML の Slot の 1 行目にあるスキーマの URL の版も�
 
 ### docv review-guide
 
-溜まったドキュメントをレビューする手順と、レビューするファイルの一覧を表示する。docv は指摘を出さない。出力を AI Agent に渡し、AI Agent が指摘を出す。
+溜まったドキュメントをレビューする手順と、ADR と PDR の一覧を表示する。Slot ファイルと Free ファイルは、手順の中で `docv list` を実行して読む。docv は指摘を出さない。出力を AI Agent に渡し、AI Agent が指摘を出す。
 
 ```sh
 docv review-guide
@@ -115,7 +148,7 @@ docv check docv/free/spec/order.md
 | format ( 設定次第 )                       | ✅          | ✅ ( markdown 部のみ ) | ✅          | ✅               |
 | textlint ( 設定次第 )                     | ✅          | ✅ ( markdown 部のみ ) | ✅          | ✅               |
 
-Slot ( md ) の YAML front matter は、`mission` が `docv slot list` のミッションと同じかを検査する。ページに分けた Slot は、`order` とページの名前（md は h1、YAML は `title`）があるかと、同じ Slot のページどうしの重なりも検査する。
+Slot ( md ) の YAML front matter は、`mission` が `docv list` のミッションと同じかを検査する。ページに分けた Slot は、`order` とページの名前（md は h1、YAML は `title`）があるかと、同じ Slot のページどうしの重なりも検査する。
 
 Slot ( yaml ) の markdown 部は、名前が `_markdown` で終わる項目。値は `|` のブロックで書く。`|` で書いていない項目と、それ以外の項目を複数行で書いたものは、スキーマの検査で error にする。
 
@@ -177,11 +210,7 @@ Slot ( yaml ) の markdown 部は、名前が `_markdown` で終わる項目。�
 | -------------- | ------------------------------------------------------------------------------- |
 | `--from <rev>` | 比べる git のリビジョン（ブランチ、タグ、コミット）。省略すると `HEAD` と比べる |
 
-### docv slot list
-
-Slot の名前、作るファイル、ミッションの一覧を表示する。
-
-### docv slot gen
+### docv gen
 
 Slot ファイルを、決まったパスに作る。
 
@@ -195,12 +224,12 @@ md の Slot には、YAML front matter の `mission` にミッションを書く
 | `--force`  | Slot ファイルがすでにあっても書き直す   |
 
 ```sh
-docv slot gen manual               # docv/slot/service/manual.md を作る
-docv slot gen doc-guide            # docv/slot/guide/doc-guide.md に、ガイドラインの雛形を作る
-docv slot gen doc-guide --print    # 運用中のファイルと雛形を見比べる
+docv gen manual               # docv/slot/service/manual.md を作る
+docv gen doc-guide            # docv/slot/guide/doc-guide.md に、ガイドラインの雛形を作る
+docv gen doc-guide --print    # 運用中のファイルと雛形を見比べる
 ```
 
-Slot をページに分けるときは、`docv/slot/service/service/` などのページのディレクトリの下にページを手で置く（[ページ分け](service/desc.md#ページ分け)）。ページがあるときは、`docv slot gen service` などは、1 つのファイルを作らずにエラーで終わる。
+Slot をページに分けるときは、`docv/slot/service/service/` などのページのディレクトリの下にページを手で置く（[ページ分け](service/desc.md#ページ分け)）。ページがあるときは、`docv gen service` などは、1 つのファイルを作らずにエラーで終わる。
 
 ### docv slot schema
 

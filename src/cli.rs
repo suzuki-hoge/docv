@@ -9,7 +9,8 @@ use clap::{Parser, Subcommand};
 use crate::check::Options;
 use crate::workspace::{Locate, Project};
 use crate::{
-    build, check, desc, diff_open, fix, generate, init, open, review_guide, schema, update_guide,
+    build, check, desc, diff_open, fix, generate, init, list, open, review_guide, schema,
+    update_guide,
 };
 
 /// 終了コード。docv/slot/service/service/cli.md の「終了コード」。
@@ -43,13 +44,27 @@ enum Command {
     },
     /// docv の概要を出す
     Desc,
+    /// Slot と Free ファイルの一覧を出す。Slot は、置いていないものも含めてすべて出し、置いたものに * を付ける
+    List,
+    /// Slot ファイルを、決まったパスに作る
+    Gen {
+        /// 作る Slot（docv list の名前）
+        #[arg(value_name = "slot")]
+        slot: String,
+        /// Slot ファイルを作らずに、書く中身を出す
+        #[arg(long, conflicts_with = "force")]
+        print: bool,
+        /// Slot ファイルがすでにあっても書き直す
+        #[arg(long)]
+        force: bool,
+    },
     /// docv を更新したときに、版ごとの変更点と対応を出す
     UpdateGuide {
         /// 更新する前に使っていた docv の版（docv.yaml の docv_version）
         #[arg(long, value_name = "version")]
         from: String,
     },
-    /// ドキュメントをレビューする手順と、レビューするファイルの一覧を出す。確かめて指摘するのは、これを読んだ AI Agent
+    /// ドキュメントをレビューする手順と、ADR と PDR の一覧を出す。確かめて指摘するのは、これを読んだ AI Agent
     ReviewGuide,
     /// 管理対象のファイルと Slot がルールに沿っているかを確かめる
     Check {
@@ -83,30 +98,16 @@ enum Command {
         #[arg(long, value_name = "rev", default_value = "HEAD")]
         from: String,
     },
-    /// Slot の一覧を出し、Slot ファイルを作り、YAML の Slot のスキーマを出す
+    /// YAML の Slot のスキーマを出す
     #[command(subcommand)]
     Slot(SlotCommand),
 }
 
 #[derive(Debug, Subcommand)]
 enum SlotCommand {
-    /// Slot の名前、ファイル、ミッションの一覧を出す
-    List,
-    /// Slot ファイルを、決まったパスに作る
-    Gen {
-        /// 作る Slot（docv slot list の名前）
-        #[arg(value_name = "slot")]
-        slot: String,
-        /// Slot ファイルを作らずに、書く中身を出す
-        #[arg(long, conflicts_with = "force")]
-        print: bool,
-        /// Slot ファイルがすでにあっても書き直す
-        #[arg(long)]
-        force: bool,
-    },
     /// YAML の Slot のスキーマを出す
     Schema {
-        /// スキーマを出す YAML の Slot（docv slot list の名前）
+        /// スキーマを出す YAML の Slot（docv list の名前）
         #[arg(value_name = "slot")]
         slot: String,
     },
@@ -136,16 +137,22 @@ fn execute(cli: Cli) -> Result<ExitCode> {
             let path = locate.config_path(&root);
             init::run(&path, force)?;
             println!("{} を作った", path.display());
-            println!("docv slot gen doc-guide で、ドキュメントのガイドラインの雛形を作る");
+            println!("docv gen doc-guide で、ドキュメントのガイドラインの雛形を作る");
             Ok(ExitCode::SUCCESS)
         }
-        Command::Slot(SlotCommand::List) => {
-            print!("{}", generate::list());
+        // docv.yaml があれば読み、なければ Slot の一覧だけを出す。docv を入れる前にも、どんな Slot があるかを見られるように
+        Command::List => {
+            let project = if locate.config_path(&root).is_file() {
+                Some(Project::open(&locate, &root)?)
+            } else {
+                None
+            };
+            print!("{}", list::text(project.as_ref())?);
             Ok(ExitCode::SUCCESS)
         }
-        Command::Slot(SlotCommand::Gen {
+        Command::Gen {
             slot, print: true, ..
-        }) => {
+        } => {
             print!("{}", generate::print(&slot)?);
             Ok(ExitCode::SUCCESS)
         }
@@ -170,7 +177,7 @@ fn execute(cli: Cli) -> Result<ExitCode> {
 
 fn execute_in_project(project: &Project, command: Command) -> Result<ExitCode> {
     match command {
-        Command::Slot(SlotCommand::Gen { slot, force, .. }) => {
+        Command::Gen { slot, force, .. } => {
             let generated = generate::run(project, &slot, force)?;
             println!("{} を作った", generated.path);
             if let Some(note) = generated.note {
@@ -246,7 +253,8 @@ fn execute_in_project(project: &Project, command: Command) -> Result<ExitCode> {
         Command::Init { .. }
         | Command::Desc
         | Command::UpdateGuide { .. }
-        | Command::Slot(SlotCommand::List | SlotCommand::Schema { .. }) => {
+        | Command::List
+        | Command::Slot(SlotCommand::Schema { .. }) => {
             unreachable!("docv.yaml を読まずに実行するコマンド")
         }
     }

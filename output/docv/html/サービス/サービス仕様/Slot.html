@@ -43,7 +43,7 @@
 <li>Slot のミッションに当たる詳しいことも、Slot の中に書く。Free ファイルへのリンクで済ませない</li>
 <li>ファイルの中のパスは、すべてルートからの相対パスで書く。md の Slot の中のリンクは、ほかの Markdown と同じく、ファイルの場所からの相対パスで書く</li>
 <li>YAML の文字列の項目には Markdown を書ける</li>
-<li><code>docv slot gen &lt;slot&gt;</code> で、Slot ファイルを決まったパスに作れる。YAML の Slot には項目のサンプルを書き、md の Slot には YAML front matter の <code>mission</code> だけを書く（<code>docv slot list</code> で一覧とミッションを出す）</li>
+<li><code>docv gen &lt;slot&gt;</code> で、Slot ファイルを決まったパスに作れる。YAML の Slot には項目のサンプルを書き、md の Slot には YAML front matter の <code>mission</code> だけを書く（<code>docv list</code> で一覧とミッションを出す）</li>
 </ul>
 <hr />
 <h2 id="2-一覧">2. 一覧</h2>
@@ -86,7 +86,7 @@
 <h2 id="3-yaml-の-slot-の項目">3. YAML の Slot の項目</h2>
 <ul>
 <li>項目の形と意味は、Slot ごとのスキーマ（JSON Schema）で決める。<code>docv slot schema &lt;slot&gt;</code> で出す。元のファイルは <code>assets/schema/&lt;ID&gt;.schema.json</code> で、<code>docv/free/schema/</code> に写しを置く</li>
-<li><code>docv slot gen</code> は、YAML の Slot の 1 行目に、yaml-language-server の書式でスキーマの URL を書く。URL は、実行した CLI の版のタグの <code>assets/schema/</code> を指す。エディタで項目の補完と検証が効く。URL の版は <code>docv.yaml</code> の <code>docv_version</code> と揃える（<a href="%E8%A8%AD%E5%AE%9A%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB.html">設定ファイル</a> の「docv の版」の章）</li>
+<li><code>docv gen</code> は、YAML の Slot の 1 行目に、yaml-language-server の書式でスキーマの URL を書く。URL は、実行した CLI の版のタグの <code>assets/schema/</code> を指す。エディタで項目の補完と検証が効く。URL の版は <code>docv.yaml</code> の <code>docv_version</code> と揃える（<a href="%E8%A8%AD%E5%AE%9A%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB.html">設定ファイル</a> の「docv の版」の章）</li>
 <li>名前が <code>_markdown</code> で終わる項目は Markdown。値は、1 行でも必ず <code>|</code> のブロックで書く。<code>|-</code>、<code>|+</code>、字下げの数を付けた <code>|2</code> などは使わない。それ以外の文字列の項目は、Markdown として扱わず、1 行で書く</li>
 <li>Markdown の項目の中のリンクは、ルートからの相対パスで書く</li>
 <li>どの YAML の Slot にも、<code>appendix_markdown</code> を書ける。項目に収まらない補足を書く</li>
@@ -102,9 +102,9 @@
 <h2 id="4-md-の-slot">4. md の Slot</h2>
 <ul>
 <li>中身の形は決めない</li>
-<li>YAML front matter には <code>mission</code> だけを書き、<code>docv slot list</code> のミッションと同じ文にする。ミッションは docv が決めるもので、プロジェクトでは変えない。ないか違えば、check が slot-mission の error にする。docv の版を上げてミッションが変わったときも、check で気づいて直す。ファイルを開けば、何を書く Slot かが分かるようにするため</li>
+<li>YAML front matter には <code>mission</code> だけを書き、<code>docv list</code> のミッションと同じ文にする。ミッションは docv が決めるもので、プロジェクトでは変えない。ないか違えば、check が slot-mission の error にする。docv の版を上げてミッションが変わったときも、check で気づいて直す。ファイルを開けば、何を書く Slot かが分かるようにするため</li>
 <li><code>mission</code> がないか違っても、HTML には本文を出す</li>
-<li><code>docv slot gen</code> は、YAML front matter の <code>mission</code> だけを書いたファイルを作り、中身の形は自由だと表示する。Doc ガイド（<code>guide/doc-guide.md</code>）だけは、docv が勧めるガイドラインを書いた雛形を作る。雛形にも <code>mission</code> を書いてある。作った雛形はプロジェクトのもので、自由に直してよい。docv の版を上げても書き換えない</li>
+<li><code>docv gen</code> は、YAML front matter の <code>mission</code> だけを書いたファイルを作り、中身の形は自由だと表示する。Doc ガイド（<code>guide/doc-guide.md</code>）だけは、docv が勧めるガイドラインを書いた雛形を作る。雛形にも <code>mission</code> を書いてある。作った雛形はプロジェクトのもので、自由に直してよい。docv の版を上げても書き換えない</li>
 </ul>
 <hr />
 <h2 id="5-ページ分け">5. ページ分け</h2>
@@ -122,7 +122,7 @@
 <li>分けるときは、1 つのファイルの代わりに、ページのディレクトリの直下に 1 ページ 1 つのファイルで置く。拡張子は、分けないときと同じ。ファイル名は自由。両方に置くと check の error になる</li>
 <li>どのページにも、並びの <code>order</code>（整数）とページの名前を書く。ページは <code>order</code> の順に並べる。<code>order</code> もページの名前も、同じ Slot のページどうしで重ねない。ほかの Slot のページとは比べない</li>
 <li>分けないときは、今までどおり 1 つのファイルに書く</li>
-<li><code>docv slot gen</code> は、1 つのファイルを作り、分けるときの置き場所も表示する。ページがあるときは、1 つのファイルを作らずに error で終わる。ページは手で置く</li>
+<li><code>docv gen</code> は、1 つのファイルを作り、分けるときの置き場所も表示する。ページがあるときは、1 つのファイルを作らずに error で終わる。ページは手で置く</li>
 </ul>
 <p>md のページ（開発コマンドのほかの Slot のページ）は、YAML front matter に <code>order</code> と <code>mission</code> を書く。<code>mission</code> は、分けないときと同じく、その Slot のミッションと同じ文にする。本文の h1 が、ページの名前になる。</p>
 <pre><code class="language-markdown"><span style="color:#a71d5d;">---
@@ -151,7 +151,7 @@
 <tr><td></td><td>md の Slot の YAML front matter に、知らない項目がある。閉じる <code>---</code> がない</td></tr>
 <tr><td></td><td>同じ Slot が、1 つのファイル（<code>service/service.md</code> など）と、ページのディレクトリ（<code>service/service/</code> など）の両方にある</td></tr>
 <tr><td></td><td>分けないときの開発コマンド（<code>guide/develop.yaml</code>）に、<code>order</code> か <code>title</code> がある</td></tr>
-<tr><td>slot-mission</td><td>md の Slot の YAML front matter に <code>mission</code> がないか、<code>docv slot list</code> のミッションと違う</td></tr>
+<tr><td>slot-mission</td><td>md の Slot の YAML front matter に <code>mission</code> がないか、<code>docv list</code> のミッションと違う</td></tr>
 <tr><td>slot-path-missing</td><td>パスの先がない</td></tr>
 <tr><td>slot-markdown-style</td><td><code>_markdown</code> で終わる項目を、<code>|</code> のブロックで書いていない</td></tr>
 <tr><td>slot-text-multiline</td><td><code>_markdown</code> で終わらない文字列の項目が、複数行になっている</td></tr>

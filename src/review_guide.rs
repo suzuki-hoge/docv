@@ -1,18 +1,13 @@
-//! docv review-guide。ドキュメントをレビューする手順と、レビューするファイルの一覧を出す。docv/slot/service/manual.md の docv review-guide。
+//! docv review-guide。ドキュメントをレビューする手順と、ADR と PDR の一覧を出す。docv/slot/service/manual.md の docv review-guide。
 //!
 //! docv は指摘を出さない。一覧には、読んでも分からないことか、AI Agent が自分で集めると間違えやすいことだけを出す。
-//! レビューする Slot と Free ファイルのパス、ミッション、タグ、打ち消されていない決定、docv_exclude である。
-//! 見出しは出さない。対象はすべて読ませるので、同じことを 2 度読ませることになるため。
-//! 行数は出さない。数が並ぶと、大きいものを悪いと受け取らせてしまうため（docv/pdr/review-guide.md）。
+//! 打ち消されていない決定と、docv_exclude である。レビューする Slot と Free ファイルは、手順の中で docv list を実行させる。
+//! 同じ一覧を、2 つのコマンドで作らないため。
+//! 見出しと行数は出さない。対象はすべて読ませ、大きさでは判断させないため（docv/pdr/review-by-reader.md）。
 
-use std::fs;
-
-use anyhow::{Context, Result};
+use anyhow::Result;
 
 use crate::decision::{self, Kind};
-use crate::markdown;
-use crate::meta;
-use crate::slot;
 use crate::workspace::Project;
 
 /// レビューの手順。末尾は一覧の見出しで終わり、その後にファイルの一覧を続ける。
@@ -26,12 +21,9 @@ const INVENTORY: &str = "\n## 一覧\n";
 const INVENTORY_NOTE: &str =
     "一覧は、`docv review-guide` を実行したときに、その時点のファイルから作る。\n";
 
-/// タグを 1 行に並べるときの区切り。
-const SEPARATOR: &str = " / ";
-
-/// レビューの手順と、ファイルの一覧。
+/// レビューの手順と、ADR と PDR の一覧。
 pub fn text(project: &Project) -> Result<String> {
-    let mut sections = vec![slots(project)?, free(project)?];
+    let mut sections = Vec::new();
     for kind in Kind::ALL {
         sections.push(decisions(project, kind)?);
     }
@@ -40,7 +32,7 @@ pub fn text(project: &Project) -> Result<String> {
 }
 
 /// HTML の Review Guide のページに出す、レビューの手順。一覧は出さない。
-/// build した時点の一覧になってずれ、HTML を git で管理していると Slot や ADR を足すたびに差分になるため（docv/pdr/review-guide.md）。
+/// build した時点の一覧になってずれ、HTML を git で管理していると ADR や PDR を足すたびに差分になるため（docv/pdr/review-by-reader.md）。
 pub fn page() -> String {
     let guide = SOURCE
         .rsplit_once(INVENTORY)
@@ -56,47 +48,6 @@ fn section(title: &str, lines: &[String]) -> String {
         lines.concat()
     };
     format!("### {title}\n\n{body}")
-}
-
-/// Slot を、HTML と同じ順に並べる。YAML の Slot のミッションはファイルに書いていないので、どの Slot にも添える。
-/// ページに分けた Slot は、Slot ごとにまとめ、ページの名前を添える。
-fn slots(project: &Project) -> Result<String> {
-    let mut lines = Vec::new();
-    let mut current = None;
-    for s in slot::load(project)? {
-        let Some(page) = &s.page else {
-            lines.push(format!(
-                "- {}（`{}`）: {}\n",
-                s.def.label, s.path, s.def.mission
-            ));
-            continue;
-        };
-        if current != Some(s.def.id) {
-            lines.push(format!("- {}: {}\n", s.def.label, s.def.mission));
-            current = Some(s.def.id);
-        }
-        lines.push(format!("  - `{}`（{}）\n", s.path, page.title));
-    }
-    Ok(section("Slot", &lines))
-}
-
-/// Free ファイルを、パスの順に並べる。
-fn free(project: &Project) -> Result<String> {
-    let mut lines = Vec::new();
-    for path in project.managed()? {
-        let text = fs::read_to_string(project.root.join(&path))
-            .with_context(|| format!("{path} を読めない"))?;
-        let document = markdown::split(&text);
-        let meta = meta::read(&document, &markdown::outline(&document));
-        let mission = meta.mission.as_deref().unwrap_or("（mission がない）");
-        let tags = if meta.tags.is_empty() {
-            String::new()
-        } else {
-            format!("（タグ: {}）", meta.tags.join(SEPARATOR))
-        };
-        lines.push(format!("- `{path}`: {mission}{tags}\n"));
-    }
-    Ok(section("Free ファイル", &lines))
 }
 
 /// 打ち消されていない ADR か PDR を、日付と id の順に並べる。
@@ -124,6 +75,8 @@ fn exclude(project: &Project) -> String {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+
     use super::*;
     use crate::workspace::Locate;
 
@@ -213,19 +166,10 @@ mod tests {
                 ),
             ],
         );
-        // 見出しと行数は出さない。打ち消された決定（go）も出さない
+        // Slot と Free ファイルは出さない（docv list で出す）。打ち消された決定（go）も出さない
         assert_eq!(
             inventory(&project),
-            "\n### Slot\n\n\
-             - サービス概要（`docv/slot/service/overview.md`）: 利用者に向けた、これが何で、誰の何を解決し、何ができるかの説明\n\
-             - サービス仕様: 外から見た機能と、それぞれの振る舞いと決まり\n\
-             \x20 - `docv/slot/service/service/a.md`（利用者向け）\n\
-             \x20 - `docv/slot/service/service/b.md`（管理）\n\
-             - インストール（`docv/slot/service/install.yaml`）: 利用者がこのサービスをインストールする方法\n\
-             \n### Free ファイル\n\n\
-             - `docv/free/note.md`: （mission がない）\n\
-             - `docv/free/order.md`: 注文を確定するタイミング（タグ: 仕様 / 注文）\n\
-             \n### ADR\n\n\
+            "\n### ADR\n\n\
              - `docv/adr/cli.md`: CLI にする\n\
              - `docv/adr/rust.md`: Rust で書く\n\
              \n### PDR\n\nなし\n\
@@ -239,7 +183,7 @@ mod tests {
         let (_dir, project) = project("title: demo\n", &[]);
         assert_eq!(
             inventory(&project),
-            "\n### Slot\n\nなし\n\n### Free ファイル\n\nなし\n\n### ADR\n\nなし\n\n### PDR\n\nなし\n\n### docv_exclude\n\nなし\n"
+            "\n### ADR\n\nなし\n\n### PDR\n\nなし\n\n### docv_exclude\n\nなし\n"
         );
     }
 }

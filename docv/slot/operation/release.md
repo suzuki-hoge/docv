@@ -46,4 +46,4 @@ mission: 版の決め方と、利用者への届け方
 
 </details>
 
-タグは、`docv init` と `docv slot gen` がファイルの 1 行目に書くスキーマの URL の参照先になる。タグを push するまで、その版の URL は開けない。
+タグは、`docv init` と `docv gen` がファイルの 1 行目に書くスキーマの URL の参照先になる。タグを push するまで、その版の URL は開けない。
