@@ -193,6 +193,7 @@
 </li>
 <li>決めた後は書き換えない
 <ul>
+<li>既定のブランチ ( main など ) に入るまでは、同じファイルを書き換えてよい</li>
 <li>決定を変えるときは、新しい ADR を書き、その <code>supersedes</code> で過去の決定の id を指す</li>
 </ul>
 </li>
@@ -236,6 +237,7 @@
 <h3 id="group"><code>group</code></h3>
 <p>任意</p>
 <p>決定のまとまりの名前
+決定の対象 ( 言語、料金など ) で分け、Slot の名前にしない。打ち消しの鎖が 1 つの図に並び、Slot を組み替えても古くならない
 省略すると「その他」</p>
 <h3 id="date"><code>date</code></h3>
 <p>必須 / YYYY-MM-DD</p>
@@ -251,6 +253,7 @@
 <li>画像は <code>docv/pdr/&lt;id&gt;_&lt;画像の名前&gt;.&lt;拡張子&gt;</code> に置き、<code>docv/pdr/</code> の中の画像だけを使う</li>
 <li>ファイルの作り方、YAML front matter の項目、書き換えないこと、HTML の図は ADR と同じ</li>
 <li><code>supersedes</code> は PDR だけを指す。ADR と PDR は、同じ id でも別の決定</li>
+<li>題と <code>## 結果</code> は、利用者の言葉で書く。実現する手段は <code>## 決めたこと</code> に書く</li>
 <li>本文の章は、ADR の章の <code>## 結果</code> の後に <code>## 見直す条件</code> を足し、<code>## 選ばなかった案</code> を任意にしたもの
 <ul>
 <li><code>## 背景</code>: 決める必要が生じた課題と、そのときの利用者、市場、事業の状況</li>
