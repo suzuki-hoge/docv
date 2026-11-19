@@ -7,7 +7,6 @@ dir:
   output: output/docv
 
 docv_exclude:
-  - docv/free/tmp/**
   - docv/free/plan/**
 
 generate:

@@ -33,7 +33,7 @@
 
 - ほかのリポジトリには書き込まない
 - ルートの `tmp/` は作業用。コミットしない
-- まとまっていない意思決定やメモは `docv/free/tmp/` に置く（`docv.yaml` の `docv_exclude` に入れてあり、docv は扱わない）
+- 予定、まとまっていない意思決定、メモは `docv/free/plan/` に置く（`docv.yaml` の `docv_exclude` に入れてあり、docv は扱わない）
 
 ---
 
