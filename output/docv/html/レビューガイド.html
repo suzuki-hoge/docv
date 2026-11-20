@@ -29,16 +29,18 @@
 <section class="doc">
 <h1>Review Guide</h1>
 <p class="note"><code>docv review-guide</code> が出す手順と同じ内容。</p>
-<p>AI Agent と開発していると、ドキュメントに作業の報告や経緯、コードの写し、コードを変える人に向けた注意が溜まる。読む人に要らないことが増え、人間がプロジェクトの今の状態をざっと把握しにくくなる。</p>
-<p>このレビューの目的は、どのページも、そのページの読者に要ることだけを残すこと。読者に要るのは、読者の行動を変えることか、読者が自分では知れないこと。</p>
+<p>AI Agent と開発していると、ドキュメントに作業の報告や経緯、コードの写し、コードを変える人に向けた注意が溜まる。読む人に要らないことが増え、人間がプロジェクトの今の姿をざっと把握しにくくなる。</p>
+<p>このレビューの目的は、どのページも、今の姿のうち、そのページの読者に要ることだけを残すこと。</p>
 <ul>
-<li>読者が自分で知れること（使えば分かること、一般的な知識、コードや生成物の写し）は消す</li>
-<li>読者の違うこと（その事柄を変える人に向けた決まりや理由）は、ドキュメントの外へ移す</li>
-<li>読者に要ることは消さない。量を減らすこと自体は目的にしない</li>
-<li>指摘するか迷ったら、直した後に、ページの読者が今の状態をつかみやすくなるかで決める</li>
+<li>読者に要ることは消さない
+<ul>
+<li>量を減らすこと自体は目的にしない</li>
+</ul>
+</li>
+<li>指摘するか迷ったら、直した後に、ページの読者が今の姿をつかみやすくなるかで決める</li>
 </ul>
 <h2 id="レビューフロー">レビューフロー</h2>
-<p><code>docv review-guide</code> の出力を、そのまま AI Agent に渡して使う。ファイルを読める AI Agent なら、どれでもよい。</p>
+<p><code>docv review-guide</code> の出力を、そのまま AI Agent に渡して使う。</p>
 <ol>
 <li>人間が AI Agent にレビューを頼む
 <ul>
@@ -59,7 +61,8 @@
 <li>AI Agent が、選ばれた直し方で直す
 <ul>
 <li>消す・移す直しを先にし、割る・畳む直しは後にする</li>
-<li>直したら、「削るべきでないもの」を消していないかを見直し、<code>docv fix</code> と <code>docv check</code> を通す</li>
+<li>直したら、「削るべきでないもの」を消していないかを見直す</li>
+<li>最後に、<code>docv fix</code> と <code>docv check</code> を通す</li>
 </ul>
 </li>
 </ol>
@@ -73,7 +76,6 @@
 </li>
 <li>Doc ガイドを読む
 <ul>
-<li>この手順と Doc ガイドが食い違うときは、Doc ガイドに従う</li>
 <li>Doc ガイドがなければ、<code>docv gen doc-guide --print</code> が出す雛形を読む</li>
 </ul>
 </li>
@@ -83,14 +85,13 @@
 <li>ADR と PDR はレビューの対象にせず、書き換えも削除も提案しない</li>
 </ul>
 </li>
-<li><code>docv_exclude</code> に当たるファイルのうち、メモや予定を置く場所のものを読む
+<li><code>docv_exclude</code> に当たるファイルのうち、Doc ガイドで予定やメモの置き場所にしたものを読む
 <ul>
 <li>生成物や、外から持ち込んだ文書の場所は読まない</li>
 </ul>
 </li>
 <li>「観点」ごとに確かめる
 <ul>
-<li>Doc ガイドにあって観点にない基準も確かめ、直し方は観点の表の近いものに合わせる</li>
 <li>「削るべきでないもの」は削らない</li>
 <li>「判断に使わないもの」では判断しない</li>
 </ul>
@@ -102,53 +103,40 @@
 </li>
 </ol>
 <h2 id="観点">観点</h2>
-<h3 id="中身に関するもの">中身に関するもの</h3>
-<div class="table-scroll"><table class="aligned"><colgroup><col style="width: 19.0em"><col style="width: 102.2em"><col></colgroup><thead><tr><th class="short">観点</th><th class="short">指摘する状態</th><th>直し方</th></tr></thead><tbody>
-<tr><td class="short">作業の報告</td><td class="short">やったこと、直したこと、試したことが書かれている</td><td>消す。やったことの置き場所は、Doc ガイドに従う</td></tr>
-<tr><td class="short">経緯</td><td class="short">以前どうだったか、いつ・なぜ変えたか、どの案を比べたかが書かれている。今の決まりを守る理由（「〜のため」）は当たらない</td><td>ADR か PDR に同じ経緯があれば、Slot や Free ファイルから消す。なければ、消すか、新しい ADR か PDR に移すかを人間に選んでもらう。移す案は、Doc ガイドの「ADR と PDR の作成基準」に当たるときだけ出す</td></tr>
-<tr><td class="short">予定と課題</td><td class="short">これからやること、検討中のこと、実装の状態（未実装、止めている）が書かれている</td><td>Doc ガイドの置き場所（課題管理の道具など）へ移す</td></tr>
-<tr><td class="short">実装の説明</td><td class="short">コードを読めば分かる局所的なこと（関数やモジュールの分け方、処理の手順）が書かれている。守らせるために書いた決まり（Doc ガイドの「実装の決まり」）と、Doc ガイドで置き場所を決めて書いた実装は当たらない</td><td>消す</td></tr>
-<tr><td class="short">自分で知れる記述</td><td class="short">使えば知らせてくれること、一般的な知識、生成物やコードやエージェントの指示ファイルの写しが書かれている</td><td>消す</td></tr>
-<tr><td class="short">内容の矛盾</td><td class="short">同じことを指す記述が、ファイルどうしで食い違っている</td><td>どちらが今の姿かを調べて、違うほうを直す。分からなければ、両方の記述を示して人間に確かめる</td></tr>
-<tr><td class="short">決定との矛盾</td><td class="short">今の姿として書いたことが、打ち消されていない ADR か PDR の「決めたこと」と食い違っている</td><td>揃えずに、人間に確かめる。選べるのは、Slot か Free ファイルを直すか、新しい ADR か PDR で決定を打ち消すか</td></tr>
-<tr><td class="short">古い図</td><td class="short">図（SVG）が、今の構成や本文と食い違っている</td><td>本文に合わせて図を直す。本文どうしも食い違っていれば、「内容の矛盾」として扱う</td></tr>
-<tr><td class="short">概要のずれ</td><td class="short">サービス概要かシステム概要が、詳しいページの今の姿と食い違っている。詳しいページに足された部品や機能が、概要から抜けている</td><td>詳しいページから要点を持ってきて、概要を置き換える</td></tr>
-<tr><td class="short">変わりやすい参照</td><td class="short">コードの行番号やドキュメントの章番号など、すぐに変わるものを頼りに書いている</td><td>見出しの名前やファイルのパスで指すように置き換える</td></tr>
-<tr><td class="short">足りないもの</td><td class="short">手順のページを読者としてなぞると、戻せないこと、戻している間の振る舞い、気づけないことが書かれていない</td><td>書き足さずに、足りないかもしれないことを問いにして人間に出す</td></tr>
+<p>観点は、docv が守らせるものと、Doc ガイドの基準の 2 つに分かれる。</p>
+<div class="table-scroll"><table><thead><tr><th>観点</th><th>決めるもの</th><th>変えられるか</th></tr></thead><tbody>
+<tr><td>今の姿、置き場所と形</td><td>docv</td><td>変えられない<br>Slot のミッションや、docv のディレクトリのルールで決まっている<br>Doc ガイドと食い違うときは、docv のルールに従う</td></tr>
+<tr><td>Doc ガイドの基準</td><td>プロジェクト</td><td>Doc ガイドを直せば変わる</td></tr>
 </tbody></table></div>
-<h3 id="置き場所に関するもの">置き場所に関するもの</h3>
-<div class="table-scroll"><table class="aligned"><colgroup><col style="width: 19.0em"><col style="width: 102.2em"><col></colgroup><thead><tr><th class="short">観点</th><th class="short">指摘する状態</th><th>直し方</th></tr></thead><tbody>
-<tr><td class="short">ミッションに合わない記述</td><td class="short"><code>docv list</code> に出たミッションに合わないことが書かれている</td><td>ミッションに合うファイルへ移す</td></tr>
-<tr><td class="short">読者の違う記述</td><td class="short">ページの読者ではなく、その事柄を変える人に向けた決まりや理由がある</td><td>ドキュメントの外（その値の隣のコメントなど）へ移す。移す先に同じことがあれば、消す</td></tr>
-<tr><td class="short">内容の重複</td><td class="short">同じことが、複数のファイルに書かれている</td><td>ミッションに合う 1 か所に残し、ほかは消す</td></tr>
-<tr><td class="short">方針の言い直し</td><td class="short">同じ方針を、分類やページごとに言い直している。方針を具体にして、情報が増えているものは当たらない</td><td>1 か所に残し、ほかは消す</td></tr>
-<tr><td class="short">値や数の写し</td><td class="short">持ち主がほかにある値や数（「3 段階」「6 本」）を写している。図の中も見る</td><td>持ち主を名前で指すだけにし、値や数を消す</td></tr>
-<tr><td class="short">ケースの列挙</td><td class="short">テストで確かめるケースを、ドキュメントに並べている</td><td>消す。ケースはテスト名に任せる</td></tr>
-<tr><td class="short">受け皿</td><td class="short">補足、注意点、残るリスクのような、何でも入る節やページがある</td><td>中身を、原因になった決定や決まりの隣へ移す。移す先のないものは、消す</td></tr>
-<tr><td class="short">ほかの Slot の案内</td><td class="short">ページの冒頭に、ほかの Slot やページに何が書いてあるかを並べている（「〜は [A]、〜は [B] に書く」）。どの Slot に何を書くかはミッションで決まっていて、読み手は知っている</td><td>消す</td></tr>
-<tr><td class="short">本文での ADR と PDR の案内</td><td class="short">Slot や Free ファイルの決まりの文に、ADR や PDR へのリンクや、「理由は ADR に書いた」のような文が付いている</td><td>YAML front matter の <code>adr</code> か <code>pdr</code> に id を移し、本文から消す</td></tr>
-<tr><td class="short">Slot に書くべき内容が Free にある</td><td class="short">Slot のミッションに当たることが、Free ファイルに書かれている。Free ファイルのディレクトリが、Slot の代わりになっている</td><td>Slot へ移す</td></tr>
-<tr><td class="short">話が混ざったページ</td><td class="short">ページに分けられる Slot のファイル（分けていなければそのファイル、分けていれば 1 ページ）に、読み手、読むタイミング、部品や機能の違う話が混ざっている</td><td>Doc ガイドの観点で分け、<code>docv desc</code> の「ページ分け」の置き方でページにする</td></tr>
-<tr><td class="short">分けすぎたページ</td><td class="short">読み手、読むタイミング、部品や機能が同じページや Free ファイルが、分けておく理由もなく分かれている</td><td>まとめる</td></tr>
+<h3 id="今の姿">今の姿</h3>
+<p>Slot と Free ファイルには、今の姿だけを、食い違いなく書く。</p>
+<div class="table-scroll"><table class="aligned"><colgroup><col style="width: 19.0em"><col><col style="width: 69.2em"></colgroup><thead><tr><th class="short">観点</th><th>指摘する状態</th><th class="short">直し方</th></tr></thead><tbody>
+<tr><td class="short">内容の矛盾</td><td>同じことを指す記述が、ファイルどうしで食い違っている</td><td class="short">どちらが今の姿かを調べて、違うほうを直す<br>分からなければ、両方の記述を示して人間に確かめる</td></tr>
+<tr><td class="short">決定との矛盾</td><td>今の姿として書いたことが、打ち消されていない ADR か PDR の「決めたこと」と食い違っている</td><td class="short">揃えずに、人間に確かめる<br>選べるのは、Slot か Free ファイルを直すか、新しい ADR か PDR で決定を打ち消すか</td></tr>
+<tr><td class="short">今の姿とのずれ</td><td>図（SVG）、サービス概要、システム概要が、本文や詳しいページの今の姿と食い違っている。詳しいページに足された部品や機能が抜けている</td><td class="short">本文や詳しいページに合わせて直す<br>本文どうしも食い違っていれば、「内容の矛盾」として扱う</td></tr>
+<tr><td class="short">作業の報告</td><td>やったこと、直したこと、試したことが書かれている</td><td class="short">消す<br>やったことの置き場所は、Doc ガイドに従う</td></tr>
+<tr><td class="short">経緯</td><td>以前どうだったか、いつ・なぜ変えたか、どの案を比べたかが書かれている。今の決まりを守る理由（「〜のため」）は当たらない</td><td class="short">ADR か PDR に同じ経緯があれば、消す<br>なければ、消すか、新しい ADR か PDR に移すかを人間に選んでもらう。移す案は、Doc ガイドの、ADR と PDR を書く基準に当たるときだけ出す</td></tr>
+<tr><td class="short">予定と課題</td><td>これからやること、検討中のこと、実装の状態（未実装、止めている）が書かれている</td><td class="short">Doc ガイドで決めた、予定を置く場所へ移す</td></tr>
+<tr><td class="short">足りないもの</td><td>手順のページを読者としてなぞると、戻せないこと、戻している間の振る舞い、気づけないことが書かれていない</td><td class="short">書き足さずに、足りないかもしれないことを問いにして人間に出す</td></tr>
 </tbody></table></div>
-<h3 id="片付けに関するもの">片付けに関するもの</h3>
-<div class="table-scroll"><table class="aligned"><colgroup><col style="width: 19.0em"><col style="width: 102.2em"><col></colgroup><thead><tr><th class="short">観点</th><th class="short">指摘する状態</th><th>直し方</th></tr></thead><tbody>
-<tr><td class="short">解決したメモ</td><td class="short"><code>docv_exclude</code> の領域に、Slot や Free ファイルにもう反映した決定や、終わった予定が残っている</td><td>消す。解決したと言い切れなければ、人間に確かめる</td></tr>
+<h3 id="置き場所と形">置き場所と形</h3>
+<p>どの Slot に何を書くかは、ミッションで決まっている。1 つのことは 1 か所に書き、Slot は docv の決めた形で書く。</p>
+<div class="table-scroll"><table class="aligned"><colgroup><col style="width: 19.0em"><col><col style="width: 69.2em"></colgroup><thead><tr><th class="short">観点</th><th>指摘する状態</th><th class="short">直し方</th></tr></thead><tbody>
+<tr><td class="short">ミッションに合わない記述</td><td><code>docv list</code> に出たミッションに合わないことが書かれている</td><td class="short">ミッションに合うファイルへ移す</td></tr>
+<tr><td class="short">Slot に書くべき内容が Free にある</td><td>Slot のミッションに当たることが、Free ファイルに書かれている。Free ファイルのディレクトリが、Slot の代わりになっている</td><td class="short">Slot へ移す</td></tr>
+<tr><td class="short">内容の重複</td><td>同じことが、複数のファイルに書かれている</td><td class="short">ミッションに合う 1 か所に残し、ほかは消す</td></tr>
+<tr><td class="short">ほかの Slot の案内</td><td>ページの冒頭で、ほかの Slot やページに何が書いてあるかを説明している（例: 「環境変数は環境変数のページに、テストの実行方法は開発コマンドのページに書く」）</td><td class="short">消す<br>どの Slot に何があるかはミッションで分かるので、本文で説明しなくてよい</td></tr>
+<tr><td class="short">本文での ADR と PDR の案内</td><td>Slot や Free ファイルの決まりの文に、ADR や PDR へのリンクや、「理由は ADR に書いた」のような文が付いている</td><td class="short">YAML front matter の <code>adr</code> か <code>pdr</code> に id を移し、本文から消す</td></tr>
+<tr><td class="short">雛形の形から外れている</td><td>雛形のある Slot（<code>docv gen &lt;slot&gt; --print</code> で出る）が、雛形の見出しや表の形から外れている。列や文を足しただけのものは当たらない</td><td class="short">雛形の形に合わせる</td></tr>
 </tbody></table></div>
-<h3 id="読みやすさに関するもの">読みやすさに関するもの</h3>
-<div class="table-scroll"><table class="aligned"><colgroup><col style="width: 19.0em"><col style="width: 102.2em"><col></colgroup><thead><tr><th class="short">観点</th><th class="short">指摘する状態</th><th>直し方</th></tr></thead><tbody>
-<tr><td class="short">冗長</td><td class="short">同じことを言い換えて繰り返している。結論より前置きが長い</td><td>1 回にまとめ、前置きを消す</td></tr>
-<tr><td class="short">冒頭での言い直し</td><td class="short">ページの冒頭の文が、ミッションの言い直しになっている</td><td>消す</td></tr>
-<tr><td class="short">雛形の形から外れている</td><td class="short">雛形のある Slot（<code>docv gen &lt;slot&gt; --print</code> で出る）が、雛形の見出しや表の形から外れている。列や文を足しただけのものは当たらない</td><td>雛形の形に合わせる</td></tr>
-<tr><td class="short">文を重ねた箇条書き</td><td class="short">箇条書きの 1 項目に、句点で複数の文が書かれている</td><td>読者に要らない文を消す。残る文が 2 つ以上なら、子の項目に分ける</td></tr>
-<tr><td class="short">畳めるのに畳んでいない</td><td class="short">必要になってから読む詳しいこと（全項目の一覧、例、例外の扱い、理由の細部など）が、畳まれずに本文の流れを切っている</td><td>畳む</td></tr>
-<tr><td class="short">畳みすぎ</td><td class="short">読む人の誰もが知っておく要点や決まりが、畳まれている。畳んだところを読まないと、本文の話が通らない</td><td>本文に出す</td></tr>
-<tr><td class="short">畳んで残した不要物</td><td class="short">消すべきもの（作業の報告や古くなった情報）が、畳んで残されている</td><td>消す</td></tr>
-<tr><td class="short">中身の分からない summary</td><td class="short"><code>&lt;summary&gt;</code> を見ても、中に何があるかが分からない</td><td><code>&lt;summary&gt;</code> を、中身の分かる言葉に置き換える</td></tr>
-<tr><td class="short">アスキーアート</td><td class="short">アスキーアートで図を描いている</td><td>SVG に置き換える</td></tr>
-<tr><td class="short">図にすべき文</td><td class="short">分岐、合流、多対多のつながり、状態の移り変わりを、文や箇条書きで追わせていて、全体の形がつかめない</td><td>図に置き換え、その分の文を消す</td></tr>
-<tr><td class="short">図と本文の重複</td><td class="short">図と同じことを、本文でも長く説明している</td><td>本文を消す</td></tr>
-<tr><td class="short">用語のゆれ</td><td class="short">同じものを違う言葉で呼んでいる。用語集があるのに、その言葉と違う言葉を使っている</td><td>用語集の言葉に揃える。用語集にない言葉のゆれは、どれに揃えるかを人間に確かめる</td></tr>
+<h3 id="doc-ガイドの基準">Doc ガイドの基準</h3>
+<p>Doc ガイドの基準に合わない記述を、すべて指摘する。章の名前や分け方はプロジェクトごとに違うので、基準の中身から次の種類を決め、その直し方から選ぶ。</p>
+<div class="table-scroll"><table><thead><tr><th>基準の種類</th><th>指摘する状態</th><th>直し方</th></tr></thead><tbody>
+<tr><td>書かないもの</td><td>Doc ガイドで書かないとしたもの（一般的な知識、コードを読めば分かることなど）が書かれている</td><td>消す</td></tr>
+<tr><td>ドキュメントの外に置くもの</td><td>Doc ガイドでドキュメントの外に置くとしたものが書かれている</td><td>Doc ガイドの置き場所へ移す<br>移す先に同じことがあれば、消す</td></tr>
+<tr><td>置き場所</td><td>Doc ガイドの、どこに書くかの基準（言葉の使い分け、ページの分け方など）に合わない</td><td>合う Slot、ページ、Free ファイルへ移す<br>ページを分けるか、まとめる</td></tr>
+<tr><td>書き方</td><td>Doc ガイドの書き方の基準（箇条書き、折りたたみ、図、用語など）に合わない</td><td>基準に合わせる<br>読者に要らない文は、合わせる前に消す</td></tr>
+<tr><td>そのほか</td><td>上のどれにも当たらない Doc ガイドの基準に合わない</td><td>基準に合わせる</td></tr>
 </tbody></table></div>
 <h2 id="削るべきでないもの">削るべきでないもの</h2>
 <div class="table-scroll"><table><thead><tr><th>削るべきでないもの</th><th>理由</th></tr></thead><tbody>
@@ -156,7 +144,7 @@
 <tr><td>読者に要る、境目の記述（やらないこと、ないもの、書かないこと）</td><td>やらないと決めたことや、ないものは、今の姿には現れない。書いておかないと、後から知る方法がない</td></tr>
 <tr><td>読者に要る、実装の決まり（コードの分け方や書き方のうち、守らせるために書いたもの）</td><td>コードを読んでも、守るべき決まりか、たまたまそうなっているかが分からない</td></tr>
 <tr><td>概要と詳細の重複</td><td>概要が詳しいページの要点を持つのは、重複ではない。概要が詳しいページの写しになっているときだけ指摘する</td></tr>
-<tr><td>文の中身になっているリンク（正本の置き場所、「[A] と同じ」の A など）</td><td>消すと、文の言っていることが分からなくなる</td></tr>
+<tr><td>文の中身になっているリンク（正本の置き場所、「〜と同じ」と書いたときの〜など）</td><td>消すと、文の言っていることが分からなくなる</td></tr>
 <tr><td>決まりを書いた文に付けた、根拠や詳しい箇所を章まで指す参照</td><td>ミッションからは、どの章に書いてあるかまでは分からない</td></tr>
 <tr><td>Slot でないもの（Free ファイル、コード、外の資料）への参照</td><td>置き場所がミッションで決まっていないので、指さないと辿れない</td></tr>
 <tr><td>理解を助ける例</td><td>冗長ではない。本文の流れを切るなら、消さずに畳む</td></tr>
@@ -165,20 +153,25 @@
 <h2 id="判断に使わないもの">判断に使わないもの</h2>
 <div class="table-scroll"><table><thead><tr><th>使わないもの</th><th>理由</th></tr></thead><tbody>
 <tr><td>行数、ページ数、ファイル数</td><td>ドキュメントの絶対的な大きさに正解はない</td></tr>
-<tr><td>図がないこと</td><td>図の観点（アスキーアート、図にすべき文など）に当たるときだけ指摘する</td></tr>
+<tr><td>図がないこと</td><td>Doc ガイドの図の基準に当たるときだけ指摘する</td></tr>
 <tr><td>置いていない Slot</td><td>Slot を置くかどうかは、プロジェクトが選ぶ</td></tr>
 <tr><td>観点に当たらない書き換え</td><td>観点に当たらない言い換えは好みの押し付けで、人間の確かめる手間を増やすだけ</td></tr>
-<tr><td><code>docv check</code> で分かること（YAML front matter と <code>mission</code>、リンク切れ、見出しの数と章番号、Slot のファイルの名前、太字など）</td><td>check が確かめる</td></tr>
+<tr><td>Doc ガイドの、AI Agent の作業の進め方の指示</td><td>書くときの動き方の決まりで、書かれたドキュメントからは確かめられない</td></tr>
+<tr><td><code>docv check</code> で分かること</td><td>check が確かめる<br>YAML front matter と <code>mission</code>、リンク切れ、見出しの数と章番号、Slot のファイルの名前、太字など</td></tr>
 <tr><td>調べる範囲の外のこと</td><td>範囲は、レビューの初めに人間と決めている</td></tr>
 <tr><td>中を読めない画像（PNG、JPG など）の中身</td><td>読めないものを、推し量って指摘しない</td></tr>
 <tr><td>打ち消された ADR と PDR との違い</td><td>打ち消された決定は履歴で、今の姿ではない</td></tr>
 <tr><td>ADR と PDR にあって、Slot と Free ファイルにないこと</td><td>直すと書き足すことになる</td></tr>
 </tbody></table></div>
 <h2 id="報告の形">報告の形</h2>
-<p>指摘のある観点だけを、中身、置き場所、片付け、読みやすさの順に出す。指摘のない観点は、最後に「指摘なし: 作業の報告、経緯、…」と 1 行で並べる。当たるものがなければ、無理に探さない。</p>
+<p>指摘のある観点だけを、今の姿、置き場所と形、Doc ガイドの基準の順に出す。指摘のない観点は、最後に「指摘なし: 内容の矛盾、決定との矛盾、…」と 1 行で並べる。当たるものがなければ、無理に探さない。</p>
 <p>指摘ごとに、次を書く。</p>
 <ul>
-<li>番号、観点、ファイルと箇所</li>
+<li>番号、観点、ファイルと箇所
+<ul>
+<li>Doc ガイドの基準による指摘では、基準を書いた Doc ガイドの箇所も書く</li>
+</ul>
+</li>
 <li>何が問題か</li>
 <li>選べる直し方と、それぞれを選んだときの直した後の姿
 <ul>
@@ -210,15 +203,16 @@
 <li>直さないときは、人間が「このままでいい」と答える</li>
 </ul>
 </li>
-<li>「このままでいい」と答えた指摘には、その判断を一般化した 1 行を、Doc ガイドに足す案として返す
+<li>Doc ガイドの基準による指摘に「このままでいい」と答えたら、その判断を一般化した 1 行を、Doc ガイドに足す案として返す
 <ul>
 <li>Doc ガイドが変わるので、次のレビューでは同じ指摘が出ない</li>
-<li>1 行は当たる範囲を言い切れる書き方にし、観点を丸ごと外す書き方にしない</li>
+<li>1 行は当たる範囲を言い切れる書き方にし、基準を丸ごと外す書き方にしない</li>
+<li>その箇所だけの例外で一般化できなければ、案を返さない</li>
 </ul>
 </li>
-<li>その箇所だけの例外で一般化できなければ、案を返さない
+<li>今の姿、置き場所と形の観点による指摘には、Doc ガイドに足す案を返さない
 <ul>
-<li>その指摘は、次のレビューでも出る</li>
+<li>Doc ガイドでは変えられないので、その指摘は、次のレビューでも出る</li>
 </ul>
 </li>
 <li>報告の最後に、「直さない指摘には「このままでいい」と答える」と書く</li>
@@ -233,10 +227,9 @@
 <li class="h2"><a href="#レビューフロー">レビューフロー</a></li>
 <li class="h2"><a href="#レビュー手順">レビュー手順</a></li>
 <li class="h2"><a href="#観点">観点</a></li>
-<li class="h3"><a href="#中身に関するもの">中身に関するもの</a></li>
-<li class="h3"><a href="#置き場所に関するもの">置き場所に関するもの</a></li>
-<li class="h3"><a href="#片付けに関するもの">片付けに関するもの</a></li>
-<li class="h3"><a href="#読みやすさに関するもの">読みやすさに関するもの</a></li>
+<li class="h3"><a href="#今の姿">今の姿</a></li>
+<li class="h3"><a href="#置き場所と形">置き場所と形</a></li>
+<li class="h3"><a href="#doc-ガイドの基準">Doc ガイドの基準</a></li>
 <li class="h2"><a href="#削るべきでないもの">削るべきでないもの</a></li>
 <li class="h2"><a href="#判断に使わないもの">判断に使わないもの</a></li>
 <li class="h2"><a href="#報告の形">報告の形</a></li>
