@@ -1,4 +1,5 @@
 //! docv check のルール。Free ファイルのルールは docv/slot/service/service/free.md の 3 章、書式の規則と textlint は docv/slot/service/service/config.md。
+//! Free ファイルと Slot の YAML front matter の adr と pdr は、決定があるかと、打ち消されていないか（warning）を確かめる。
 
 use std::fs;
 use std::path::Path;
@@ -6,8 +7,10 @@ use std::path::Path;
 use anyhow::{Context, Result};
 use serde_yaml_ng::Value;
 
+use crate::decision::{Decision, Kind};
 use crate::diagnostic::Diagnostic;
 use crate::markdown::{self, Document, Outline};
+use crate::meta;
 use crate::style::{self, Style};
 use crate::textlint::Textlint;
 use crate::workspace::Project;
@@ -27,18 +30,31 @@ pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Ve
     let read = |path: &str| {
         fs::read_to_string(project.root.join(path)).with_context(|| format!("{path} を読めない"))
     };
+    let known = Known::load(project)?;
     let mut diagnostics = Vec::new();
     let mut textlint_files = Vec::new();
     for path in project.targets(targets)? {
         let text = read(&path)?;
-        diagnostics.extend(check_markdown(project, &style, &path, &text, true));
+        diagnostics.extend(check_markdown(
+            project,
+            &known,
+            &style,
+            &path,
+            &text,
+            Front::Free,
+        ));
         textlint_files.push(path);
     }
     // Slot、ADR、PDR には、YAML front matter のほかは、Free ファイルと同じ検査をかける。
-    // Slot の YAML front matter は slot::check で、ADR と PDR の YAML front matter は decision::check で確かめる。
+    // Slot の YAML front matter の形は slot::check で、ADR と PDR の YAML front matter は decision::check で確かめる。
     for path in project.docv_markdown()?.into_iter().filter(|p| wanted(p)) {
         let text = read(&path)?;
-        diagnostics.extend(check_markdown(project, &style, &path, &text, false));
+        let front = if slot::def_of_path(project, &path).is_some() {
+            Front::Slot
+        } else {
+            Front::Other
+        };
+        diagnostics.extend(check_markdown(project, &known, &style, &path, &text, front));
         textlint_files.push(path);
     }
     // docv.yaml は、末尾の改行だけを整形と連動させる。
@@ -48,12 +64,12 @@ pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Ve
         let text = read(&path)?;
         let formatted = format::final_newline(&text);
         if formatted != text {
-            diagnostics.push(Diagnostic {
-                line: format::first_diff_line(&text, &formatted),
+            diagnostics.push(Diagnostic::error(
                 path,
-                rule: "format-diff".to_string(),
-                message: "末尾の改行を 1 つにする。docv fix で整形する".to_string(),
-            });
+                format::first_diff_line(&text, &formatted),
+                "format-diff",
+                "末尾の改行を 1 つにする。docv fix で整形する",
+            ));
         }
     }
     // Slot、ADR、PDR は、ファイルどうしのつながり（supersedes など）も見るので、すべて読んでから絞る。
@@ -88,41 +104,93 @@ pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Ve
     Ok(diagnostics)
 }
 
+/// ファイルの種類ごとの、YAML front matter の確かめ方。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Front {
+    /// Free ファイル。mission、tags、adr、pdr を確かめる。
+    Free,
+    /// Slot（分けたページも）。形は slot::check が確かめるので、adr と pdr の id だけを確かめる。
+    Slot,
+    /// ADR と PDR（decision::check が確かめる）と、Slot の名前でないファイル（slot::check が報告する）。ここでは確かめない。
+    Other,
+}
+
+/// 関わる決定の id を確かめるための、ADR と PDR。
+struct Known {
+    adr: Records,
+    pdr: Records,
+}
+
+struct Records {
+    /// ファイルのある決定の id。読めない決定（adr-invalid など）も含め、ないとは言わない。
+    ids: Vec<String>,
+    /// 読めた決定。打ち消されたかを見る。
+    decisions: Vec<Decision>,
+}
+
+impl Known {
+    fn load(project: &Project) -> Result<Known> {
+        let records = |kind| -> Result<Records> {
+            Ok(Records {
+                ids: decision::ids(project, kind)?,
+                decisions: decision::load(project, kind)?,
+            })
+        };
+        Ok(Known {
+            adr: records(Kind::Adr)?,
+            pdr: records(Kind::Pdr)?,
+        })
+    }
+
+    fn of(&self, kind: Kind) -> &Records {
+        match kind {
+            Kind::Adr => &self.adr,
+            Kind::Pdr => &self.pdr,
+        }
+    }
+}
+
 struct Checker<'a> {
     project: &'a Project,
+    known: &'a Known,
     path: &'a str,
     diagnostics: Vec<Diagnostic>,
 }
 
 impl Checker<'_> {
     fn push(&mut self, line: usize, rule: &str, message: impl Into<String>) {
-        self.diagnostics.push(Diagnostic {
-            path: self.path.to_string(),
-            line,
-            rule: rule.to_string(),
-            message: message.into(),
-        });
+        self.diagnostics
+            .push(Diagnostic::error(self.path, line, rule, message));
+    }
+
+    fn warn(&mut self, line: usize, rule: &str, message: impl Into<String>) {
+        self.diagnostics
+            .push(Diagnostic::warning(self.path, line, rule, message));
     }
 }
 
-/// Markdown のファイル 1 つ。frontmatter なら、Free ファイルの YAML front matter を確かめる。
+/// Markdown のファイル 1 つ。YAML front matter は、front に合わせて確かめる。
 fn check_markdown(
     project: &Project,
+    known: &Known,
     style: &Style,
     path: &str,
     text: &str,
-    frontmatter: bool,
+    front: Front,
 ) -> Vec<Diagnostic> {
     let mut cx = Checker {
         project,
+        known,
         path,
         diagnostics: Vec::new(),
     };
     let document = markdown::split(text);
     let outline = markdown::outline(&document);
 
-    if frontmatter {
-        check_frontmatter(&mut cx, &document);
+    match front {
+        Front::Free => check_frontmatter(&mut cx, &document),
+        Front::Slot => check_related(&mut cx, &document),
+        Front::Other => {}
     }
     check_structure(&mut cx, &document, &outline);
 
@@ -233,6 +301,57 @@ fn check_frontmatter(cx: &mut Checker, document: &Document) {
             "frontmatter-invalid",
             "tags は文字列の配列で書く",
         ),
+    }
+
+    for kind in Kind::ALL {
+        if let Some(message) = meta::related_type_problem(kind, mapping.get(kind.dir())) {
+            cx.push(line_of(kind.dir()), "frontmatter-invalid", message);
+        }
+    }
+    check_related(cx, document);
+}
+
+/// YAML front matter の adr と pdr に書いた id の決定があるかと、打ち消されていないかを確かめる。
+/// ADR と PDR は、同じ id でも別の決定なので、adr は ADR だけ、pdr は PDR だけから探す。
+/// 打ち消された決定は、直さなくても困らないので warning にする。HTML のページの末尾には出さない。
+/// 型の誤りは、Free ファイルなら frontmatter-invalid、Slot なら slot-invalid で出しているので、読める id だけを確かめる。
+fn check_related(cx: &mut Checker, document: &Document) {
+    let Some(fm) = document.frontmatter.as_ref().filter(|fm| fm.closed) else {
+        return;
+    };
+    let related = meta::related(document);
+    for kind in Kind::ALL {
+        let key = kind.dir();
+        let records = cx.known.of(kind);
+        for id in related.ids(kind) {
+            let line = fm.line_of_item(key, id);
+            if !records.ids.contains(id) {
+                // 種類を取り違えていれば、もう一方の項目を案内する。
+                let hint = Kind::ALL
+                    .into_iter()
+                    .find(|other| *other != kind && cx.known.of(*other).ids.contains(id))
+                    .map(|other| format!("。{} の {id} なら {} に書く", other.label(), other.dir()))
+                    .unwrap_or_default();
+                cx.push(
+                    line,
+                    "decision-unknown",
+                    format!("{key} の {id} という {} がない{hint}", kind.label()),
+                );
+                continue;
+            }
+            if let Some(d) = records
+                .decisions
+                .iter()
+                .find(|d| &d.record.id == id && !d.superseded_by.is_empty())
+            {
+                let newer = d.superseded_by.join("、");
+                cx.warn(
+                    line,
+                    "decision-superseded",
+                    format!("{key} の {id} は打ち消された。新しい決定は {newer}"),
+                );
+            }
+        }
     }
 }
 
@@ -400,6 +519,82 @@ lint:
                 .iter()
                 .any(|r| r.starts_with("docv/free/spec/c.md:1: frontmatter-invalid"))
         );
+    }
+
+    /// adr と pdr を書いた Free ファイルと Slot、指される決定。
+    const RELATED_FILES: &[(&str, &str)] = &[
+        (
+            "docv/adr/go.md",
+            "---\ndate: 2026-01-01\n---\n\n# Go にする\n",
+        ),
+        (
+            "docv/adr/rust.md",
+            "---\ndate: 2026-02-01\nsupersedes: [go]\n---\n\n# Rust にする\n",
+        ),
+        ("docv/pdr/paid.md", "---\ndate: 2026-01-01\n---\n\n# 有料\n"),
+        // 読めない決定も、ないとは言わない
+        ("docv/adr/broken.md", "# 壊れた\n"),
+        (
+            "docv/free/spec/a.md",
+            "---\nmission: q\nadr: [rust, go, broken, none]\npdr:\n  - paid\n  - rust\n---\n\n# A\n",
+        ),
+        // 型の違う adr と pdr は frontmatter-invalid にし、読める id だけを確かめる
+        (
+            "docv/free/spec/b.md",
+            "---\nmission: q\nadr: go\npdr: [paid, 1]\n---\n\n# B\n",
+        ),
+        (
+            "docv/slot/service/manual.md",
+            "---\nmission: 利用者の使い方（CLI のコマンド、GUI の操作など）\nadr: [go]\n---\n\n# M\n",
+        ),
+        (
+            "docv/slot/service/service/a.md",
+            "---\norder: 1\nmission: 外から見た機能と、それぞれの振る舞いと決まり\npdr: [none]\n---\n\n# A\n",
+        ),
+    ];
+
+    #[test]
+    fn checks_related_decisions_of_free_files_and_slots() {
+        assert_eq!(
+            check(RELATED_FILES),
+            [
+                "docv/adr/broken.md:1: adr-invalid YAML front matter がない",
+                // 見つからない id は error、打ち消された決定は warning。どちらも id の行を指す
+                "docv/free/spec/a.md:3: decision-unknown adr の none という ADR がない",
+                "docv/free/spec/a.md:3: warning decision-superseded adr の go は打ち消された。新しい決定は rust",
+                // ADR と PDR は別の決定。種類を取り違えていれば、もう一方の項目を案内する
+                "docv/free/spec/a.md:6: decision-unknown pdr の rust という PDR がない。ADR の rust なら adr に書く",
+                "docv/free/spec/b.md:3: frontmatter-invalid adr は ADR の id（ファイル名から .md を除いたもの）の配列で書く",
+                "docv/free/spec/b.md:4: frontmatter-invalid pdr は PDR の id（ファイル名から .md を除いたもの）の配列で書く",
+                // Slot と分けたページも、Free ファイルと同じく確かめる
+                "docv/slot/service/manual.md:3: warning decision-superseded adr の go は打ち消された。新しい決定は rust",
+                "docv/slot/service/service/a.md:4: decision-unknown pdr の none という PDR がない",
+            ]
+        );
+    }
+
+    #[test]
+    fn checks_related_decisions_only_in_targets() {
+        let dir = tempfile::tempdir().unwrap();
+        write(dir.path(), "docv.yaml", CONFIG);
+        for (path, text) in RELATED_FILES {
+            write(dir.path(), path, text);
+        }
+        let project = Project::open(&Locate::default(), dir.path()).unwrap();
+        let run_on = |path: &str| run(&project, &[path.to_string()], OPTIONS).unwrap();
+        // warning だけなら、error はない（終了コードは 0）
+        let manual = run_on("docv/slot/service/manual.md");
+        assert_eq!(
+            manual.iter().map(|d| d.to_string()).collect::<Vec<_>>(),
+            [
+                "docv/slot/service/manual.md:3: warning decision-superseded adr の go は打ち消された。新しい決定は rust"
+            ]
+        );
+        assert!(!crate::diagnostic::has_error(&manual));
+        let a = run_on("docv/free/spec/a.md");
+        assert_eq!(a.len(), 3, "{a:#?}");
+        assert!(a.iter().all(|d| d.path == "docv/free/spec/a.md"));
+        assert!(crate::diagnostic::has_error(&a));
     }
 
     #[test]

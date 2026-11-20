@@ -49,6 +49,7 @@ docv/
     - ページを移したり分けたりしたときも、移した先の案内を元のページに残さない
     - 冒頭のほかでは、ほかの Slot やページ、Free ファイルを参照してよい
 - Slot と Free ファイルの本文で、ADR と PDR を案内しない
+    - 関わる決定は、YAML front matter の `adr` と `pdr` に id を並べる。HTML では、docv がページの末尾に題を出す
 
 ### `docv/free/`
 
@@ -78,7 +79,7 @@ Free ファイル、Slot ファイル、ADR、PDR で使う画像の置き方
 
 `docv list` で一覧と、それぞれの Slot のミッションを確認でき、作成したい場合は `docv gen <slot>` で作成する
 
-Slot ファイルは、すべて Markdown で書く。YAML front matter の `mission` に、その Slot のミッションを `docv list` のとおりに書く
+Slot ファイルは、すべて Markdown で書く。YAML front matter の `mission` に、その Slot のミッションを `docv list` のとおりに書く。関わる決定の `adr` と `pdr` も書ける ( 「YAML front matter」の章 )
 
 - ミッションは docv が決めるもので、プロジェクトでは変えられない
 - `mission` がないか、ミッションと違えば、`docv check` が error にする。docv の版を上げてミッションが変わったときも、check で気づいて直す
@@ -127,6 +128,7 @@ Free ファイル ( `docv/free/` の Markdown ) を管理するための YAML fr
 ---
 mission: 注文を確定するタイミングと、失敗したときの扱い
 tags: [ 仕様, 注文 ]
+adr: [ queue ]
 ---
 ```
 
@@ -142,6 +144,14 @@ HTML にインデックスするときに添える
 任意 / リスト形式
 
 HTML にインデックスするときに組み込まれる
+
+### `adr`、`pdr`
+
+任意 / リスト形式
+
+関わる ADR と PDR の id
+HTML のページの末尾に、決定の題を並べる。Slot にも書ける
+ない id は `docv check` が error に、打ち消された決定は warning にする
 
 ## 4. ADR
 

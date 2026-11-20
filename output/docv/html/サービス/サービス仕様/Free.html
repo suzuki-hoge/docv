@@ -36,6 +36,8 @@
 <div class="table-scroll"><table><thead><tr><th>key</th><th>必須</th><th>中身</th></tr></thead><tbody>
 <tr><td><code>mission</code></td><td>必須</td><td>ミッション。このファイルを読むと何が分かるか（1 文）</td></tr>
 <tr><td><code>tags</code></td><td>任意</td><td>タグの配列（「タグ」の章）</td></tr>
+<tr><td><code>adr</code></td><td>任意</td><td>関わる ADR の id の配列（「関わる決定」の章）</td></tr>
+<tr><td><code>pdr</code></td><td>任意</td><td>関わる PDR の id の配列（「関わる決定」の章）</td></tr>
 </tbody></table></div>
 <pre><code class="language-yaml"><span style="color:#323232;">---
 </span><span style="color:#63a35c;">mission</span><span style="color:#323232;">: </span><span style="color:#183691;">注文を確定するタイミングと、失敗したときの扱い
@@ -48,6 +50,20 @@
 <li>docv が知らない key は、そのまま残し、check もしない。作成者の記録（<code>created</code> / <code>updated</code> など）のように、プロジェクトが決めた key を書いてよい</li>
 <li>HTML は、<code>mission</code> をファイルの説明として表示する</li>
 </ul>
+<h3 id="関わる決定">関わる決定</h3>
+<ul>
+<li><code>adr</code> と <code>pdr</code> には、そのページに関わる決定の id を並べる。HTML では、docv がページの末尾に決定の題を出す（<a href="%E3%83%93%E3%82%B8%E3%83%A5%E3%82%A2%E3%83%A9%E3%82%A4%E3%82%BA.html">ビジュアライズ</a> のページの「HTML の作り」の章）</li>
+<li>本文には、ADR と PDR へのリンクや、「理由は ADR に書いた」のような文を書かない。決定を指すのは、<code>adr</code> と <code>pdr</code> だけにする</li>
+<li>ADR と PDR は、同じ id でも別の決定なので、項目を分ける</li>
+<li>決定の側には、関わるページを書かない。決定は書き換えないが、ページは移ったり分かれたりするため</li>
+<li>md の Slot にも、同じく書ける</li>
+</ul>
+<pre><code class="language-yaml"><span style="color:#323232;">---
+</span><span style="color:#63a35c;">mission</span><span style="color:#323232;">: </span><span style="color:#183691;">注文を確定するタイミングと、失敗したときの扱い
+</span><span style="color:#63a35c;">adr</span><span style="color:#323232;">: [</span><span style="color:#183691;">queue</span><span style="color:#323232;">]
+</span><span style="color:#63a35c;">pdr</span><span style="color:#323232;">: [</span><span style="color:#183691;">paid-plan</span><span style="color:#323232;">]
+</span><span style="color:#323232;">---
+</span></code></pre>
 <hr />
 <h2 id="2-タグ">2. タグ</h2>
 <ul>
@@ -67,10 +83,12 @@
 <p><code>docv check</code> が Free ファイルで確かめるルール。</p>
 <h3 id="yaml-front-matter">YAML front matter</h3>
 <div class="table-scroll"><table class="aligned"><colgroup><col style="width: 12.8em"><col></colgroup><thead><tr><th class="short">ID</th><th>内容</th></tr></thead><tbody>
-<tr><td class="short">frontmatter-invalid</td><td>YAML front matter が読めない。<code>mission</code>、<code>tags</code> の型が違う</td></tr>
+<tr><td class="short">frontmatter-invalid</td><td>YAML front matter が読めない。<code>mission</code>、<code>tags</code>、<code>adr</code>、<code>pdr</code> の型が違う</td></tr>
 <tr><td class="short">mission-missing</td><td><code>mission</code> がない</td></tr>
 <tr><td class="short">mission-multiline</td><td><code>mission</code> が複数行</td></tr>
 <tr><td class="short">tag-unknown</td><td><code>docv.yaml</code> の <code>tags</code> にないタグがある</td></tr>
+<tr><td class="short">decision-unknown</td><td><code>adr</code> か <code>pdr</code> の id の決定がない</td></tr>
+<tr><td class="short">decision-superseded</td><td><code>adr</code> か <code>pdr</code> の id の決定が、打ち消されている。warning で、終了コードは変えない</td></tr>
 </tbody></table></div>
 <h3 id="構造とリンク">構造とリンク</h3>
 <div class="table-scroll"><table class="aligned"><colgroup><col style="width: 12.8em"><col></colgroup><thead><tr><th class="short">ID</th><th>内容</th></tr></thead><tbody>
@@ -106,6 +124,7 @@
 <p class="outline-title">目次</p>
 <ul>
 <li class="h2"><a href="#1-yaml-front-matter">1. YAML front matter</a></li>
+<li class="h3"><a href="#関わる決定">関わる決定</a></li>
 <li class="h2"><a href="#2-タグ">2. タグ</a></li>
 <li class="h2"><a href="#3-check-のルール">3. check のルール</a></li>
 <li class="h3"><a href="#yaml-front-matter">YAML front matter</a></li>

@@ -126,7 +126,7 @@
 <tr><td class="short">ケースの列挙</td><td class="short">テストで確かめるケースを、ドキュメントに並べている</td><td>消す。ケースはテスト名に任せる</td></tr>
 <tr><td class="short">受け皿</td><td class="short">補足、注意点、残るリスクのような、何でも入る節やページがある</td><td>中身を、原因になった決定や決まりの隣へ移す。移す先のないものは、消す</td></tr>
 <tr><td class="short">ほかの Slot の案内</td><td class="short">ページの冒頭に、ほかの Slot やページに何が書いてあるかを並べている（「〜は [A]、〜は [B] に書く」）。どの Slot に何を書くかはミッションで決まっていて、読み手は知っている</td><td>消す</td></tr>
-<tr><td class="short">本文での ADR と PDR の案内</td><td class="short">Slot や Free ファイルの決まりの文に、ADR や PDR へのリンクや、「理由は [ADR]」の文が付いている</td><td>消す</td></tr>
+<tr><td class="short">本文での ADR と PDR の案内</td><td class="short">Slot や Free ファイルの決まりの文に、ADR や PDR へのリンクや、「理由は ADR に書いた」のような文が付いている</td><td>YAML front matter の <code>adr</code> か <code>pdr</code> に id を移し、本文から消す</td></tr>
 <tr><td class="short">Slot に書くべき内容が Free にある</td><td class="short">Slot のミッションに当たることが、Free ファイルに書かれている。Free ファイルのディレクトリが、Slot の代わりになっている</td><td>Slot へ移す</td></tr>
 <tr><td class="short">話が混ざったページ</td><td class="short">ページに分けられる Slot のファイル（分けていなければそのファイル、分けていれば 1 ページ）に、読み手、読むタイミング、部品や機能の違う話が混ざっている</td><td>Doc ガイドの観点で分け、<code>docv desc</code> の「ページ分け」の置き方でページにする</td></tr>
 <tr><td class="short">分けすぎたページ</td><td class="short">読み手、読むタイミング、部品や機能が同じページや Free ファイルが、分けておく理由もなく分かれている</td><td>まとめる</td></tr>

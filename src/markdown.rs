@@ -36,6 +36,35 @@ impl Frontmatter {
             .position(|l| l.starts_with(&prefix))
             .map_or(1, |i| i + 2)
     }
+
+    /// key の配列の要素 item が、ファイルの何行目か。`key: [a, b]` の形でも、続く行に `- a` と並べた形でも探す。
+    /// 要素が見つからなければ key の行、key もなければ 1 行目。
+    pub fn line_of_item(&self, key: &str, item: &str) -> usize {
+        let prefix = format!("{key}:");
+        let lines: Vec<&str> = self.yaml.lines().collect();
+        let Some(start) = lines.iter().position(|l| l.starts_with(&prefix)) else {
+            return 1;
+        };
+        // key の行の値と、次の key（行の頭が空白でも - でもない行）の前までの行。
+        let values = std::iter::once(&lines[start][prefix.len()..]).chain(
+            lines[start + 1..]
+                .iter()
+                .take_while(|l| l.is_empty() || l.starts_with([' ', '\t', '-', '#']))
+                .copied(),
+        );
+        let has_item = |line: &str| {
+            let line = line.split(" #").next().unwrap_or(line);
+            !line.trim_start().starts_with('#')
+                && line
+                    .split(|c: char| c.is_whitespace() || matches!(c, '[' | ']' | ','))
+                    .any(|token| token.trim_matches(['"', '\'']) == item)
+        };
+        values
+            .enumerate()
+            .find(|(_, line)| has_item(line))
+            .map_or(start, |(i, _)| start + i)
+            + 2
+    }
 }
 
 pub fn split(text: &str) -> Document {
@@ -335,6 +364,22 @@ mod tests {
         assert_eq!(fm.line_of_key("topics"), 3);
         assert_eq!(doc.body, "\n# T\n");
         assert_eq!(doc.body_start_line, 5);
+    }
+
+    #[test]
+    fn finds_lines_of_items() {
+        let doc = split(
+            "---\nmission: q\nadr: [go, \"rust\"]\npdr:\n  - free\n  # paid は消した\n- 'paid'\ntags: [paid]\n---\n",
+        );
+        let fm = doc.frontmatter.unwrap();
+        assert_eq!(fm.line_of_item("adr", "rust"), 3);
+        assert_eq!(fm.line_of_item("pdr", "free"), 5);
+        // コメントの中の文字や、ほかの key の値には当てない
+        assert_eq!(fm.line_of_item("pdr", "paid"), 7);
+        // 文字の一部には当てず、見つからなければ key の行にする
+        assert_eq!(fm.line_of_item("adr", "go-v2"), 3);
+        assert_eq!(fm.line_of_item("pdr", "none"), 4);
+        assert_eq!(fm.line_of_item("none", "go"), 1);
     }
 
     #[test]

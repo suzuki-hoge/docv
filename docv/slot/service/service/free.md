@@ -15,6 +15,8 @@ docv が管理する Free ファイル（`docv.yaml` の `dir.document_root` の
 | --------- | ---- | ---------------------------------------------------- |
 | `mission` | 必須 | ミッション。このファイルを読むと何が分かるか（1 文） |
 | `tags`    | 任意 | タグの配列（「タグ」の章）                           |
+| `adr`     | 任意 | 関わる ADR の id の配列（「関わる決定」の章）        |
+| `pdr`     | 任意 | 関わる PDR の id の配列（「関わる決定」の章）        |
 
 ```yaml
 ---
@@ -27,6 +29,22 @@ tags: [仕様, 注文]
 - ファイルごとの設定は、すべて YAML front matter に書き、`docv.yaml` には書かない。ファイルを動かしても設定がずれず、AI Agent はファイルを読むだけで、そのファイルの扱いが分かる
 - docv が知らない key は、そのまま残し、check もしない。作成者の記録（`created` / `updated` など）のように、プロジェクトが決めた key を書いてよい
 - HTML は、`mission` をファイルの説明として表示する
+
+### 関わる決定
+
+- `adr` と `pdr` には、そのページに関わる決定の id を並べる。HTML では、docv がページの末尾に決定の題を出す（[ビジュアライズ](html.md) のページの「HTML の作り」の章）
+- 本文には、ADR と PDR へのリンクや、「理由は ADR に書いた」のような文を書かない。決定を指すのは、`adr` と `pdr` だけにする
+- ADR と PDR は、同じ id でも別の決定なので、項目を分ける
+- 決定の側には、関わるページを書かない。決定は書き換えないが、ページは移ったり分かれたりするため
+- md の Slot にも、同じく書ける
+
+```yaml
+---
+mission: 注文を確定するタイミングと、失敗したときの扱い
+adr: [queue]
+pdr: [paid-plan]
+---
+```
 
 ---
 
@@ -53,12 +71,14 @@ tags:
 
 ### YAML front matter
 
-| ID                  | 内容                                                       |
-| ------------------- | ---------------------------------------------------------- |
-| frontmatter-invalid | YAML front matter が読めない。`mission`、`tags` の型が違う |
-| mission-missing     | `mission` がない                                           |
-| mission-multiline   | `mission` が複数行                                         |
-| tag-unknown         | `docv.yaml` の `tags` にないタグがある                     |
+| ID                  | 内容                                                                              |
+| ------------------- | --------------------------------------------------------------------------------- |
+| frontmatter-invalid | YAML front matter が読めない。`mission`、`tags`、`adr`、`pdr` の型が違う          |
+| mission-missing     | `mission` がない                                                                  |
+| mission-multiline   | `mission` が複数行                                                                |
+| tag-unknown         | `docv.yaml` の `tags` にないタグがある                                            |
+| decision-unknown    | `adr` か `pdr` の id の決定がない                                                 |
+| decision-superseded | `adr` か `pdr` の id の決定が、打ち消されている。warning で、終了コードは変えない |
 
 ### 構造とリンク
 

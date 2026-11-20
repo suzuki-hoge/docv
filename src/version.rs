@@ -123,25 +123,25 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
             .lines()
             .position(|l| l.starts_with("docv_version:"))
             .map_or(1, |i| i + 1);
-        diagnostics.push(Diagnostic {
-            path: config_path.clone(),
+        diagnostics.push(Diagnostic::error(
+            config_path.clone(),
             line,
-            rule: "docv-version".to_string(),
+            "docv-version",
             message,
-        });
+        ));
     }
     if let Some(declared) = declared
         && let Some(version) = schema_version(&config_text)
         && version != declared
     {
-        diagnostics.push(Diagnostic {
-            path: config_path,
-            line: 1,
-            rule: "schema-version".to_string(),
-            message: format!(
+        diagnostics.push(Diagnostic::error(
+            config_path,
+            1,
+            "schema-version",
+            format!(
                 "スキーマの URL の版は v{version} で、docv_version は {declared}。URL の版を v{declared} にする"
             ),
-        });
+        ));
     }
     Ok(diagnostics)
 }

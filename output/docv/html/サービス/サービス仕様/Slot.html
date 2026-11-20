@@ -85,7 +85,7 @@
 <h2 id="3-書き方">3. 書き方</h2>
 <ul>
 <li>中身の形は、check では確かめない</li>
-<li>YAML front matter には <code>mission</code> だけを書き、<code>docv list</code> のミッションと同じ文にする。ミッションは docv が決めるもので、プロジェクトでは変えない。ないか違えば、check が slot-mission の error にする。docv の版を上げてミッションが変わったときも、check で気づいて直す。ファイルを開けば、何を書く Slot かが分かるようにするため</li>
+<li>YAML front matter には <code>mission</code> を書き、<code>docv list</code> のミッションと同じ文にする。ほかに書けるのは、関わる決定の <code>adr</code> と <code>pdr</code> だけ（<a href="Free.html">Free</a> のページの「関わる決定」の章）。ミッションは docv が決めるもので、プロジェクトでは変えない。ないか違えば、check が slot-mission の error にする。docv の版を上げてミッションが変わったときも、check で気づいて直す。ファイルを開けば、何を書く Slot かが分かるようにするため</li>
 <li><code>mission</code> がないか違っても、HTML には本文を出す</li>
 <li><code>docv gen</code> は、雛形のある Slot には雛形を作る。ほかの Slot には、YAML front matter の <code>mission</code> だけを書いたファイルを作り、中身の形は自由だと表示する</li>
 <li>雛形にも <code>mission</code> を書いてある。作った雛形はプロジェクトのもので、列や文を足すのは自由。docv の版を上げても書き換えない</li>
@@ -118,7 +118,7 @@
 <li>分けないときは、今までどおり 1 つのファイルに書く</li>
 <li><code>docv gen</code> は、1 つのファイルを作り、分けるときの置き場所も表示する。ページがあるときは、1 つのファイルを作らずに error で終わる。ページは手で置く</li>
 </ul>
-<p>ページは、YAML front matter に <code>order</code> と <code>mission</code> を書く。<code>mission</code> は、分けないときと同じく、その Slot のミッションと同じ文にする。本文の h1 が、ページの名前になる。</p>
+<p>ページは、YAML front matter に <code>order</code> と <code>mission</code> を書く。関わる決定の <code>adr</code> と <code>pdr</code> も書ける。<code>mission</code> は、分けないときと同じく、その Slot のミッションと同じ文にする。本文の h1 が、ページの名前になる。</p>
 <pre><code class="language-markdown"><span style="color:#a71d5d;">---
 </span><span style="color:#323232;">order: 2
 </span><span style="color:#323232;">mission: 外から見た機能と、それぞれの振る舞いと決まり
@@ -138,6 +138,7 @@
 </tbody></table></div>
 <ul>
 <li>Slot には、YAML front matter のほかは、Free ファイルと同じ検査（<a href="Free.html">Free</a> のページの「check のルール」の章）をかける</li>
+<li><code>adr</code> と <code>pdr</code> は、Free ファイルと同じく decision-unknown と decision-superseded で確かめる</li>
 <li><code>slot/</code> の中の画像には、Free ファイルの画像と同じ検査（image-owner）をかける</li>
 </ul>
 

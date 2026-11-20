@@ -153,6 +153,8 @@ YAML の Slot（`service/words.yaml` など）が残っていれば error にし
 
 あわせて、`docv.yaml` の `docv_version` を docv の版と比べる。`docv.yaml` の 1 行目にあるスキーマの URL の版も、`docv_version` と比べる（[設定ファイル](service/config.md) の「docv の版」の章）。
 
+直さなくても困らないもの（打ち消された決定を `adr` や `pdr` で指しているなど）は、warning にする。warning の行は、ルール ID の前に `warning` を付ける。最後に `error N 件` を出し、warning があれば続けて `warning N 件` を出す。warning だけなら、終了コードは 0。
+
 パスを渡しても、検査するファイルが絞られるだけで、検査内容は変わらない。
 
 現在の設定は [現在の設定](../../../docv.yaml) を参照。

@@ -55,7 +55,7 @@
 <hr />
 <h2 id="3-終了コード">3. 終了コード</h2>
 <div class="table-scroll"><table><thead><tr><th>コード</th><th>意味</th></tr></thead><tbody>
-<tr><td>0</td><td>成功。check で指摘が 1 件もない</td></tr>
+<tr><td>0</td><td>成功。check で error が 1 件もない（warning だけのときも 0）</td></tr>
 <tr><td>1</td><td>check で指摘（error）が 1 件以上ある。fix で直せないファイルがある。open と diff-open に対応していない OS</td></tr>
 <tr><td>2</td><td><code>docv.yaml</code> がスキーマに合わない、引数が正しくない、など実行できない</td></tr>
 </tbody></table></div>

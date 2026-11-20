@@ -8,6 +8,7 @@
 //! 状態は持たない。打ち消されたかどうかは、つながりからわかる。
 //! 過去の決定を打ち消すときは、新しい決定の supersedes から、同じ種類の過去の決定の id を指す（未来から過去を参照する）。
 //! 過去から未来へのつながりは、読み込むときに組み立てる。
+//! 決定に関わるページは、決定の側には書かず、ページの側の YAML front matter の adr と pdr に書く（meta::Related）。
 
 use std::collections::{BTreeMap, HashSet};
 use std::fs;
@@ -40,7 +41,8 @@ impl Kind {
         }
     }
 
-    /// 置くディレクトリの名前（dir.document_root からの相対パス）。check のルールの ID の頭と、アイコンの名前にも使う。
+    /// 置くディレクトリの名前（dir.document_root からの相対パス）。check のルールの ID の頭と、アイコンの名前と、
+    /// ページの YAML front matter で関わる決定を並べる key（meta::Related）にも使う。
     pub fn dir(self) -> &'static str {
         match self {
             Kind::Adr => "adr",
@@ -152,6 +154,14 @@ fn files(project: &Project, kind: Kind) -> Result<Vec<String>> {
         .collect())
 }
 
+/// 1 つの種類の決定の id を、名前の順に返す。読めない決定（check が報告する）も含める。
+pub fn ids(project: &Project, kind: Kind) -> Result<Vec<String>> {
+    Ok(files(project, kind)?
+        .iter()
+        .map(|path| id_of(path).to_string())
+        .collect())
+}
+
 /// 1 つの種類の決定を、日付と id の順に読む。読めないものは飛ばす（check が報告する）。
 /// supersedes は、同じ種類の決定だけをたどる。
 pub fn load(project: &Project, kind: Kind) -> Result<Vec<Decision>> {
@@ -239,12 +249,7 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
 fn check_kind(project: &Project, kind: Kind) -> Result<Vec<Diagnostic>> {
     let mut diagnostics = Vec::new();
     let mut push = |path: &str, line: usize, rule: &str, message: String| {
-        diagnostics.push(Diagnostic {
-            path: path.to_string(),
-            line,
-            rule: rule.to_string(),
-            message,
-        });
+        diagnostics.push(Diagnostic::error(path, line, rule, message));
     };
     let mut records: Vec<(String, String, Record)> = Vec::new();
     let own = dir(project, kind);

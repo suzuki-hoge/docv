@@ -64,11 +64,11 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
         }
     }
     for path in unknown {
-        diagnostics.push(Diagnostic {
+        diagnostics.push(Diagnostic::error(
             path,
-            line: 1,
-            rule: "root-unknown".to_string(),
-            message: format!(
+            1,
+            "root-unknown",
+            format!(
                 "{root}/ の直下に置けるのは {} だけ。docv に読ませないなら docv.yaml の docv_exclude に書く",
                 allowed
                     .iter()
@@ -80,7 +80,7 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
                     .collect::<Vec<_>>()
                     .join("、")
             ),
-        });
+        ));
     }
 
     // 画像の持ち主は、同じディレクトリの Markdown のファイル。
@@ -110,12 +110,12 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
             .match_indices('_')
             .any(|(i, _)| owners.contains(&(dir, &stem[..i])));
         if !owned {
-            diagnostics.push(Diagnostic {
-                path: path.clone(),
-                line: 1,
-                rule: "image-owner".to_string(),
-                message: "画像の持ち主がない。画像は、使うファイルと同じディレクトリに {使うファイルの名前}_{画像の名前}.{拡張子} の名前で置く".to_string(),
-            });
+            diagnostics.push(Diagnostic::error(
+                path.clone(),
+                1,
+                "image-owner",
+                "画像の持ち主がない。画像は、使うファイルと同じディレクトリに {使うファイルの名前}_{画像の名前}.{拡張子} の名前で置く",
+            ));
         }
     }
     Ok(diagnostics)

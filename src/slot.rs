@@ -4,15 +4,19 @@
 //! サービス仕様、システム仕様、開発コマンド、アーキテクチャ、設計・実装、テスト方針、インフラと環境は、`<まとまり>/<ID>/` の直下に 1 ページ 1 つの Markdown で置いて、ページに分けられる。
 //! ページの名前は h1、並びは YAML front matter の order。
 //! Slot（分けたページも）は、YAML front matter の mission に、docv が決めたミッションをそのまま書く。違えば check が error にする。
+//! YAML front matter には、ほかに関わる決定の adr と pdr（meta::Related）を書ける。分けたページは order も書く。
 //! 中身の形は確かめない。雛形のある Slot は、docv gen が雛形を書く。
 
 use std::fs;
 
 use anyhow::{Context, Result};
 use serde::Deserialize;
+use serde::de::IgnoredAny;
 
+use crate::decision::Kind;
 use crate::diagnostic::Diagnostic;
 use crate::markdown;
+use crate::meta::{self, Related};
 use crate::workspace::Project;
 
 /// Slot のまとまり。
@@ -226,6 +230,12 @@ pub fn def_of_page(rel: &str) -> Option<&'static Def> {
         .find(|d| d.pages_dir().is_some_and(|pages| pages == dir) && name.ends_with(".md"))
 }
 
+/// ルートからの相対パスが、Slot ファイルか分けた Slot のページなら、その Slot を引く。
+pub fn def_of_path(project: &Project, path: &str) -> Option<&'static Def> {
+    let rel = path.strip_prefix(&format!("{}/", project.slot_dir()))?;
+    def_of_file(rel).or_else(|| def_of_page(rel))
+}
+
 /// Slot ファイルとして置ける名前の一覧。メッセージに使う。
 pub fn file_names() -> String {
     DEFS.iter()
@@ -317,6 +327,8 @@ pub struct Slot {
     pub body: String,
     /// 分けた Slot のページなら、その名前と並び。分けていなければ None。
     pub page: Option<Page>,
+    /// YAML front matter の adr と pdr。
+    pub related: Related,
 }
 
 /// 分けた Slot の 1 ページ。
@@ -329,18 +341,36 @@ pub struct Page {
 }
 
 /// 分けていない Slot の YAML front matter。mission は必ず書き、docv が決めたミッションと同じ文にする（check が確かめる）。
+/// adr と pdr は、書けることだけをここで受ける。型は Free ファイルと同じく related_problem で確かめ、中身は meta::related で読む。
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct MdFront {
     mission: Option<String>,
+    #[serde(default, rename = "adr")]
+    _adr: IgnoredAny,
+    #[serde(default, rename = "pdr")]
+    _pdr: IgnoredAny,
 }
 
-/// 分けた Slot のページの YAML front matter。mission は、分けていない Slot と同じ。
+/// 分けた Slot のページの YAML front matter。mission、adr、pdr は、分けていない Slot と同じ。
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct PageFront {
     order: i64,
     mission: Option<String>,
+    #[serde(default, rename = "adr")]
+    _adr: IgnoredAny,
+    #[serde(default, rename = "pdr")]
+    _pdr: IgnoredAny,
+}
+
+/// YAML front matter の adr と pdr が、文字列の配列でなければ、最初の 1 つの行とメッセージ。
+fn related_problem(fm: &markdown::Frontmatter) -> Option<(usize, String)> {
+    let value = serde_yaml_ng::from_str::<serde_yaml_ng::Value>(&fm.yaml).ok()?;
+    Kind::ALL.into_iter().find_map(|kind| {
+        meta::related_type_problem(kind, value.get(kind.dir()))
+            .map(|message| (fm.line_of_key(kind.dir()), message))
+    })
 }
 
 /// 読んだページ。
@@ -411,6 +441,9 @@ fn md_front_problem(def: &Def, text: &str) -> Option<(usize, &'static str, Strin
             ));
         }
     };
+    if let Some((line, message)) = related_problem(fm) {
+        return Some((line, "slot-invalid", message));
+    }
     mission_problem(def, front.mission.as_deref(), fm.line_of_key("mission"))
         .map(|(line, message)| (line, "slot-mission", message))
 }
@@ -436,6 +469,9 @@ fn parse_md_page(def: &Def, text: &str) -> Result<ParsedPage, (usize, String)> {
             ),
         )
     })?;
+    if let Some(problem) = related_problem(fm) {
+        return Err(problem);
+    }
     let outline = markdown::outline(&document);
     let Some(h1) = outline.headings.iter().find(|h| h.level == 1) else {
         return Err((
@@ -514,12 +550,13 @@ pub fn load(project: &Project) -> Result<Vec<Slot>> {
         }
         let text = fs::read_to_string(project.root.join(&file.path))
             .with_context(|| format!("{} を読めない", file.path))?;
+        let document = markdown::split(&text);
         let parsed = if file.page {
             parse_md_page(def, &text)
                 .ok()
                 .map(|p| (p.body, Some(p.page)))
         } else {
-            Some((markdown::split(&text).body, None))
+            Some((document.body.clone(), None))
         };
         if let Some((body, page)) = parsed {
             slots.push(Slot {
@@ -527,6 +564,7 @@ pub fn load(project: &Project) -> Result<Vec<Slot>> {
                 path: file.path.clone(),
                 body,
                 page,
+                related: meta::related(&document),
             });
         }
     }
@@ -544,12 +582,7 @@ pub fn load(project: &Project) -> Result<Vec<Slot>> {
 pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
     let mut diagnostics = Vec::new();
     let mut push = |path: &str, line: usize, rule: &str, message: String| {
-        diagnostics.push(Diagnostic {
-            path: path.to_string(),
-            line,
-            rule: rule.to_string(),
-            message,
-        });
+        diagnostics.push(Diagnostic::error(path, line, rule, message));
     };
     let slot_dir = project.slot_dir();
     let prefix = format!("{slot_dir}/");
@@ -849,12 +882,77 @@ mod tests {
                     "docv/slot/system/db.md:2 slot-mission mission が、DB 仕様書のミッションと違う。mission: {} にする",
                     def("db").unwrap().mission
                 ),
-                "docv/slot/system/system.md:2 slot-invalid システム仕様の YAML front matter の形に合わない: unknown field `tags`, expected `mission`".to_string(),
+                "docv/slot/system/system.md:2 slot-invalid システム仕様の YAML front matter の形に合わない: unknown field `tags`, expected one of `mission`, `adr`, `pdr`".to_string(),
             ]
         );
         // 指摘があっても、HTML には本文を出す
         let ids: Vec<&str> = load(&project).unwrap().iter().map(|s| s.def.id).collect();
         assert!(ids.contains(&"api") && ids.contains(&"db"), "{ids:?}");
+    }
+
+    #[test]
+    fn reads_related_decisions_of_slots_and_pages() {
+        let service = def("service").unwrap().mission;
+        let (_dir, project) = project(&[
+            (
+                "docv/slot/service/manual.md",
+                &format!(
+                    "---\nmission: {}\nadr: [go]\npdr: [paid, free]\n---\n\n# M\n",
+                    def("manual").unwrap().mission
+                ),
+            ),
+            (
+                "docv/slot/service/service/a.md",
+                &format!("---\norder: 1\nmission: {service}\nadr:\n  - rust\n---\n\n# A\n"),
+            ),
+            // 型の違う adr と pdr は、ほかの YAML front matter の形の誤りと同じく slot-invalid にする
+            (
+                "docv/slot/service/service/b.md",
+                &format!("---\norder: 2\nmission: {service}\nadr: rust\n---\n\n# B\n"),
+            ),
+            (
+                "docv/slot/system/db.md",
+                &format!(
+                    "---\nmission: {}\npdr: [1]\n---\n\n# DB\n",
+                    def("db").unwrap().mission
+                ),
+            ),
+        ]);
+        let result: Vec<String> = check(&project)
+            .unwrap()
+            .iter()
+            .map(|d| format!("{}:{} {} {}", d.path, d.line, d.rule, d.message))
+            .collect();
+        // 数の要素も、文字列として読まずに誤りにする
+        assert_eq!(
+            result,
+            [
+                "docv/slot/service/service/b.md:4 slot-invalid adr は ADR の id（ファイル名から .md を除いたもの）の配列で書く",
+                "docv/slot/system/db.md:3 slot-invalid pdr は PDR の id（ファイル名から .md を除いたもの）の配列で書く",
+            ]
+        );
+        let slots = load(&project).unwrap();
+        let related: Vec<(&str, &[String], &[String])> = slots
+            .iter()
+            .map(|s| (s.path.as_str(), &s.related.adr[..], &s.related.pdr[..]))
+            .collect();
+        assert_eq!(
+            related,
+            [
+                (
+                    "docv/slot/service/service/a.md",
+                    &["rust".to_string()][..],
+                    &[][..]
+                ),
+                (
+                    "docv/slot/service/manual.md",
+                    &["go".to_string()][..],
+                    &["paid".to_string(), "free".to_string()][..]
+                ),
+                // 形の合わない YAML front matter でも、分けていない Slot は本文を出す。読める id だけを読む
+                ("docv/slot/system/db.md", &[][..], &[][..]),
+            ]
+        );
     }
 
     #[test]
@@ -1066,7 +1164,7 @@ mod tests {
                 "docv/slot/service/service/b.md:2 slot-invalid order 1 が docv/slot/service/service/a.md と重なっている",
                 "docv/slot/service/service/b.md:6 slot-invalid h1「A」が docv/slot/service/service/a.md と重なっている。h1 はページの名前で、重ねない",
                 "docv/slot/service/service/c.md:1 slot-invalid YAML front matter がない。ページに分けたサービス仕様には、どのページにも order と mission を書く",
-                "docv/slot/service/service/d.md:3 slot-invalid YAML front matter がサービス仕様のページの形に合わない: unknown field `name`, expected `order` or `mission` at line 2 column 1",
+                "docv/slot/service/service/d.md:3 slot-invalid YAML front matter がサービス仕様のページの形に合わない: unknown field `name`, expected one of `order`, `mission`, `adr`, `pdr` at line 2 column 1",
                 "docv/slot/service/service/e.md:4 slot-invalid h1 がない。h1 がページの名前になる",
                 &format!(
                     "docv/slot/service/service/sub/f.md:1 slot-unknown Slot の名前ではない。Slot のディレクトリに置けるのは {}",

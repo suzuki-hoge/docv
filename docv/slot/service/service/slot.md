@@ -66,7 +66,7 @@ HTML には、この表の順に、まとまりごとに並べる。
 ## 3. 書き方
 
 - 中身の形は、check では確かめない
-- YAML front matter には `mission` だけを書き、`docv list` のミッションと同じ文にする。ミッションは docv が決めるもので、プロジェクトでは変えない。ないか違えば、check が slot-mission の error にする。docv の版を上げてミッションが変わったときも、check で気づいて直す。ファイルを開けば、何を書く Slot かが分かるようにするため
+- YAML front matter には `mission` を書き、`docv list` のミッションと同じ文にする。ほかに書けるのは、関わる決定の `adr` と `pdr` だけ（[Free](free.md) のページの「関わる決定」の章）。ミッションは docv が決めるもので、プロジェクトでは変えない。ないか違えば、check が slot-mission の error にする。docv の版を上げてミッションが変わったときも、check で気づいて直す。ファイルを開けば、何を書く Slot かが分かるようにするため
 - `mission` がないか違っても、HTML には本文を出す
 - `docv gen` は、雛形のある Slot には雛形を作る。ほかの Slot には、YAML front matter の `mission` だけを書いたファイルを作り、中身の形は自由だと表示する
 - 雛形にも `mission` を書いてある。作った雛形はプロジェクトのもので、列や文を足すのは自由。docv の版を上げても書き換えない
@@ -103,7 +103,7 @@ HTML には、この表の順に、まとまりごとに並べる。
 - 分けないときは、今までどおり 1 つのファイルに書く
 - `docv gen` は、1 つのファイルを作り、分けるときの置き場所も表示する。ページがあるときは、1 つのファイルを作らずに error で終わる。ページは手で置く
 
-ページは、YAML front matter に `order` と `mission` を書く。`mission` は、分けないときと同じく、その Slot のミッションと同じ文にする。本文の h1 が、ページの名前になる。
+ページは、YAML front matter に `order` と `mission` を書く。関わる決定の `adr` と `pdr` も書ける。`mission` は、分けないときと同じく、その Slot のミッションと同じ文にする。本文の h1 が、ページの名前になる。
 
 ```markdown
 ---
@@ -128,4 +128,5 @@ mission: 外から見た機能と、それぞれの振る舞いと決まり
 | slot-mission | YAML front matter に `mission` がないか、`docv list` のミッションと違う                                                                   |
 
 - Slot には、YAML front matter のほかは、Free ファイルと同じ検査（[Free](free.md) のページの「check のルール」の章）をかける
+- `adr` と `pdr` は、Free ファイルと同じく decision-unknown と decision-superseded で確かめる
 - `slot/` の中の画像には、Free ファイルの画像と同じ検査（image-owner）をかける

@@ -74,7 +74,11 @@
 <li>冒頭のほかでは、ほかの Slot やページ、Free ファイルを参照してよい</li>
 </ul>
 </li>
-<li>Slot と Free ファイルの本文で、ADR と PDR を案内しない</li>
+<li>Slot と Free ファイルの本文で、ADR と PDR を案内しない
+<ul>
+<li>関わる決定は、YAML front matter の <code>adr</code> と <code>pdr</code> に id を並べる。HTML では、docv がページの末尾に題を出す</li>
+</ul>
+</li>
 </ul>
 <h3 id="docvfree"><code>docv/free/</code></h3>
 <p><code>docv/free/</code> 配下の Markdown を Free ファイルと呼ぶ</p>
@@ -109,7 +113,7 @@
 </ul>
 <h2 id="2-slot">2. Slot</h2>
 <p><code>docv list</code> で一覧と、それぞれの Slot のミッションを確認でき、作成したい場合は <code>docv gen &lt;slot&gt;</code> で作成する</p>
-<p>Slot ファイルは、すべて Markdown で書く。YAML front matter の <code>mission</code> に、その Slot のミッションを <code>docv list</code> のとおりに書く</p>
+<p>Slot ファイルは、すべて Markdown で書く。YAML front matter の <code>mission</code> に、その Slot のミッションを <code>docv list</code> のとおりに書く。関わる決定の <code>adr</code> と <code>pdr</code> も書ける ( 「YAML front matter」の章 )</p>
 <ul>
 <li>ミッションは docv が決めるもので、プロジェクトでは変えられない</li>
 <li><code>mission</code> がないか、ミッションと違えば、<code>docv check</code> が error にする。docv の版を上げてミッションが変わったときも、check で気づいて直す</li>
@@ -155,6 +159,7 @@
 <pre><code class="language-yaml"><span style="color:#323232;">---
 </span><span style="color:#63a35c;">mission</span><span style="color:#323232;">: </span><span style="color:#183691;">注文を確定するタイミングと、失敗したときの扱い
 </span><span style="color:#63a35c;">tags</span><span style="color:#323232;">: [ </span><span style="color:#183691;">仕様</span><span style="color:#323232;">, </span><span style="color:#183691;">注文 </span><span style="color:#323232;">]
+</span><span style="color:#63a35c;">adr</span><span style="color:#323232;">: [ </span><span style="color:#183691;">queue </span><span style="color:#323232;">]
 </span><span style="color:#323232;">---
 </span></code></pre>
 <h3 id="mission"><code>mission</code></h3>
@@ -164,6 +169,11 @@
 <h3 id="tags"><code>tags</code></h3>
 <p>任意 / リスト形式</p>
 <p>HTML にインデックスするときに組み込まれる</p>
+<h3 id="adrpdr"><code>adr</code>、<code>pdr</code></h3>
+<p>任意 / リスト形式</p>
+<p>関わる ADR と PDR の id
+HTML のページの末尾に、決定の題を並べる。Slot にも書ける
+ない id は <code>docv check</code> が error に、打ち消された決定は warning にする</p>
 <h2 id="4-adr">4. ADR</h2>
 <p>ADR（Architecture Decision Record）は、技術の決定 1 つを、背景や選ばなかった案と一緒に残す記録</p>
 <p>プロダクトやサービスの仕様の変更は、ADR ではなく PDR に残す</p>
@@ -325,6 +335,7 @@
 <li class="h2"><a href="#3-yaml-front-matter">3. YAML front matter</a></li>
 <li class="h3"><a href="#mission">mission</a></li>
 <li class="h3"><a href="#tags">tags</a></li>
+<li class="h3"><a href="#adrpdr">adr、pdr</a></li>
 <li class="h2"><a href="#4-adr">4. ADR</a></li>
 <li class="h3"><a href="#group">group</a></li>
 <li class="h3"><a href="#date">date</a></li>

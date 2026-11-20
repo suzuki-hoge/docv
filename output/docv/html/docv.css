@@ -198,6 +198,10 @@ details[open] > summary { border-bottom: 1px solid var(--border); border-radius:
 .decision-nav > .next { align-items: flex-end; }
 .decision-nav .boxes { display: flex; align-items: stretch; gap: 8px; }
 .decision-nav-label { margin: 0; color: var(--fg-muted); font-size: 0.85em; }
+/* Slot と Free ファイルのページの「関わる決定」と、決定のページの「この決定を指しているページ」。行の頭に、種類を小さく出し、題の頭をそろえる */
+ul.refs { padding-left: 0; list-style: none; }
+ul.refs li { display: flex; align-items: center; gap: 10px; margin: 4px 0; }
+ul.refs .kind { flex: none; min-width: 3em; color: var(--fg-muted); font-size: 0.85em; }
 
 /* docv diff-open の印。新しく足したものは緑、消したものは赤で、カードと箱は枠、タブと Free の行は背景に色を付ける。
    書き換えたものは鉛筆を出し、マウスを乗せると行数を出す。サイドバーは鉛筆だけで、マウスを乗せると変わったファイルの数（README と Config は行数）を出す */

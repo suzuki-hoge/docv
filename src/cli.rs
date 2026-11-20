@@ -9,7 +9,8 @@ use clap::{Parser, Subcommand};
 use crate::check::Options;
 use crate::workspace::{Locate, Project};
 use crate::{
-    build, check, desc, diff_open, fix, generate, init, list, open, review_guide, update_guide,
+    build, check, desc, diagnostic, diff_open, fix, generate, init, list, open, review_guide,
+    update_guide,
 };
 
 /// 終了コード。docv/slot/service/service/cli.md の「終了コード」。
@@ -172,11 +173,8 @@ fn execute_in_project(project: &Project, command: Command) -> Result<ExitCode> {
                 textlint: !no_textlint,
             };
             let diagnostics = check::run(project, &targets, options)?;
-            for d in &diagnostics {
-                println!("{d}");
-            }
-            println!("error {} 件", diagnostics.len());
-            Ok(failure_if(!diagnostics.is_empty()))
+            print!("{}", diagnostic::report(&diagnostics));
+            Ok(failure_if(diagnostic::has_error(&diagnostics)))
         }
         Command::Fix { paths, no_textlint } => {
             let targets = relative_targets(project, &paths);

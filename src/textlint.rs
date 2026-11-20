@@ -245,19 +245,19 @@ impl<'a> Textlint<'a> {
         for result in results {
             let path = self.relative(&result.file_path, files);
             for message in result.messages {
-                diagnostics.push(Diagnostic {
-                    path: path.clone(),
-                    line: message.line,
-                    rule: format!(
+                diagnostics.push(Diagnostic::error(
+                    path.clone(),
+                    message.line,
+                    format!(
                         "textlint/{}",
                         message.rule_id.as_deref().unwrap_or("unknown")
                     ),
-                    message: message
+                    message
                         .message
                         .split_whitespace()
                         .collect::<Vec<_>>()
                         .join(" "),
-                });
+                ));
             }
         }
         Ok(diagnostics)

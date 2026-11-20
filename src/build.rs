@@ -13,6 +13,8 @@
 //! Markdown の中の `<details>` は閉じたまま出し、印刷の表示では CSS で開く。
 //! document_root の直下に、Slot ファイルへのリンクを並べたインデックス（README.md）も書く（index.rs）。
 //! 左のサイドバーの一番下に、作った docv の版を出す。
+//! Slot と Free ファイルのページの本文の後に、YAML front matter の adr と pdr に書いた決定を「関わる決定」として並べる。
+//! 決定のページの本文の後には、その決定を指している Slot と Free ファイルのページを「この決定を指しているページ」として並べる。
 
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
@@ -39,7 +41,7 @@ use crate::decision::{self, Decision, Kind, Record};
 use crate::diff_open::{Change, Changes, Status};
 use crate::index;
 use crate::markdown::{self, relative_path, slug};
-use crate::meta;
+use crate::meta::{self, Related};
 use crate::review_guide;
 use crate::slot::{self, DEFS, Group, Slot};
 use crate::textlint;
@@ -152,6 +154,8 @@ struct Page {
     title: String,
     mission: Option<String>,
     tags: Vec<String>,
+    /// YAML front matter の adr と pdr。
+    related: Related,
     /// YAML front matter を除いた本文。
     body: String,
 }
@@ -372,6 +376,7 @@ fn page_of_text(path: &str, text: &str) -> Page {
         title: meta.title.unwrap_or_else(|| path.to_string()),
         mission: meta.mission,
         tags: meta.tags,
+        related: meta.related,
         body: document.body.clone(),
     }
 }
@@ -883,9 +888,10 @@ impl Site<'_> {
             .to_path_buf();
         let html = self.markdown_with_ids(&page.body, &base, true, 2);
         let body = format!(
-            "{}<section class=\"doc\">\n<h1>{}</h1>\n{html}</section>\n",
+            "{}<section class=\"doc\">\n<h1>{}</h1>\n{html}{}</section>\n",
             self.source(&page.source, None),
-            escape(&page.title)
+            escape(&page.title),
+            self.related_section(&page.related)
         );
         self.page(
             &format!(
@@ -1179,6 +1185,7 @@ impl Site<'_> {
             .unwrap_or(Path::new(""))
             .to_path_buf();
         let _ = writeln!(out, "{}", self.markdown(&r.body, &base, true, 2));
+        out.push_str(&self.referring_section(a));
         // ページの下に、打ち消した過去の決定を左、打ち消された先の新しい決定を右に、見出しを付けたカードで出す。
         // カーソルキーの ← と → で、それぞれの先頭のカードのページへ移る。移れることも書いておく。
         let boxes = |ids: &[String]| -> String {
@@ -1207,6 +1214,62 @@ impl Site<'_> {
         );
     }
 
+    /// Slot と Free ファイルのページの、本文の後に置く「関わる決定」。YAML front matter の adr と pdr に書いた決定を、
+    /// ADR、PDR の順に、それぞれ書いた順で並べ、決定のページへリンクする。決定の種類は、ADR か PDR の文字で示す。
+    /// ない決定と、打ち消された決定（check が warning にする）は出さない。出す決定がなければ、見出しごと出さない。
+    /// 見出しの id は、本文の見出しと重ならないように outline が付け、右の目次にも出す。
+    fn related_section(&self, related: &Related) -> String {
+        let mut items = String::new();
+        for kind in Kind::ALL {
+            for id in related.ids(kind) {
+                let Some(d) = self
+                    .decisions(kind)
+                    .iter()
+                    .find(|d| &d.record.id == id && d.superseded_by.is_empty())
+                else {
+                    continue;
+                };
+                let _ = writeln!(
+                    items,
+                    "<li><span class=\"kind\">{}</span><a href=\"{}\">{}</a></li>",
+                    kind.label(),
+                    escape(&self.decision_href(d)),
+                    escape(&d.record.title)
+                );
+            }
+        }
+        refs_section("関わる決定", &items)
+    }
+
+    /// 決定のページの、本文の後に置く「この決定を指しているページ」。YAML front matter の adr か pdr でこの決定を指している
+    /// Slot と Free ファイルのページを、Slot は規格の順（分けたページは order の順）、Free ファイルはパスの順で並べる。
+    /// 打ち消された決定でも出す。指しているページがなければ、見出しごと出さない。
+    /// 分けた Slot のページは、Slot の名前の後にページの名前を括弧で付ける。Free ファイルは、ツリーと同じ名前（h1 か、なければパス）にする。
+    fn referring_section(&self, a: &Decision) -> String {
+        let points = |related: &Related| related.ids(a.kind).contains(&a.record.id);
+        let mut items = String::new();
+        let mut item = |kind: Nav, path: &str, name: &str| {
+            let _ = writeln!(
+                items,
+                "<li><span class=\"kind\">{}</span><a href=\"{}\">{}</a></li>",
+                kind.label(),
+                escape(&self.link(path, "").unwrap_or_default()),
+                escape(name)
+            );
+        };
+        for s in self.slots.iter().filter(|s| points(&s.related)) {
+            let name = match &s.page {
+                Some(page) => format!("{}（{}）", s.def.label, page.title),
+                None => s.def.label.to_string(),
+            };
+            item(Nav::Overview, &s.path, &name);
+        }
+        for p in self.pages.iter().filter(|p| points(&p.related)) {
+            item(Nav::Detail, &p.source, &p.title);
+        }
+        refs_section("この決定を指しているページ", &items)
+    }
+
     fn slot(&self, out: &mut String, slot: &Slot) {
         let _ = writeln!(
             out,
@@ -1217,6 +1280,7 @@ impl Site<'_> {
         );
         self.page_tabs(out, slot);
         out.push_str(&self.slot_body(slot));
+        out.push_str(&self.related_section(&slot.related));
         let _ = writeln!(out, "</section>");
     }
 
@@ -1746,6 +1810,15 @@ fn page(title: &str, css: &str, js: &str, nav: &str, body: &str, aside: &str) ->
 </html>
 "
     )
+}
+
+/// 「関わる決定」と「この決定を指しているページ」の h2 と一覧。items（`<li>` の並び）が空なら、見出しごと出さない。
+/// 一覧は、行の頭に種類（ADR、PDR、Slot、Free）を小さく出す。
+fn refs_section(heading: &str, items: &str) -> String {
+    if items.is_empty() {
+        return String::new();
+    }
+    format!("<h2>{heading}</h2>\n<ul class=\"refs\">\n{items}</ul>\n")
 }
 
 /// Slot、ADR、PDR、Free ファイルのページの h1 の上に置く、元のファイルのルートからのパスと、それをコピーするボタン。
@@ -2879,6 +2952,155 @@ mod tests {
             .find("\"path\":\"docv/pdr/free.md\",\"href\":\"PDR/料金/無料で始める.html\"")
             .unwrap();
         assert!(adr < pdr, "{search}");
+    }
+
+    #[test]
+    fn lists_related_decisions_and_the_pages_pointing_to_them() {
+        let service = slot::def("service").unwrap().mission;
+        let manual = slot::def("manual").unwrap().mission;
+        let (dir, project) = project(&[
+            (
+                "docv/adr/go.md",
+                "---\ngroup: 言語\ndate: 2026-01-01\n---\n\n# Go にする\n",
+            ),
+            (
+                "docv/adr/rust.md",
+                "---\ngroup: 言語\ndate: 2026-02-01\nsupersedes: [go]\n---\n\n# Rust にする\n",
+            ),
+            (
+                "docv/adr/queue.md",
+                "---\ngroup: 注文\ndate: 2026-01-01\n---\n\n# キューで受ける\n\n## 決めたこと\n",
+            ),
+            (
+                "docv/adr/alone.md",
+                "---\ndate: 2026-01-01\n---\n\n# だれも指さない\n",
+            ),
+            (
+                "docv/pdr/paid.md",
+                "---\ngroup: 料金\ndate: 2026-01-01\n---\n\n# 有料のプランを足す\n",
+            ),
+            // ADR の queue と同じ id の、別の決定
+            (
+                "docv/pdr/queue.md",
+                "---\ngroup: 注文\ndate: 2026-01-01\n---\n\n# 注文は 1 日に 1 回\n",
+            ),
+            (
+                "docv/free/spec/order.md",
+                "---\nmission: q\npdr: [paid]\nadr: [rust, go, none, queue, queue]\n---\n\n# 注文の確定\n\n## 関わる決定\n\n本文の見出し\n",
+            ),
+            (
+                "docv/free/a.md",
+                "---\nmission: q\nadr: [queue]\n---\n\n# A\n",
+            ),
+            (
+                "docv/free/plan/old.md",
+                "---\nmission: q\nadr: [go, none]\n---\n\n# 古い\n",
+            ),
+            (
+                "docv/slot/service/manual.md",
+                &format!(
+                    "---\nmission: {manual}\nadr: [queue]\n---\n\n# 利用マニュアル\n\n## 使い方\n"
+                ),
+            ),
+            (
+                "docv/slot/service/service/user.md",
+                &format!(
+                    "---\norder: 2\nmission: {service}\nadr: [queue, go]\n---\n\n# 利用者向け機能\n"
+                ),
+            ),
+            (
+                "docv/slot/service/service/admin.md",
+                &format!(
+                    "---\norder: 1\nmission: {service}\nadr: [queue]\n---\n\n# 管理者向け機能\n"
+                ),
+            ),
+        ]);
+        let out = dir.path().join("out");
+        run(&project, &out).unwrap();
+        let read = |path: &str| fs::read_to_string(out.join(path)).unwrap();
+        // Free ファイルのページは、本文の後に、ADR、PDR の順に、それぞれ書いた順で決定を並べる。
+        // 打ち消された決定と、ない決定は出さず、重なりは 1 つにする。種類は、ADR か PDR の文字で示す
+        let order = read("プロジェクト詳細/docv/free/spec/order.html");
+        assert!(
+            order.contains(
+                "<p>本文の見出し</p>\n<h2 id=\"関わる決定-1\">関わる決定</h2>\n<ul class=\"refs\">\n<li><span class=\"kind\">ADR</span><a href=\"../../../../ADR/言語/Rustにする.html\">Rust にする</a></li>\n<li><span class=\"kind\">ADR</span><a href=\"../../../../ADR/注文/キューで受ける.html\">キューで受ける</a></li>\n<li><span class=\"kind\">PDR</span><a href=\"../../../../PDR/料金/有料のプランを足す.html\">有料のプランを足す</a></li>\n</ul>\n</section>"
+            ),
+            "{order}"
+        );
+        // 見出しの id は本文の見出しと重ねず、右の目次にも出す
+        assert!(
+            order.contains("<li class=\"h2\"><a href=\"#関わる決定\">関わる決定</a></li>\n<li class=\"h2\"><a href=\"#関わる決定-1\">関わる決定</a></li>"),
+            "{order}"
+        );
+        assert_headings(&order);
+        // 出す決定が残らなければ、見出しごと出さない
+        let old = read("プロジェクト詳細/docv/free/plan/old.html");
+        assert!(!old.contains("関わる決定"), "{old}");
+        assert!(!old.contains("class=\"refs\""), "{old}");
+
+        // Slot のページも、分けた Slot のページも、本文の後に出す
+        let manual = read("サービス/利用マニュアル.html");
+        assert!(
+            manual.contains(
+                "<h2 id=\"使い方\">使い方</h2>\n\n<h2 id=\"関わる決定\">関わる決定</h2>\n<ul class=\"refs\">\n<li><span class=\"kind\">ADR</span><a href=\"../ADR/注文/キューで受ける.html\">キューで受ける</a></li>\n</ul>\n</section>"
+            ),
+            "{manual}"
+        );
+        assert!(
+            manual.contains("<li class=\"h2\"><a href=\"#関わる決定\">関わる決定</a></li>"),
+            "{manual}"
+        );
+        assert_headings(&manual);
+        let user = read("サービス/サービス仕様/利用者向け機能.html");
+        assert!(
+            user.contains(
+                "<h2 id=\"関わる決定\">関わる決定</h2>\n<ul class=\"refs\">\n<li><span class=\"kind\">ADR</span><a href=\"../../ADR/注文/キューで受ける.html\">キューで受ける</a></li>\n</ul>\n</section>"
+            ),
+            "{user}"
+        );
+        assert_headings(&user);
+
+        // 決定のページは、本文の後に、指している Slot（規格の順、分けたページは order の順）と Free ファイル（パスの順）を並べる
+        let queue = read("ADR/注文/キューで受ける.html");
+        assert!(
+            queue.contains("<h2 id=\"決めたこと\">決めたこと</h2>\n\n<h2 id=\"この決定を指しているページ\">この決定を指しているページ</h2>\n<ul class=\"refs\">\n<li><span class=\"kind\">Slot</span><a href=\"../../サービス/サービス仕様/管理者向け機能.html\">サービス仕様（管理者向け機能）</a></li>\n<li><span class=\"kind\">Slot</span><a href=\"../../サービス/サービス仕様/利用者向け機能.html\">サービス仕様（利用者向け機能）</a></li>\n<li><span class=\"kind\">Slot</span><a href=\"../../サービス/利用マニュアル.html\">利用マニュアル</a></li>\n<li><span class=\"kind\">Free</span><a href=\"../../プロジェクト詳細/docv/free/a.html\">A</a></li>\n<li><span class=\"kind\">Free</span><a href=\"../../プロジェクト詳細/docv/free/spec/order.html\">注文の確定</a></li>\n</ul>\n</section>"),
+            "{queue}"
+        );
+        assert_headings(&queue);
+        // 打ち消された決定のページにも出す。前後の決定のカードの前に置く
+        let go = read("ADR/言語/Goにする.html");
+        let pointing = go.find("この決定を指しているページ</h2>").unwrap();
+        assert!(
+            pointing < go.find("<nav class=\"decision-nav\">").unwrap(),
+            "{go}"
+        );
+        assert!(
+            go.contains("<ul class=\"refs\">\n<li><span class=\"kind\">Slot</span><a href=\"../../サービス/サービス仕様/利用者向け機能.html\">サービス仕様（利用者向け機能）</a></li>\n<li><span class=\"kind\">Free</span><a href=\"../../プロジェクト詳細/docv/free/plan/old.html\">古い</a></li>\n<li><span class=\"kind\">Free</span><a href=\"../../プロジェクト詳細/docv/free/spec/order.html\">注文の確定</a></li>\n</ul>"),
+            "{go}"
+        );
+        assert_headings(&go);
+        // PDR も同じ。ADR と PDR は、同じ id でも別の決定
+        let paid = read("PDR/料金/有料のプランを足す.html");
+        assert!(
+            paid.contains("<ul class=\"refs\">\n<li><span class=\"kind\">Free</span><a href=\"../../プロジェクト詳細/docv/free/spec/order.html\">注文の確定</a></li>\n</ul>"),
+            "{paid}"
+        );
+        // 指しているページがなければ、見出しごと出さない
+        for path in [
+            "ADR/その他/だれも指さない.html",
+            "PDR/注文/注文は1日に1回.html",
+        ] {
+            let html = read(path);
+            assert!(!html.contains("この決定を指しているページ"), "{html}");
+            assert!(!html.contains("class=\"refs\""), "{html}");
+        }
+
+        // 入力が同じなら、毎回同じ出力にする
+        run(&project, &out).unwrap();
+        assert_eq!(read("プロジェクト詳細/docv/free/spec/order.html"), order);
+        assert_eq!(read("サービス/サービス仕様/利用者向け機能.html"), user);
+        assert_eq!(read("ADR/注文/キューで受ける.html"), queue);
+        assert_eq!(read("ADR/言語/Goにする.html"), go);
     }
 
     #[test]

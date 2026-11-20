@@ -16,6 +16,7 @@ PDR（Product Decision Record）は、プロダクトやサービスの仕様の
 - `dir.document_root`（既定は `docv`）の下の `pdr/` に、変更 1 つを 1 つの Markdown で置く
 - 画像は、`pdr/` の中に `{id}_{画像の名前}.{拡張子}` の名前で置き、`pdr/` の中の画像だけを参照する。ADR の画像も参照しない
 - ファイル名と id、YAML front matter の項目（`group`、`date`、`supersedes`）、状態を持たないこと、決めた後に書き換えないことは、[ADR](adr.md) と同じ
+- 決定に関わるページは、ページの側の YAML front matter の `pdr` に書き、PDR には書かない
 - `supersedes` は、PDR だけを指す。ADR と PDR は、同じ id でも別の決定。PDR から ADR に触れるときは、本文のリンクで示す
 - 題と結果の章は、利用者の言葉で書く。実現する手段は、決めたことの章に書く
 

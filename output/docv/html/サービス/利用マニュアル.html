@@ -160,6 +160,7 @@ docv.yaml の 1 行目にあるスキーマの URL の版も、v1.5.0 にする
 <p>Slot の YAML front matter は、<code>mission</code> が <code>docv list</code> のミッションと同じかを検査する。ページに分けた Slot は、<code>order</code> とページの名前（h1）があるかと、同じ Slot のページどうしの重なりも検査する。中身の形（雛形の見出しや表）は検査しない。</p>
 <p>YAML の Slot（<code>service/words.yaml</code> など）が残っていれば error にし、<code>docv gen &lt;slot&gt; --print</code> の雛形を見て md に書き直すよう案内する。</p>
 <p>あわせて、<code>docv.yaml</code> の <code>docv_version</code> を docv の版と比べる。<code>docv.yaml</code> の 1 行目にあるスキーマの URL の版も、<code>docv_version</code> と比べる（<a href="%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E4%BB%95%E6%A7%98/%E8%A8%AD%E5%AE%9A%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB.html">設定ファイル</a> の「docv の版」の章）。</p>
+<p>直さなくても困らないもの（打ち消された決定を <code>adr</code> や <code>pdr</code> で指しているなど）は、warning にする。warning の行は、ルール ID の前に <code>warning</code> を付ける。最後に <code>error N 件</code> を出し、warning があれば続けて <code>warning N 件</code> を出す。warning だけなら、終了コードは 0。</p>
 <p>パスを渡しても、検査するファイルが絞られるだけで、検査内容は変わらない。</p>
 <p>現在の設定は <a href="../%E7%8F%BE%E5%9C%A8%E3%81%AE%E8%A8%AD%E5%AE%9A.html">現在の設定</a> を参照。</p>
 <h3 id="docv-fix">docv fix</h3>
