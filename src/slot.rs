@@ -191,7 +191,7 @@ pub const DEFS: &[Def] = &[
         id: "cost",
         label: "費用",
         group: Group::Operate,
-        mission: "かかっている費用と、費用を理由にやっていないこと",
+        mission: "このプロジェクトの費用（月額費や、費用を理由にやっていないことなど）",
     },
 ];
 

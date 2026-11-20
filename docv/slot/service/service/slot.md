@@ -49,7 +49,7 @@ HTML には、この表の順に、まとまりごとに並べる。
 | `operation/infrastructure.md` | インフラと環境 | 運用             | 環境（本番、ステージング、開発など）の一覧と、それぞれの用途                                   |
 | `operation/deploy.md`         | デプロイ       | 運用             | 作ったものを環境に反映する手順                                                                 |
 | `operation/release.md`        | リリース       | 運用             | 版の決め方と、利用者への届け方                                                                 |
-| `operation/cost.md`           | 費用           | 運用             | かかっている費用と、費用を理由にやっていないこと                                               |
+| `operation/cost.md`           | 費用           | 運用             | このプロジェクトの費用（月額費や、費用を理由にやっていないことなど）                           |
 
 - Slot の名前に近いパスで置くと、check が slot-unknown で正しいパスを示す。たとえば、まとまりのディレクトリが違う `words.md`、番号を付けた `service/03-words.md`、拡張子が違う `service/service.txt`
 - 利用マニュアル（manual）と開発コマンド（develop）を分けるのは、使う人と目的が違うため。利用マニュアルは、リポジトリが CLI や GUI のときの、利用者向けの使い方
