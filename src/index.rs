@@ -13,7 +13,7 @@ use anyhow::{Result, bail};
 use crate::build;
 use crate::decision::Kind;
 use crate::markdown::relative_path;
-use crate::slot::{Content, DEFS, Group, Slot};
+use crate::slot::{DEFS, Group, Slot};
 use crate::workspace::Project;
 
 /// インデックスの 1 行目。docv が作ったことを示す。これで始まらない同じ名前のファイルは書き換えない。
@@ -67,20 +67,14 @@ pub enum Item<'a> {
     Split(&'static str, Vec<(&'a str, &'a Slot)>),
 }
 
-/// インデックスに並べる Slot を、まとまりごとに DEFS の順で返す。置いていない Slot と、include に当てはまらない Slot は出さない。
-/// Slot がなくなったまとまりは出さない。GitHub で見るインデックスと、HTML の Index のページで、同じ並びにする。
-pub fn outline<'a>(
-    slots: &'a [Slot],
-    include: impl Fn(&Slot) -> bool,
-) -> Vec<(Group, Vec<Item<'a>>)> {
+/// インデックスに並べる Slot を、まとまりごとに DEFS の順で返す。置いていない Slot は出さない。
+/// Slot のないまとまりは出さない。GitHub で見るインデックスと、HTML の Index のページで、同じ並びにする。
+pub fn outline(slots: &[Slot]) -> Vec<(Group, Vec<Item<'_>>)> {
     let mut groups = Vec::new();
     for group in Group::ALL {
         let mut items = Vec::new();
         for def in DEFS.iter().filter(|d| d.group == group) {
-            let members: Vec<&Slot> = slots
-                .iter()
-                .filter(|s| s.def.id == def.id && include(s))
-                .collect();
+            let members: Vec<&Slot> = slots.iter().filter(|s| s.def.id == def.id).collect();
             let Some(first) = members.first() else {
                 continue;
             };
@@ -106,8 +100,7 @@ pub fn outline<'a>(
 
 /// インデックスの中身。index は書く先のパスで、リンクはそのディレクトリからの相対パスにする。
 /// Slot は、HTML の Slot のページ（index.html）と同じく、まとまりごとに DEFS の順で並べる。置いていない Slot は出さない。
-/// md の Slot は元のファイルへ、YAML の Slot は generate.image が true なら JPG へリンクし、false なら出さない。分けた Slot のページも同じ。
-/// JPG を出すかは、generate.image で決める。--no-image で build しても、同じインデックスになる。
+/// Slot は元のファイルへリンクする。GitHub で Markdown のまま読めるため。分けた Slot は、ページごとのファイルへリンクする。
 /// Free ファイル、ADR、PDR は、置いているディレクトリと、HTML で見るときのページを示す。
 /// kinds は、決定がある記録の種類（ADR、PDR）。
 pub fn render(
@@ -118,7 +111,6 @@ pub fn render(
     kinds: &[Kind],
 ) -> String {
     let from = index.parent().unwrap_or(&project.root);
-    let image_dir = project.image_dir();
     let link = |label: &str, target: &Path| {
         format!(
             "[{}](<{}>)",
@@ -133,31 +125,17 @@ pub fn render(
         "{MARKER}\n\n# {}\n\n本ページは、プロジェクトをローカルに取得しなくても、GitHub などのホスティングサービス上で docv のビジュアライズページとほぼ同じ内容を閲覧するためのもの。\n",
         project.title()
     );
-    // md の Slot は元のファイル、YAML の Slot は JPG。generate.image が false なら、YAML の Slot はリンクしない。
-    let target = |slot: &Slot| -> Option<PathBuf> {
-        if matches!(slot.content, Content::Markdown(_)) {
-            Some(source(project, slot))
-        } else {
-            image_dir
-                .as_ref()
-                .map(|dir| dir.join(build::jpg_path(slot)))
-        }
-    };
-    for (group, items) in outline(slots, |slot| target(slot).is_some()) {
+    for (group, items) in outline(slots) {
         let mut lines = Vec::new();
         for item in items {
             match item {
                 Item::Single(label, slot) => {
-                    if let Some(to) = target(slot) {
-                        lines.push(format!("- {}", link(label, &to)));
-                    }
+                    lines.push(format!("- {}", link(label, &source(project, slot))));
                 }
                 Item::Split(label, pages) => {
                     lines.push(format!("- {label}"));
                     for (title, slot) in pages {
-                        if let Some(to) = target(slot) {
-                            lines.push(format!("  - {}", link(title, &to)));
-                        }
+                        lines.push(format!("  - {}", link(title, &source(project, slot))));
                     }
                 }
             }
@@ -243,15 +221,20 @@ mod tests {
             "---\norder: 1\nmission: 外から見た機能と、それぞれの振る舞いと決まり\n---\n\n# 概要\n",
         ),
         (
-            "docv/slot/service/install.yaml",
-            "steps:\n  - id: cargo\n    name: cargo\n    items:\n      body_markdown: \"`cargo install`\"\n",
+            "docv/slot/service/install.md",
+            "---\nmission: 利用者がこのサービスをインストールする方法\n---\n\n# インストール\n",
         ),
         ("docv/slot/guide/doc-guide.md", "# Doc ガイド\n"),
         (
-            "docv/slot/guide/develop/web.yaml",
-            "order: 2\ntitle: Web 画面\n",
+            "docv/slot/guide/develop/web.md",
+            "---\norder: 2\n---\n\n# Web 画面\n",
         ),
-        ("docv/slot/guide/develop/api.yaml", "order: 1\ntitle: API\n"),
+        (
+            "docv/slot/guide/develop/api.md",
+            "---\norder: 1\n---\n\n# API\n",
+        ),
+        // 残った YAML の Slot は、Slot として読まないので、並べない
+        ("docv/slot/service/words.yaml", "groups: []\n"),
         (
             "docv/adr/go.md",
             "---\ndate: 2026-01-01\n---\n\n# Go にする\n",
@@ -268,13 +251,9 @@ mod tests {
     }
 
     #[test]
-    fn lists_slots_in_html_order_with_jpg_when_image_is_set() {
-        let (dir, project) = project(
-            "title: demo\ndir:\n  output: out\ngenerate:\n  image: true\n",
-            FILES,
-        );
-        // JPG を作らなくても（--no-image）、generate.image が true なら JPG へリンクする
-        build::run(&project, &dir.path().join("out/html"), None).unwrap();
+    fn lists_every_slot_in_html_order_with_links_to_md() {
+        let (dir, project) = project("title: demo\ndir:\n  output: out\n", FILES);
+        build::run(&project, &dir.path().join("out/html")).unwrap();
         assert_eq!(
             index(&dir),
             format!(
@@ -291,13 +270,13 @@ mod tests {
 - サービス仕様
   - [概要](<slot/service/service/a.md>)
   - [管理 \\[β\\]](<slot/service/service/b.md>)
-- [インストール](<../out/image/サービス/インストール.jpg>)
+- [インストール](<slot/service/install.md>)
 
 ## 開発者向けガイド
 
 - 開発コマンド
-  - [API](<../out/image/開発者向けガイド/開発コマンド/API.jpg>)
-  - [Web 画面](<../out/image/開発者向けガイド/開発コマンド/Web画面.jpg>)
+  - [API](<slot/guide/develop/api.md>)
+  - [Web 画面](<slot/guide/develop/web.md>)
 - [Doc ガイド](<slot/guide/doc-guide.md>)
 
 ## Free ファイル
@@ -328,15 +307,15 @@ Generated by [docv](https://github.com/suzuki-hoge/docv) [{v}](https://github.co
     }
 
     #[test]
-    fn lists_only_md_slots_without_image() {
-        let (dir, project) = project("{}\n", &FILES[..7]);
-        build::run(&project, &dir.path().join("out"), None).unwrap();
+    fn leaves_out_missing_slots_and_chapters() {
+        let (dir, project) = project("{}\n", &FILES[..4]);
+        build::run(&project, &dir.path().join("out")).unwrap();
         let text = index(&dir);
-        assert!(!text.contains("インストール"), "{text}");
-        // 分けた YAML の Slot も、JPG がなければ Slot の名前ごと出さない
+        // 置いていない Slot は出さない。Slot のないまとまりも出さない
         assert!(!text.contains("開発コマンド"), "{text}");
+        assert!(!text.contains("## 開発者向けガイド"), "{text}");
         assert!(
-            text.contains("- [Doc ガイド](<slot/guide/doc-guide.md>)\n"),
+            text.contains("- [インストール](<slot/service/install.md>)\n"),
             "{text}"
         );
         // Free ファイルも ADR も PDR もなければ、その章を出さない
@@ -361,7 +340,7 @@ Generated by [docv](https://github.com/suzuki-hoge/docv) [{v}](https://github.co
             dir.path().join("docv/slot/service/service/desc.md"),
         )
         .unwrap();
-        build::run(&project, &dir.path().join("out"), None).unwrap();
+        build::run(&project, &dir.path().join("out")).unwrap();
         assert!(
             index(&dir).contains("  - [概要](<../assets/desc.md>)\n"),
             "{}",
@@ -373,13 +352,13 @@ Generated by [docv](https://github.com/suzuki-hoge/docv) [{v}](https://github.co
     fn always_writes_but_not_over_foreign_file() {
         // Slot がなくても、毎回書く
         let (dir, empty) = project("{}\n", &[]);
-        build::run(&empty, &dir.path().join("out"), None).unwrap();
+        build::run(&empty, &dir.path().join("out")).unwrap();
         assert!(index(&dir).ends_with(&format!("{}\n", generated_by())));
 
         // docv が作った印のない同じ名前のファイルがあれば、何も書かずに error で終わる
         let (dir, project) = project("{}\n", FILES);
         fs::write(dir.path().join("docv/README.md"), "# 手で書いた\n").unwrap();
-        let error = build::run(&project, &dir.path().join("out"), None)
+        let error = build::run(&project, &dir.path().join("out"))
             .unwrap_err()
             .to_string();
         assert!(error.contains("docv が作ったファイルではない"), "{error}");

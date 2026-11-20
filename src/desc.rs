@@ -5,7 +5,7 @@ use crate::markdown;
 /// docv の概要の元のファイル。docv のサービス仕様の 1 ページ目（docv/slot/service/service/desc.md）と同じファイル。バイナリに埋め込むので、CLI の版と内容が一致する。
 const SOURCE: &str = include_str!("../assets/desc.md");
 
-/// docv の概要。元のファイルは md の Slot として YAML front matter の mission を持つので、それを除いた本文を出す。
+/// docv の概要。元のファイルは Slot のページとして YAML front matter の mission を持つので、それを除いた本文を出す。
 pub fn text() -> String {
     markdown::split(SOURCE)
         .body

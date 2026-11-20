@@ -25,16 +25,12 @@ dir:
   # ドキュメントを置くディレクトリ。この下に free/（Free ファイル）、slot/（Slot ファイル）、adr/、pdr/ を置く
   # build が、Slot ファイルへのリンクを並べたインデックス（README.md）を直下に書く
   document_root: docv
-  # docv build の出力先。この下に html/ と image/ を作る。document_root の中には置けない
+  # docv build の出力先。この下に html/ を作る。document_root の中には置けない
   output: output/docv
 
 # docv が読まないファイルの glob。check、fix、HTML などのどれの対象にもならない
 docv_exclude:
   - docv/free/tmp/**
-
-generate:
-  # docv build で、YAML の Slot のページを JPG にするか。JPG を作るには Chrome が要る
-  image: false
 
 # 使うタグの一覧。YAML front matter の tags には、ここにあるタグだけを書ける
 # color は HTML のタグの色（blue、green、yellow、red、purple、orange、teal、pink）
@@ -58,7 +54,7 @@ format:
   # check で、整形が要るファイルを error にするか
   enabled: false
 ",
-        schema::header("docv.schema.json"),
+        schema::header(),
         env!("CARGO_PKG_VERSION")
     )
 }
@@ -97,7 +93,7 @@ mod tests {
         assert_eq!(config.document_root(), "docv");
         assert_eq!(config.output_dir(), "output/docv");
         assert_eq!(config.docv_exclude, ["docv/free/tmp/**"]);
-        assert_eq!(config.image_dir(), None);
+        assert!(!text.contains("generate"), "{text}");
         let error = run(&path, false).unwrap_err().to_string();
         assert!(error.contains("すでにある"), "{error}");
         fs::write(&path, "dir:\n  document_root: notes\n").unwrap();

@@ -31,21 +31,21 @@
 <h1><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>システム仕様</h1>
 <h2 id="処理の流れ">処理の流れ</h2>
 <ol>
-<li><code>docv.yaml</code> を読み、スキーマで確かめる。init、desc、update-guide、slot schema と、<code>--print</code> を付けた gen は、<code>docv.yaml</code> を読まない。list は、<code>docv.yaml</code> があれば読み、なければ Slot の一覧だけを出す</li>
+<li><code>docv.yaml</code> を読み、スキーマで確かめる。init、desc、update-guide と、<code>--print</code> を付けた gen は、<code>docv.yaml</code> を読まない。list は、<code>docv.yaml</code> があれば読み、なければ Slot の一覧だけを出す</li>
 <li>ルート以下のファイルを分類し、Slot、ADR、PDR、Free ファイルを読む</li>
 <li>コマンドに応じて、次の部品を使う</li>
 </ol>
 <div class="table-scroll"><table><thead><tr><th>コマンド</th><th>使う部品</th></tr></thead><tbody>
 <tr><td>check</td><td>埋め込んだスキーマと決まりで確かめる。<code>lint.textlint</code> が enable なら、npx で textlint を呼ぶ</td></tr>
 <tr><td>fix</td><td><code>lint.textlint</code> が enable なら、textlint に自動修正させる。続けて、埋め込んだ整形の道具で整形し、書き戻す</td></tr>
-<tr><td>build</td><td>HTML を <code>dir.output</code> の下の <code>html/</code> に書き、インデックスを <code>document_root</code> の <code>README.md</code> に書く。そのあと、<code>generate.image</code> が true なら、Chrome に JPG を撮らせる</td></tr>
+<tr><td>build</td><td>HTML を <code>dir.output</code> の下の <code>html/</code> に書き、インデックスを <code>document_root</code> の <code>README.md</code> に書く</td></tr>
 <tr><td>diff-open</td><td>git で <code>--from</code> のリビジョンと作業ツリーの差分を取り、印を付けた HTML を OS のキャッシュのディレクトリに書いて、OS のコマンドで開く</td></tr>
 </tbody></table></div>
 <h2 id="バイナリに埋め込むもの">バイナリに埋め込むもの</h2>
 <p>Rust で書いたバイナリに、次のものを埋め込む。</p>
 <ul>
-<li>Slot のテンプレ（<code>assets/template/</code>。YAML の Slot の項目のサンプルと、ドキュメントのガイドラインの雛形）</li>
-<li>YAML の Slot と <code>docv.yaml</code> のスキーマ（<code>assets/schema/</code>）</li>
+<li>Slot の雛形（<code>assets/template/</code>）</li>
+<li><code>docv.yaml</code> のスキーマ（<code>assets/schema/</code>）</li>
 <li>docv の概要（<code>docv desc</code> が出す <code>assets/desc.md</code>）。サービス仕様の 1 ページ目（<code>docv/slot/service/service/desc.md</code>）は、このファイルへのシンボリックリンク</li>
 <li>版ごとの変更点と対応（<code>docv update-guide</code> が出す <code>assets/update-guide.yaml</code>）。手元の docv の版と、出す内容を一致させるため</li>
 <li>ドキュメントをレビューする手順（<code>docv review-guide</code> が出す <code>assets/review-guide.md</code>）</li>
@@ -53,20 +53,16 @@
 <li>Markdown の整形に使う dprint-plugin-markdown</li>
 <li>コードブロックの色付けに使う syntect と、その構文の定義とテーマ</li>
 </ul>
-<p>textlint を使うときだけ Node.js が、JPG を作るときだけ Chrome が、diff-open を使うときだけ git が要る。どれもバイナリには入れない。</p>
+<p>textlint を使うときだけ Node.js が、diff-open を使うときだけ git が要る。どれもバイナリには入れない。</p>
 <h2 id="スキーマの公開">スキーマの公開</h2>
-<p><code>docv.yaml</code> と YAML の Slot の JSON Schema（<code>assets/schema/</code>）は、埋め込むほかにリポジトリでも公開する。<code>docv init</code> と <code>docv gen</code> は、ファイルの 1 行目に、版のタグを含む URL を書いて参照させる。新しい版の docv が書く URL は、その版のタグを push するまで開けない。</p>
+<p><code>docv.yaml</code> の JSON Schema（<code>assets/schema/</code>）は、埋め込むほかにリポジトリでも公開する。<code>docv init</code> は、<code>docv.yaml</code> の 1 行目に、版のタグを含む URL を書いて参照させる。新しい版の docv が書く URL は、その版のタグを push するまで開けない。</p>
 <h2 id="textlint-とのやりとり">textlint とのやりとり</h2>
 <p>check と fix は、<code>lint.textlint</code> が enable のときだけ textlint を動かす。textlint と 2 つのプリセット（ja-technical-writing、ja-spacing）は、npx で取ってくる。それぞれの版は、docv の版ごとに決める。</p>
 <ul>
 <li>設定ファイルは docv が作り、OS のキャッシュのディレクトリに書く。プリセットの既定に頼らず、使わないルールも含めて、すべての値を書く</li>
-<li>YAML の Slot の Markdown の項目は、OS のキャッシュのディレクトリに一時的なファイルとして書いて渡し、使い終わったら消す</li>
 <li>リポジトリには、ファイルを作らない</li>
 <li>終了コード 1 は指摘として読み、それより大きい終了コードは失敗として扱う</li>
 </ul>
-<h2 id="chrome-とのやりとり">Chrome とのやりとり</h2>
-<p>build は、ローカルの Chrome をヘッドレスで起動し、DevTools Protocol で出力先の HTML を開いて撮る。印刷の表示にし、ページの高さに画面を合わせて、Slot のページを 1 枚ずつ撮る。</p>
-<p>Chrome が見つからないときや、DevTools に接続できないときは、error で終わる。HTML は、それまでに書き終えている。</p>
 <h2 id="git-とのやりとり">git とのやりとり</h2>
 <p>diff-open は、docv ルートで git のコマンドを呼び、<code>--from</code> のリビジョンと作業ツリーを比べる。</p>
 <ul>
@@ -79,7 +75,7 @@
 </li>
 <li>まだ git に追加していないファイルは、<code>git ls-files</code> で取り、新規として扱う。行数は、ファイルの行を数える</li>
 <li>消したファイルは、<code>git show</code> で <code>--from</code> での中身を読み、題や ADR と PDR の <code>group</code> を出す</li>
-<li>書き換えた YAML のファイルは、<code>git show</code> で <code>--from</code> での中身を読み、docv の版を伏せて今の中身と比べる
+<li>書き換えた <code>docv.yaml</code> は、<code>git show</code> で <code>--from</code> での中身を読み、docv の版を伏せて今の中身と比べる
 <ul>
 <li>伏せるのは、docv check が版を確かめる行（1 行目のスキーマの URL の版と、<code>docv_version</code> の値）だけ</li>
 <li>伏せて同じなら、変わっていないとみなす。違えば、版だけが違う行を、足した行数と消した行数から引く</li>
@@ -98,7 +94,6 @@
 <li class="h2"><a href="#バイナリに埋め込むもの">バイナリに埋め込むもの</a></li>
 <li class="h2"><a href="#スキーマの公開">スキーマの公開</a></li>
 <li class="h2"><a href="#textlint-とのやりとり">textlint とのやりとり</a></li>
-<li class="h2"><a href="#chrome-とのやりとり">Chrome とのやりとり</a></li>
 <li class="h2"><a href="#git-とのやりとり">git とのやりとり</a></li>
 </ul>
 </nav>

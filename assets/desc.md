@@ -34,7 +34,7 @@ docv/
 
 - 配置は docv が決める。`docv.yaml` で変えられるのは、`docv/` の名前 ( `dir.document_root` ) だけ
 - `docv/` の直下には、これ以外のものを置けない ( `docv check` が error にする )
-- docv build の出力 ( HTML と JPG ) は `output/docv/` ( `dir.output` ) に出す。`docv/` の中には置けない。AI Agent が `docv/` を読むときに、同じ内容が倍入らないようにするため
+- docv build の出力 ( HTML ) は `output/docv/` ( `dir.output` ) に出す。`docv/` の中には置けない。AI Agent が `docv/` を読むときに、同じ内容が倍入らないようにするため
 - メモや下書きなど、docv に読ませないファイルは、`docv.yaml` の `docv_exclude` に glob で書く ( 例: `docv/free/tmp/**` )
 
 ### `docv/slot/`
@@ -43,8 +43,6 @@ docv/
 
 - プロジェクトの `docv/slot/` ディレクトリに docv 指定のファイルを配置するとビジュアライズされ HTML で閲覧できる
 - 環境構築や用語集などそれぞれのページを Slot といい、Slot ごとに所定の書式がある
-- 設定すれば、HTML に加え JPG 画像も出力する
-    - GitHub で直接ドキュメントを閲覧できるようにするため
 - Slot ファイルは複数プロジェクトのドキュメントルールや閲覧方法を統一する目的のために存在するため、強制力が強い
     - ミッションの変更やファイル名の変更は不可能
 - どの Slot に何を書くかはミッションで決まっているので、ページの冒頭に、ほかの Slot やページに何が書いてあるかを並べない ( 「〜は [A]、〜は [B] に書く」 )
@@ -73,17 +71,19 @@ Free ファイル、Slot ファイル、ADR、PDR で使う画像の置き方
 - 共通の画像のディレクトリは作らない。複数のページで使う画像は、主になるページの隣に置き、ほかのページからはそのパスを参照する
 - ADR と PDR は、それぞれのディレクトリの中の画像だけを使う。ほかの画像を使いたいときは、写しを置く
     - ADR と PDR は、それ単体で完結することに価値があるため。ほかのドキュメントの画像を参照すると、最新のドキュメントの内容に過去の決定が左右されてしまう
-- 持ち主 ( 名前の `_` より前と同じ名前の Markdown か YAML のファイル ) のない画像は、`docv check` が error にする
+- 持ち主 ( 名前の `_` より前と同じ名前の Markdown のファイル ) のない画像は、`docv check` が error にする
 - 画像として扱うのは、拡張子が png、jpg、jpeg、gif、svg、webp のファイル
 
 ## 2. Slot
 
 `docv list` で一覧と、それぞれの Slot のミッションを確認でき、作成したい場合は `docv gen <slot>` で作成する
 
-md の Slot には、YAML front matter の `mission` に、その Slot のミッションを `docv list` のとおりに書く
+Slot ファイルは、すべて Markdown で書く。YAML front matter の `mission` に、その Slot のミッションを `docv list` のとおりに書く
 
 - ミッションは docv が決めるもので、プロジェクトでは変えられない
 - `mission` がないか、ミッションと違えば、`docv check` が error にする。docv の版を上げてミッションが変わったときも、check で気づいて直す
+- 用語集、技術スタック、環境変数、費用、インストール、環境構築、開発コマンドは、`docv gen` が見出しと表の形を示した雛形を作る。列や文を足すのは自由
+    - 形は check では確かめない。`docv gen <slot> --print` で雛形を見られる
 
 ```markdown
 ---
@@ -97,10 +97,10 @@ mission: 利用者の使い方（CLI のコマンド、GUI の操作など）
 
 サービス仕様、システム仕様、開発コマンド、アーキテクチャ、設計・実装、テスト方針、インフラと環境は、ページに分けられる
 
-- 分けるときは、1 つのファイルの代わりに、次のディレクトリの直下に 1 ページ 1 ファイルで置く。拡張子は、分けないときと同じ
+- 分けるときは、1 つのファイルの代わりに、次のディレクトリの直下に 1 ページ 1 つの Markdown で置く
     - サービス仕様: `docv/slot/service/service.md` の代わりに `docv/slot/service/service/`
     - システム仕様: `docv/slot/system/system.md` の代わりに `docv/slot/system/system/`
-    - 開発コマンド: `docv/slot/guide/develop.yaml` の代わりに `docv/slot/guide/develop/`
+    - 開発コマンド: `docv/slot/guide/develop.md` の代わりに `docv/slot/guide/develop/`
     - アーキテクチャ: `docv/slot/guide/architecture.md` の代わりに `docv/slot/guide/architecture/`
     - 設計・実装: `docv/slot/guide/design.md` の代わりに `docv/slot/guide/design/`
     - テスト方針: `docv/slot/guide/testing.md` の代わりに `docv/slot/guide/testing/`
@@ -108,7 +108,7 @@ mission: 利用者の使い方（CLI のコマンド、GUI の操作など）
 - ページは `order`（整数）の順に並ぶ。ページの名前は、HTML でページを切り替えるタブの名前になる。`order` もページの名前も、同じ Slot のページどうしで重ねない
 - 分けないときは 1 つのファイルに書く
 
-md のページは、YAML front matter に `order` と `mission` を書き、本文の h1 をページの名前にする。`mission` は、分けないときと同じ、その Slot のミッション
+ページは、YAML front matter に `order` と `mission` を書き、本文の h1 をページの名前にする。`mission` は、分けないときと同じ、その Slot のミッション
 
 ```markdown
 ---
@@ -117,19 +117,6 @@ mission: 外から見た機能と、それぞれの振る舞いと決まり
 ---
 
 # 利用者向け機能
-```
-
-YAML のページ（開発コマンド）は、分けないときの項目に、`order` と、ページの名前の `title` を足す
-
-```yaml
-order: 1
-title: Web 画面
-steps:
-  - id: test
-    name: テストを実行する
-    items:
-      body_markdown: |
-        npm test
 ```
 
 ## 3. YAML front matter
@@ -211,7 +198,7 @@ CLI は Rust で書き、単一のバイナリにして配る。CLI の外で動
 
 ## 参考
 
-- [技術スタック](../system/stack.yaml)
+- [技術スタック](../slot/system/stack.md)
 ```
 
 ### `group`
@@ -301,23 +288,19 @@ supersedes: [ free-only ]
 
 すべての項目が、既定の値でコメントとして載っている
 
-## 8. スキーマ ( docv ファイル )
-
-YAML の Slot は `docv list` で確認し、そのスキーマは `docv slot schema <slot>` で確認する
-
-## 9. ルール、ガイドライン、設定
+## 8. ルール、ガイドライン、設定
 
 docv の決まりは、次の 3 つに分かれる
 
-- ルール: docv の仕組みが決める決まり。Slot と `docv.yaml` のスキーマ、YAML front matter の key、check が確かめることなど。利用側は変えられない。この概要と `docv slot schema <slot>` で確認する
+- ルール: docv の仕組みが決める決まり。Slot の名前とミッション、`docv.yaml` のスキーマ、YAML front matter の key、check が確かめることなど。利用側は変えられない。この概要で確認する
 - ガイドライン: ドキュメントを書くときの方針。`docv gen doc-guide` で Doc ガイド（`docv/slot/guide/doc-guide.md`）に雛形を作り、プロジェクトに合わせて自由に直す
 - 設定: `docv.yaml` で切り替えること。check のルールや textlint を使うか、出力を git で管理するかなど。`docv init --print` で確認する
 
-## 10. docv の更新
+## 9. docv の更新
 
 `docv.yaml` の `docv_version` に、ドキュメントを合わせた docv の版を書く
 
 - docv の版と違えば、パッチの版の違いでも `docv check` が error にする
 - docv を更新したら、`docv update-guide --from <docv_version>` で版ごとの変更点と対応を確かめ、対応する
-- 対応が終わったら、`docv_version` と、`docv.yaml` と YAML の Slot の 1 行目にあるスキーマの URL の版を、docv の版にする
+- 対応が終わったら、`docv_version` と、`docv.yaml` の 1 行目にあるスキーマの URL の版を、docv の版にする
 - `docv_version` が docv の版より新しければ、docv を更新する

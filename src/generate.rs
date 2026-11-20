@@ -1,16 +1,16 @@
 //! docv gen。Slot ファイルを決まったパスに作る。docv/slot/service/manual.md の docv gen。
 //!
-//! パスは docv が Slot ごとに決めていて、選ぶ余地はない。yaml の Slot には項目のサンプル（テンプレ）を書く。
-//! md の Slot は、YAML front matter の mission にミッションを書き、中身の形は自由だと伝える。Doc ガイドの Slot（doc-guide）だけは、ガイドラインの雛形を書く。
-//! どの Slot も、ファイルの先頭でミッションが分かる。yaml の Slot はコメントで、md の Slot は check が確かめる mission で。yaml と Doc ガイドの雛形は、雛形の中に書いてある。
+//! パスは docv が Slot ごとに決めていて、選ぶ余地はない。Slot ファイルは、すべて Markdown。
+//! 雛形のある Slot（用語集、技術スタック、環境変数、費用、インストール、環境構築、開発コマンド、Doc ガイド）には、雛形を書く。
+//! ほかの Slot は、YAML front matter の mission にミッションを書き、中身の形は自由だと伝える。
+//! どの Slot も、ファイルの先頭の mission でミッションが分かる。雛形にも書いてある。
 
 use std::fmt::Write as _;
 use std::fs;
 
 use anyhow::{Context, Result, bail};
 
-use crate::schema;
-use crate::slot::{self, Def, Format};
+use crate::slot::{self, Def};
 use crate::workspace::Project;
 
 pub fn find(slot: &str) -> Result<&'static Def> {
@@ -20,41 +20,29 @@ pub fn find(slot: &str) -> Result<&'static Def> {
     }
 }
 
-/// Slot ファイルに書く中身。yaml の Slot は、1 行目でスキーマの URL をエディタに伝える。
-/// 雛形のない md の Slot は、YAML front matter の mission だけを書く。
+/// Slot ファイルに書く中身。雛形のない Slot は、YAML front matter の mission だけを書く。
 fn text(def: &Def) -> String {
-    match def.format {
-        Format::Yaml => format!(
-            "{}{}",
-            schema::header(&format!("{}.schema.json", def.id)),
-            slot::template(def.id).expect("yaml の Slot にはテンプレがある")
-        ),
-        Format::Markdown => match slot::md_template(def.id) {
-            Some(template) => template.to_string(),
-            None => format!("---\nmission: {}\n---\n", def.mission),
-        },
+    match slot::template(def.id) {
+        Some(template) => template.to_string(),
+        None => format!("---\nmission: {}\n---\n", def.mission),
     }
 }
 
-/// 作ったあとに伝える文。雛形のない md の Slot は、中身の形は自由だと伝える。
+/// 作ったあとに伝える文。雛形のない Slot は、中身の形は自由だと伝える。雛形のある Slot は、雛形が形を示すので伝えない。
 /// ページに分けられる Slot は、分けるときの置き場所を伝える。どちらでもなければ None。
 fn note(def: &Def) -> Option<String> {
     let mut note = String::new();
-    if def.format == Format::Markdown && slot::md_template(def.id).is_none() {
+    if slot::template(def.id).is_none() {
         let _ = writeln!(
             note,
-            "{}は md の Slot で、中身の形は決めていない。ミッション「{}」に沿って、Markdown を自由に書く",
+            "{}の中身の形は決めていない。ミッション「{}」に沿って、Markdown を自由に書く",
             def.label, def.mission
         );
     }
     if let Some(dir) = def.pages_dir() {
-        let kind = match def.format {
-            Format::Markdown => "Markdown",
-            Format::Yaml => "YAML",
-        };
         let _ = writeln!(
             note,
-            "ページに分けるときは、このファイルの代わりに、Slot のディレクトリ（document_root の下の slot/）の下の {dir}/ に 1 ページ 1 つの {kind} で置く。書き方は docv desc の「ページ分け」"
+            "ページに分けるときは、このファイルの代わりに、Slot のディレクトリ（document_root の下の slot/）の下の {dir}/ に 1 ページ 1 つの Markdown で置く。書き方は docv desc の「ページ分け」"
         );
     }
     (!note.is_empty()).then_some(note)
@@ -132,52 +120,111 @@ mod tests {
         fs::read_to_string(dir.path().join(path)).unwrap()
     }
 
-    /// 1 行目でスキーマの URL を伝える、用語集の Slot。
-    fn words_text() -> String {
-        format!(
-            "# yaml-language-server: $schema=https://raw.githubusercontent.com/suzuki-hoge/docv/v{}/assets/schema/words.schema.json\n{}",
-            env!("CARGO_PKG_VERSION"),
-            include_str!("../assets/template/words.yaml")
-        )
-    }
+    /// 雛形のある Slot と、その雛形。
+    const TEMPLATES: [(&str, &str, &str); 8] = [
+        (
+            "install",
+            "docv/slot/service/install.md",
+            include_str!("../assets/template/install.md"),
+        ),
+        (
+            "words",
+            "docv/slot/service/words.md",
+            include_str!("../assets/template/words.md"),
+        ),
+        (
+            "stack",
+            "docv/slot/system/stack.md",
+            include_str!("../assets/template/stack.md"),
+        ),
+        (
+            "setup",
+            "docv/slot/guide/setup.md",
+            include_str!("../assets/template/setup.md"),
+        ),
+        (
+            "develop",
+            "docv/slot/guide/develop.md",
+            include_str!("../assets/template/develop.md"),
+        ),
+        (
+            "env",
+            "docv/slot/guide/env.md",
+            include_str!("../assets/template/env.md"),
+        ),
+        (
+            "doc-guide",
+            "docv/slot/guide/doc-guide.md",
+            include_str!("../assets/template/doc-guide.md"),
+        ),
+        (
+            "cost",
+            "docv/slot/operation/cost.md",
+            include_str!("../assets/template/cost.md"),
+        ),
+    ];
 
     #[test]
     fn creates_slots_at_fixed_paths() {
         let (dir, project) = project();
-        let words = run(&project, "words", false).unwrap();
-        assert_eq!(words.path, "docv/slot/service/words.yaml");
-        assert!(words.note.is_none());
-        assert_eq!(read(&dir, &words.path), words_text());
-        // md の Slot は、YAML front matter の mission だけを書いたファイルを作り、中身の形は自由だと伝える
+        // 雛形のない Slot は、YAML front matter の mission だけを書いたファイルを作り、中身の形は自由だと伝える
         let api = run(&project, "api", false).unwrap();
         assert_eq!(api.path, "docv/slot/system/api.md");
         assert_eq!(
             read(&dir, &api.path),
             "---\nmission: API の一覧と、それぞれが受け取るものと返すもの\n---\n"
         );
-        assert!(api.note.unwrap().contains("中身の形は決めていない"));
-        // Doc ガイドの Slot は、ガイドラインの雛形を書く
-        let guide = run(&project, "doc-guide", false).unwrap();
-        assert_eq!(guide.path, "docv/slot/guide/doc-guide.md");
-        assert!(guide.note.is_none());
         assert_eq!(
-            read(&dir, &guide.path),
-            include_str!("../assets/template/doc-guide.md")
+            api.note.as_deref(),
+            Some(
+                "API 仕様書の中身の形は決めていない。ミッション「API の一覧と、それぞれが受け取るものと返すもの」に沿って、Markdown を自由に書く\n"
+            )
         );
+    }
+
+    #[test]
+    fn writes_each_template() {
+        // 雛形のある Slot は、雛形をそのまま書く。形は雛形が示すので、中身の形は自由だとは伝えない
+        let (dir, project) = project();
+        for (id, path, template) in TEMPLATES {
+            let generated = run(&project, id, false).unwrap();
+            assert_eq!(generated.path, path);
+            assert_eq!(read(&dir, path), template, "{id}");
+            assert!(
+                !generated
+                    .note
+                    .unwrap_or_default()
+                    .contains("中身の形は決めていない"),
+                "{id}"
+            );
+            assert_eq!(print(id).unwrap(), template, "{id}");
+        }
+        // 雛形があるのは、これらの Slot だけ
+        let with_template: Vec<&str> = DEFS
+            .iter()
+            .filter(|d| slot::template(d.id).is_some())
+            .map(|d| d.id)
+            .collect();
+        let mut expected: Vec<&str> = TEMPLATES.iter().map(|(id, ..)| *id).collect();
+        expected.sort_by_key(|id| DEFS.iter().position(|d| d.id == *id));
+        assert_eq!(with_template, expected);
     }
 
     #[test]
     fn rewrites_only_with_force() {
         let (dir, project) = project();
-        write(dir.path(), "docv/slot/service/words.yaml", "groups: []\n");
+        write(dir.path(), "docv/slot/service/words.md", "# 用語集\n");
         let error = run(&project, "words", false).unwrap_err().to_string();
         assert!(
-            error.contains("docv/slot/service/words.yaml がすでにある"),
+            error.contains("docv/slot/service/words.md がすでにある"),
             "{error}"
         );
-        assert_eq!(read(&dir, "docv/slot/service/words.yaml"), "groups: []\n");
+        assert_eq!(read(&dir, "docv/slot/service/words.md"), "# 用語集\n");
         run(&project, "words", true).unwrap();
-        assert_eq!(read(&dir, "docv/slot/service/words.yaml"), words_text());
+        assert_eq!(
+            read(&dir, "docv/slot/service/words.md"),
+            include_str!("../assets/template/words.md")
+        );
     }
 
     #[test]
@@ -204,18 +251,18 @@ mod tests {
                 .unwrap()
                 .contains("Slot のディレクトリ（document_root の下の slot/）の下の service/service/ に 1 ページ 1 つの Markdown で置く")
         );
-        // YAML の Slot も、分けられるなら置き場所を伝える
+        // 雛形のある開発コマンドも、分けられるので置き場所を伝える。ページも Markdown
         let develop = run(&whole, "develop", false).unwrap();
         assert_eq!(
             develop.note.as_deref(),
             Some(
-                "ページに分けるときは、このファイルの代わりに、Slot のディレクトリ（document_root の下の slot/）の下の guide/develop/ に 1 ページ 1 つの YAML で置く。書き方は docv desc の「ページ分け」\n"
+                "ページに分けるときは、このファイルの代わりに、Slot のディレクトリ（document_root の下の slot/）の下の guide/develop/ に 1 ページ 1 つの Markdown で置く。書き方は docv desc の「ページ分け」\n"
             )
         );
         write(
             dir.path(),
-            "docv/slot/guide/develop/web.yaml",
-            "order: 1\ntitle: Web\n",
+            "docv/slot/guide/develop/web.md",
+            "---\norder: 1\n---\n\n# Web\n",
         );
         let error = run(&paged, "develop", true).unwrap_err().to_string();
         assert!(
@@ -227,15 +274,10 @@ mod tests {
     #[test]
     fn prints_without_writing() {
         assert_eq!(
-            print("doc-guide").unwrap(),
-            include_str!("../assets/template/doc-guide.md")
-        );
-        assert_eq!(print("words").unwrap(), words_text());
-        assert_eq!(
             print("manual").unwrap(),
             "---\nmission: 利用者の使い方（CLI のコマンド、GUI の操作など）\n---\n"
         );
-        for name in ["api-md", "docv/slot/service/words.yaml"] {
+        for name in ["api-md", "docv/slot/service/words.md"] {
             let error = print(name).unwrap_err().to_string();
             assert!(error.contains("Slot の名前ではない"), "{name}: {error}");
         }
@@ -243,22 +285,13 @@ mod tests {
 
     #[test]
     fn every_slot_file_starts_with_its_mission() {
-        // yaml の Slot はスキーマの URL の次の行に Slot の名前とミッションを、md の Slot は YAML front matter の mission を書く
+        // 雛形も、雛形のない Slot のファイルも、YAML front matter の mission から始まる
         for def in DEFS {
-            let text = text(def);
-            match def.format {
-                Format::Yaml => assert_eq!(
-                    text.lines().nth(1),
-                    Some(format!("# {}: {}", def.label, def.mission).as_str()),
-                    "{}",
-                    def.id
-                ),
-                Format::Markdown => assert!(
-                    text.starts_with(&format!("---\nmission: {}\n---\n", def.mission)),
-                    "{}",
-                    def.id
-                ),
-            }
+            assert!(
+                text(def).starts_with(&format!("---\nmission: {}\n---\n", def.mission)),
+                "{}",
+                def.id
+            );
         }
     }
 }

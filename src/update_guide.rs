@@ -69,7 +69,7 @@ pub fn text(from: &str) -> Result<String> {
     }
     out.push_str(&format!(
         "対応が終わったら、docv.yaml の docv_version を {current} にする\n\
-         docv.yaml と YAML の Slot の 1 行目にあるスキーマの URL の版も、v{current} にする\n\
+         docv.yaml の 1 行目にあるスキーマの URL の版も、v{current} にする\n\
          最後に docv check で、残りがないかを確かめる\n"
     ));
     Ok(out)
@@ -118,7 +118,7 @@ mod tests {
         assert!(all.contains("\n- "), "{all}");
         assert!(
             all.ends_with(&format!(
-                "\n\n対応が終わったら、docv.yaml の docv_version を {current} にする\ndocv.yaml と YAML の Slot の 1 行目にあるスキーマの URL の版も、v{current} にする\n最後に docv check で、残りがないかを確かめる\n"
+                "\n\n対応が終わったら、docv.yaml の docv_version を {current} にする\ndocv.yaml の 1 行目にあるスキーマの URL の版も、v{current} にする\n最後に docv check で、残りがないかを確かめる\n"
             )),
             "{all}"
         );

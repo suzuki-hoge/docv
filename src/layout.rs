@@ -17,7 +17,7 @@ use crate::workspace::Project;
 const IMAGE_EXTENSIONS: [&str; 6] = ["png", "jpg", "jpeg", "gif", "svg", "webp"];
 
 /// 持ち主になれるファイルの拡張子。
-const OWNER_EXTENSIONS: [&str; 3] = ["md", "yaml", "yml"];
+const OWNER_EXTENSIONS: [&str; 1] = ["md"];
 
 /// パスが画像か。拡張子の大文字と小文字は区別しない。
 pub fn is_image(path: &str) -> bool {
@@ -83,7 +83,7 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
         });
     }
 
-    // 画像の持ち主は、同じディレクトリの Markdown か YAML のファイル。
+    // 画像の持ち主は、同じディレクトリの Markdown のファイル。
     let areas: Vec<String> = [FREE_DIR, SLOT_DIR]
         .into_iter()
         .chain(Kind::ALL.iter().map(|kind| kind.dir()))
@@ -200,8 +200,11 @@ mod tests {
                 "docv/free/schema/config.json",
                 "docv/slot/system/system-overview.md",
                 "docv/slot/system/system-overview_parts.svg",
-                "docv/slot/system/stack.yaml",
+                "docv/slot/system/stack.md",
                 "docv/slot/system/stack_backend.png",
+                // YAML のファイルは持ち主にならない
+                "docv/slot/service/words.yaml",
+                "docv/slot/service/words_map.png",
                 "docv/slot/service/service/cli.md",
                 "docv/slot/service/service/cli_flow.svg",
                 "docv/slot/service/service_flow.svg",
@@ -221,6 +224,7 @@ mod tests {
                 "docv/free/sub/order_flow.svg image-owner",
                 "docv/pdr/paid_plan.svg image-owner",
                 "docv/slot/service/service_flow.svg image-owner",
+                "docv/slot/service/words_map.png image-owner",
             ]
         );
     }

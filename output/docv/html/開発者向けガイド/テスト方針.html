@@ -34,13 +34,13 @@
 <ul>
 <li>テストは、確かめるコードと同じファイルの <code>tests</code> モジュールに書く</li>
 <li>ファイルを読むものは、一時ディレクトリに小さなプロジェクトを作り、check の指摘や build が書いた HTML の文字列を確かめる</li>
-<li>埋め込むものどうしが揃っていることも確かめる。スキーマと <code>docv/free/schema/</code> の写し、YAML の Slot の雛形とスキーマ、<code>assets/update-guide.yaml</code> にある今の版と 1 行の長さ</li>
+<li>埋め込むものどうしが揃っていることも確かめる。スキーマと <code>docv/free/schema/</code> の写し、<code>assets/update-guide.yaml</code> にある今の版と 1 行の長さ</li>
 </ul>
 <h2 id="自動テストで確かめないこと">自動テストで確かめないこと</h2>
 <ul>
-<li>textlint と Chrome は、<code>cargo test</code> では呼ばない。Node.js と Chrome がなくても通るようにするため。確かめるのは、渡す設定と、受け取った結果の読み方だけ</li>
-<li>代わりに、<code>make fix</code> で、このリポジトリのドキュメントに textlint を含む docv check と、JPG を含む docv build をかける。docv を使うプロジェクトとして、外から通して確かめる E2E テストに当たる</li>
-<li>HTML と JPG の見た目は、人間が <code>docv open</code> で開いて確かめる</li>
+<li>textlint は、<code>cargo test</code> では呼ばない。Node.js がなくても通るようにするため。確かめるのは、渡す設定と、受け取った結果の読み方だけ</li>
+<li>代わりに、<code>make fix</code> で、このリポジトリのドキュメントに textlint を含む docv check と、docv build をかける。docv を使うプロジェクトとして、外から通して確かめる E2E テストに当たる</li>
+<li>HTML の見た目は、人間が <code>docv open</code> で開いて確かめる</li>
 </ul>
 
 </section>

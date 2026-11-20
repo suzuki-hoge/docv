@@ -1,16 +1,15 @@
-//! Slot。どのプロジェクトにも要るドキュメントを、docv が決めたミッションと形で書くファイル。docv/slot/service/service/slot.md。
+//! Slot。どのプロジェクトにも要るドキュメントを、docv が決めたミッションで書くファイル。docv/slot/service/service/slot.md。
 //!
-//! Slot ファイルは、Slot のディレクトリ（document_root の下の slot/）の、まとまりのディレクトリに `<まとまり>/<ID>.<拡張子>` の名前で置く。拡張子は Slot ごとに決まる（yaml か md）。
-//! サービス仕様、システム仕様、開発コマンド、アーキテクチャ、設計・実装、テスト方針、インフラと環境は、`<まとまり>/<ID>/` の直下に 1 ページ 1 つのファイルで置いて、ページに分けられる。
-//! md のページの名前は h1、並びは YAML front matter の order。YAML のページ（開発コマンド）は、項目の title と order。
-//! md の Slot（分けたページも）は、YAML front matter の mission に、docv が決めたミッションをそのまま書く。違えば check が error にする。
-//! ファイルの中のパスは、すべてルートからの相対パス。
+//! Slot ファイルは、すべて Markdown。Slot のディレクトリ（document_root の下の slot/）の、まとまりのディレクトリに `<まとまり>/<ID>.md` の名前で置く。
+//! サービス仕様、システム仕様、開発コマンド、アーキテクチャ、設計・実装、テスト方針、インフラと環境は、`<まとまり>/<ID>/` の直下に 1 ページ 1 つの Markdown で置いて、ページに分けられる。
+//! ページの名前は h1、並びは YAML front matter の order。
+//! Slot（分けたページも）は、YAML front matter の mission に、docv が決めたミッションをそのまま書く。違えば check が error にする。
+//! 中身の形は確かめない。雛形のある Slot は、docv gen が雛形を書く。
 
 use std::fs;
 
 use anyhow::{Context, Result};
 use serde::Deserialize;
-use serde_yaml_ng::Value;
 
 use crate::diagnostic::Diagnostic;
 use crate::markdown;
@@ -53,15 +52,6 @@ impl Group {
     }
 }
 
-/// Slot ファイルの形式。
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Format {
-    /// 決まった項目を持つ YAML。
-    Yaml,
-    /// 形を決めない Markdown。HTML にはそのまま出す。
-    Markdown,
-}
-
 #[derive(Debug)]
 pub struct Def {
     pub id: &'static str,
@@ -69,7 +59,6 @@ pub struct Def {
     pub group: Group,
     /// ミッション。この Slot を読むと何が分かるか。
     pub mission: &'static str,
-    pub format: Format,
 }
 
 /// Slot の一覧。並び順は HTML に出す順。
@@ -79,165 +68,136 @@ pub const DEFS: &[Def] = &[
         label: "サービス概要",
         group: Group::Service,
         mission: "利用者に向けた、これが何で、誰の何を解決し、何ができるかの説明",
-        format: Format::Markdown,
     },
     Def {
         id: "service",
         label: "サービス仕様",
         group: Group::Service,
         mission: "外から見た機能と、それぞれの振る舞いと決まり",
-        format: Format::Markdown,
     },
     Def {
         id: "install",
         label: "インストール",
         group: Group::Service,
         mission: "利用者がこのサービスをインストールする方法",
-        format: Format::Yaml,
     },
     Def {
         id: "manual",
         label: "利用マニュアル",
         group: Group::Service,
         mission: "利用者の使い方（CLI のコマンド、GUI の操作など）",
-        format: Format::Markdown,
     },
     Def {
         id: "words",
         label: "用語集",
         group: Group::Service,
         mission: "このプロジェクトの言葉の意味",
-        format: Format::Yaml,
     },
     Def {
         id: "system-overview",
         label: "システム概要",
         group: Group::System,
         mission: "開発者に向けた、システムを作る部品と、そのつながりの全体像",
-        format: Format::Markdown,
     },
     Def {
         id: "system",
         label: "システム仕様",
         group: Group::System,
         mission: "部品ごとの振る舞いと、部品の間の流れ",
-        format: Format::Markdown,
     },
     Def {
         id: "stack",
         label: "技術スタック",
         group: Group::System,
         mission: "利用している外部サービス、言語、ライブラリなどの名前と用途",
-        format: Format::Yaml,
     },
     Def {
         id: "api",
         label: "API 仕様書",
         group: Group::System,
         mission: "API の一覧と、それぞれが受け取るものと返すもの",
-        format: Format::Markdown,
     },
     Def {
         id: "db",
         label: "DB 仕様書",
         group: Group::System,
         mission: "保存しているデータと、その保存先と形",
-        format: Format::Markdown,
     },
     Def {
         id: "setup",
         label: "環境構築",
         group: Group::Developer,
         mission: "開発を始めるのに用意するものと、実行するコマンド",
-        format: Format::Yaml,
     },
     Def {
         id: "develop",
         label: "開発コマンド",
         group: Group::Developer,
         mission: "テストやビルドなど、開発者が実行するコマンド",
-        format: Format::Yaml,
     },
     Def {
         id: "architecture",
         label: "アーキテクチャ",
         group: Group::Developer,
         mission: "システム全体で採る方式と決まり（部品の分け方、通信の方式、非同期処理の実現方法など）",
-        format: Format::Markdown,
     },
     Def {
         id: "design",
         label: "設計・実装",
         group: Group::Developer,
         mission: "コードを書くときに従う決まり（フレームワークの使い方、ディレクトリやコーディングの決まりなど）",
-        format: Format::Markdown,
     },
     Def {
         id: "testing",
         label: "テスト方針",
         group: Group::Developer,
         mission: "テストの範囲と方法（自動テストの範囲、E2E テスト、手動テストについてなど）",
-        format: Format::Markdown,
     },
     Def {
         id: "env",
         label: "環境変数",
         group: Group::Developer,
         mission: "システムを動かすのに要る環境変数と、それぞれを設定している場所",
-        format: Format::Yaml,
     },
     Def {
         id: "doc-guide",
         label: "Doc ガイド",
         group: Group::Developer,
         mission: "このプロジェクトのドキュメントの置き場所と書き方",
-        format: Format::Markdown,
     },
     Def {
         id: "infrastructure",
         label: "インフラと環境",
         group: Group::Operate,
         mission: "環境（本番、ステージング、開発など）の一覧と、それぞれの用途",
-        format: Format::Markdown,
     },
     Def {
         id: "deploy",
         label: "デプロイ",
         group: Group::Operate,
         mission: "作ったものを環境に反映する手順",
-        format: Format::Markdown,
     },
     Def {
         id: "release",
         label: "リリース",
         group: Group::Operate,
         mission: "版の決め方と、利用者への届け方",
-        format: Format::Markdown,
     },
     Def {
         id: "cost",
         label: "費用",
         group: Group::Operate,
         mission: "かかっている費用と、費用を理由にやっていないこと",
-        format: Format::Yaml,
     },
 ];
 
 impl Def {
-    /// 拡張子。
-    pub fn extension(&self) -> &'static str {
-        match self.format {
-            Format::Yaml => "yaml",
-            Format::Markdown => "md",
-        }
-    }
-
     /// Slot ファイルの、Slot のディレクトリからの相対パス。
     pub fn file_name(&self) -> String {
-        format!("{}/{}.{}", self.group.dir(), self.id, self.extension())
+        format!("{}/{}.md", self.group.dir(), self.id)
     }
 
-    /// ページに分けるときのディレクトリの、Slot のディレクトリからの相対パス。直下に 1 ページ 1 つの、Slot と同じ拡張子のファイルを置く。
+    /// ページに分けるときのディレクトリの、Slot のディレクトリからの相対パス。直下に 1 ページ 1 つの Markdown を置く。
     /// 分けられるのはサービス仕様、システム仕様、開発コマンド、アーキテクチャ、設計・実装、テスト方針、インフラと環境だけで、ほかの Slot は None。
     pub fn pages_dir(&self) -> Option<String> {
         matches!(
@@ -254,36 +214,30 @@ impl Def {
     }
 }
 
-/// Slot のディレクトリからの相対パス（`service/words.yaml`）から Slot を引く。
+/// Slot のディレクトリからの相対パス（`service/words.md`）から Slot を引く。
 pub fn def_of_file(rel: &str) -> Option<&'static Def> {
     DEFS.iter().find(|d| d.file_name() == rel)
 }
 
-/// Slot のディレクトリからの相対パスが、分けた Slot のページ（`service/service/admin.md`、`guide/develop/web.yaml`）なら、その Slot を引く。
-/// ページの拡張子は、分けないときの Slot と同じ。
+/// Slot のディレクトリからの相対パスが、分けた Slot のページ（`service/service/admin.md`）なら、その Slot を引く。
 pub fn def_of_page(rel: &str) -> Option<&'static Def> {
     let (dir, name) = rel.rsplit_once('/')?;
-    DEFS.iter().find(|d| {
-        d.pages_dir().is_some_and(|pages| pages == dir)
-            && name.ends_with(&format!(".{}", d.extension()))
-    })
+    DEFS.iter()
+        .find(|d| d.pages_dir().is_some_and(|pages| pages == dir) && name.ends_with(".md"))
 }
 
 /// Slot ファイルとして置ける名前の一覧。メッセージに使う。
 pub fn file_names() -> String {
     DEFS.iter()
         .flat_map(|d| {
-            std::iter::once(d.file_name()).chain(
-                d.pages_dir()
-                    .map(|dir| format!("{dir}/*.{}", d.extension())),
-            )
+            std::iter::once(d.file_name()).chain(d.pages_dir().map(|dir| format!("{dir}/*.md")))
         })
         .collect::<Vec<_>>()
         .join("、")
 }
 
-/// Slot の名前に近いパス（ディレクトリが違う `words.yaml`、番号が付いた `service/03-words.yaml`、
-/// 拡張子が違う `service/service.yaml`）なら、正しいパスを返す。
+/// Slot の名前に近いパス（ディレクトリが違う `words.md`、番号が付いた `service/03-words.md`、
+/// 拡張子が違う `service/service.txt`）なら、正しいパスを返す。
 /// dir は Slot のディレクトリ。返すパスはルートからの相対パス。
 pub fn suggest(dir: &str, rel: &str) -> Option<String> {
     let name = rel.rsplit('/').next().unwrap_or(rel);
@@ -299,335 +253,58 @@ pub fn def(id: &str) -> Option<&'static Def> {
     DEFS.iter().find(|d| d.id == id)
 }
 
-// ---- Slot の中身 ----
+/// 以前は YAML で書いた Slot。ファイルが残っていれば、雛形を見て Markdown に書き直すよう案内する。
+const FORMER_YAML: [&str; 7] = [
+    "install", "words", "stack", "setup", "develop", "env", "cost",
+];
 
-/// 手順の Slot（インストール、環境構築、開発コマンド）。
-#[derive(Debug, Clone, Default, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Procedure {
-    #[serde(default)]
-    pub requirements: Vec<Tool>,
-    #[serde(default)]
-    pub steps: Vec<Step>,
-    /// 項目のあとに続けて出す Markdown。
-    #[serde(rename = "appendix_markdown")]
-    pub appendix: Option<String>,
+/// 残っている YAML の Slot。
+struct FormerYaml {
+    def: &'static Def,
+    /// 書き直す先の、Slot のディレクトリからの相対パス。
+    rel: String,
+    /// 分けた開発コマンドのページか。
+    page: bool,
 }
 
-/// 分けた開発コマンドのページ。分けないときの項目に、ページの名前（title）と並び（order）を足す。
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct ProcedurePage {
-    order: i64,
-    title: String,
-    #[serde(default)]
-    requirements: Vec<Tool>,
-    #[serde(default)]
-    steps: Vec<Step>,
-    #[serde(rename = "appendix_markdown")]
-    appendix: Option<String>,
+/// Slot のディレクトリからの相対パスが、以前は YAML で書いた Slot のファイル（`service/words.yaml`）か、
+/// その分けたページ（`guide/develop/web.yaml`）なら、Slot と書き直す先を返す。
+fn former_yaml(rel: &str) -> Option<FormerYaml> {
+    let stem = rel.strip_suffix(".yaml")?;
+    DEFS.iter()
+        .filter(|d| FORMER_YAML.contains(&d.id))
+        .find_map(|def| {
+            let page = match stem.rsplit_once('/') {
+                _ if stem == format!("{}/{}", def.group.dir(), def.id) => false,
+                Some((dir, name))
+                    if !name.is_empty() && def.pages_dir().as_deref() == Some(dir) =>
+                {
+                    true
+                }
+                _ => return None,
+            };
+            Some(FormerYaml {
+                def,
+                rel: format!("{stem}.md"),
+                page,
+            })
+        })
 }
 
-/// 手順の 1 つ。items が複数あるときは、HTML で os ごとのタブにする。
-#[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Step {
-    pub id: String,
-    pub name: String,
-    /// 手順の中身。1 つなら配列にしなくてよい。
-    #[serde(default, deserialize_with = "one_or_many")]
-    pub items: Vec<StepItem>,
-}
-
-/// 手順の中身。os ごとに分けるときは、os を書く。
-#[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct StepItem {
-    pub os: Option<String>,
-    #[serde(rename = "body_markdown")]
-    pub markdown: Option<String>,
-}
-
-/// 1 つの値か、その配列を読む。
-fn one_or_many<'de, D, T>(deserializer: D) -> Result<Vec<T>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-    T: Deserialize<'de>,
-{
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum OneOrMany<T> {
-        Many(Vec<T>),
-        One(T),
-    }
-    Ok(match OneOrMany::deserialize(deserializer)? {
-        OneOrMany::Many(items) => items,
-        OneOrMany::One(item) => vec![item],
+/// 雛形。docv gen で書く。雛形のない Slot は None で、YAML front matter の mission だけを書いたファイルを作る。
+/// 雛形にも mission を書いてある。作った雛形はプロジェクトのもので、docv の版を上げても書き換えない。
+pub fn template(id: &str) -> Option<&'static str> {
+    Some(match id {
+        "install" => include_str!("../assets/template/install.md"),
+        "words" => include_str!("../assets/template/words.md"),
+        "stack" => include_str!("../assets/template/stack.md"),
+        "setup" => include_str!("../assets/template/setup.md"),
+        "develop" => include_str!("../assets/template/develop.md"),
+        "env" => include_str!("../assets/template/env.md"),
+        "doc-guide" => include_str!("../assets/template/doc-guide.md"),
+        "cost" => include_str!("../assets/template/cost.md"),
+        _ => return None,
     })
-}
-
-/// 技術スタックの項目や、前提として要るツール。
-#[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Tool {
-    pub name: String,
-    pub version: Option<String>,
-    #[serde(rename = "purpose_markdown")]
-    pub purpose: Option<String>,
-    pub url: Option<String>,
-}
-
-#[derive(Debug, Clone, Default, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Words {
-    #[serde(default)]
-    pub groups: Vec<WordGroup>,
-    /// 項目のあとに続けて出す Markdown。
-    #[serde(rename = "appendix_markdown")]
-    pub appendix: Option<String>,
-}
-
-/// 用語のまとまり。HTML では、name を h2 にし、items を表にする。
-#[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct WordGroup {
-    pub name: String,
-    #[serde(default)]
-    pub items: Vec<Word>,
-}
-
-/// 用語。ja と en は、どちらかがあればよい。
-#[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Word {
-    pub ja: Option<String>,
-    pub en: Option<String>,
-    #[serde(rename = "desc_markdown")]
-    pub desc: String,
-}
-
-#[derive(Debug, Clone, Default, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Stack {
-    #[serde(default)]
-    pub stack: Vec<StackGroup>,
-    /// 項目のあとに続けて出す Markdown。
-    #[serde(rename = "appendix_markdown")]
-    pub appendix: Option<String>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct StackGroup {
-    pub group: String,
-    /// 図のパス。あれば表示する。
-    pub image: Option<String>,
-    #[serde(default)]
-    pub items: Vec<Tool>,
-}
-
-#[derive(Debug, Clone, Default, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Env {
-    #[serde(default)]
-    pub envs: Vec<EnvVar>,
-    /// 項目のあとに続けて出す Markdown。
-    #[serde(rename = "appendix_markdown")]
-    pub appendix: Option<String>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct EnvVar {
-    pub key: String,
-    #[serde(rename = "desc_markdown")]
-    pub desc: String,
-    #[serde(default)]
-    pub secret: bool,
-    /// ローカル環境で、どこで設定しているか（Docker Compose、.env など）。
-    #[serde(rename = "local_from_markdown")]
-    pub local_from: Option<String>,
-    /// ステージングや本番で、どこで設定しているか（ECS のタスク定義、SSM など）。
-    #[serde(rename = "release_from_markdown")]
-    pub release_from: Option<String>,
-}
-
-#[derive(Debug, Clone, Default, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Cost {
-    /// 費用をかけて使っているもの。
-    #[serde(default)]
-    pub accepted_items: Vec<CostItem>,
-    /// 費用を理由に、やっていないこと。
-    #[serde(default)]
-    pub rejected_items: Vec<CostItem>,
-    /// 項目のあとに続けて出す Markdown。
-    #[serde(rename = "appendix_markdown")]
-    pub appendix: Option<String>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct CostItem {
-    pub name: String,
-    #[serde(rename = "desc_markdown")]
-    pub desc: Option<String>,
-    /// 1 か月あたりの金額。数でも文字列でもよい。
-    pub monthly: Option<Value>,
-    #[serde(rename = "ref")]
-    pub reference: Option<String>,
-}
-
-#[derive(Debug, Clone)]
-pub enum Content {
-    Procedure(Procedure),
-    Words(Words),
-    Stack(Stack),
-    Env(Env),
-    Cost(Cost),
-    /// Markdown の Slot。YAML front matter を除いた本文。
-    Markdown(String),
-}
-
-impl Content {
-    fn parse(def: &Def, text: &str) -> serde_yaml_ng::Result<Content> {
-        let id = def.id;
-        if def.format == Format::Markdown {
-            return Ok(Content::Markdown(markdown::split(text).body));
-        }
-        // 空のファイルは、項目のない Slot として扱う。
-        let text = if text.trim().is_empty() { "{}" } else { text };
-        Ok(match id {
-            "install" | "setup" | "develop" => Content::Procedure(serde_yaml_ng::from_str(text)?),
-            "words" => Content::Words(serde_yaml_ng::from_str(text)?),
-            "stack" => Content::Stack(serde_yaml_ng::from_str(text)?),
-            "env" => Content::Env(serde_yaml_ng::from_str(text)?),
-            "cost" => Content::Cost(serde_yaml_ng::from_str(text)?),
-            _ => unreachable!("YAML の Slot の ID は DEFS で確かめてある"),
-        })
-    }
-
-    /// 分けた YAML の Slot のページを読む。分けないときの項目に、ページの order と title を足した形。
-    /// ページに分けられる YAML の Slot は、開発コマンドだけ。
-    fn parse_page(def: &Def, text: &str) -> serde_yaml_ng::Result<(Content, Page)> {
-        // 空のファイルも、order と title がないことを指摘する。
-        let text = if text.trim().is_empty() { "{}" } else { text };
-        Ok(match def.id {
-            "develop" => {
-                let p: ProcedurePage = serde_yaml_ng::from_str(text)?;
-                (
-                    Content::Procedure(Procedure {
-                        requirements: p.requirements,
-                        steps: p.steps,
-                        appendix: p.appendix,
-                    }),
-                    Page {
-                        title: p.title,
-                        order: p.order,
-                    },
-                )
-            }
-            _ => {
-                unreachable!("ページに分けられる YAML の Slot は DEFS と pages_dir で確かめてある")
-            }
-        })
-    }
-
-    /// 項目のあとに続けて出す Markdown（appendix_markdown）。md の Slot は None。
-    pub fn appendix(&self) -> Option<&str> {
-        match self {
-            Content::Procedure(c) => c.appendix.as_deref(),
-            Content::Words(c) => c.appendix.as_deref(),
-            Content::Stack(c) => c.appendix.as_deref(),
-            Content::Env(c) => c.appendix.as_deref(),
-            Content::Cost(c) => c.appendix.as_deref(),
-            Content::Markdown(_) => None,
-        }
-    }
-
-    /// 中身が指すルートの中のパス。check で、あるかどうかを確かめる。(フィールド名, パス)
-    fn paths(&self) -> Vec<(&'static str, &str)> {
-        let mut paths: Vec<(&'static str, &str)> = Vec::new();
-        match self {
-            Content::Stack(c) => {
-                for g in &c.stack {
-                    if let Some(image) = &g.image {
-                        paths.push(("image", image));
-                    }
-                }
-            }
-            Content::Cost(c) => {
-                for item in c.accepted_items.iter().chain(&c.rejected_items) {
-                    if let Some(r) = item.reference.as_deref().filter(|r| !is_url(r)) {
-                        paths.push(("ref", r));
-                    }
-                }
-            }
-            _ => {}
-        }
-        paths
-    }
-
-    /// 形のほかに確かめること。(行を探す文字列, メッセージ)
-    fn problems(&self) -> Vec<(String, String)> {
-        if let Content::Words(c) = self {
-            return c
-                .groups
-                .iter()
-                .flat_map(|g| &g.items)
-                .filter(|w| w.ja.is_none() && w.en.is_none())
-                .map(|w| {
-                    (
-                        w.desc
-                            .lines()
-                            .find(|l| !l.trim().is_empty())
-                            .unwrap_or("")
-                            .to_string(),
-                        "用語に ja か en のどちらかを書く".to_string(),
-                    )
-                })
-                .collect();
-        }
-        let Content::Procedure(c) = self else {
-            return Vec::new();
-        };
-        let mut problems = Vec::new();
-        let mut ids = std::collections::HashSet::new();
-        for step in &c.steps {
-            let needle = format!("id: {}", step.id);
-            if !ids.insert(step.id.as_str()) {
-                problems.push((
-                    needle.clone(),
-                    format!("手順の id {} が重なっている", step.id),
-                ));
-            }
-            if step.items.len() > 1 {
-                if step.items.iter().any(|i| i.os.is_none()) {
-                    problems.push((
-                        needle.clone(),
-                        format!(
-                            "手順 {} の items が複数ある。どの item にも os を書く",
-                            step.id
-                        ),
-                    ));
-                }
-                let mut oses = std::collections::HashSet::new();
-                for os in step.items.iter().filter_map(|i| i.os.as_deref()) {
-                    if !oses.insert(os) {
-                        problems.push((
-                            needle.clone(),
-                            format!("手順 {} の os {os} が重なっている", step.id),
-                        ));
-                    }
-                }
-            }
-        }
-        problems
-    }
-}
-
-pub fn is_url(href: &str) -> bool {
-    href.contains("://") || href.starts_with("mailto:")
 }
 
 /// 読み込んだ Slot。ページに分けた Slot は、ページごとに 1 つ。
@@ -636,7 +313,8 @@ pub struct Slot {
     pub def: &'static Def,
     /// ルートからの相対パス。
     pub path: String,
-    pub content: Content,
+    /// YAML front matter を除いた本文。
+    pub body: String,
     /// 分けた Slot のページなら、その名前と並び。分けていなければ None。
     pub page: Option<Page>,
 }
@@ -650,14 +328,14 @@ pub struct Page {
     pub order: i64,
 }
 
-/// md の Slot の YAML front matter。mission は必ず書き、docv が決めたミッションと同じ文にする（check が確かめる）。
+/// 分けていない Slot の YAML front matter。mission は必ず書き、docv が決めたミッションと同じ文にする（check が確かめる）。
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct MdFront {
     mission: Option<String>,
 }
 
-/// 分けた Slot のページの YAML front matter。mission は、分けていない md の Slot と同じ。
+/// 分けた Slot のページの YAML front matter。mission は、分けていない Slot と同じ。
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct PageFront {
@@ -677,7 +355,7 @@ struct ParsedPage {
     mission_line: usize,
 }
 
-/// md の Slot の mission を確かめる。ないか、docv が決めたミッションと違えば、その行とメッセージ。
+/// Slot の mission を確かめる。ないか、docv が決めたミッションと違えば、その行とメッセージ。
 fn mission_problem(def: &Def, mission: Option<&str>, line: usize) -> Option<(usize, String)> {
     match mission {
         Some(mission) if mission == def.mission => None,
@@ -698,7 +376,7 @@ fn mission_problem(def: &Def, mission: Option<&str>, line: usize) -> Option<(usi
     }
 }
 
-/// 分けていない md の Slot の YAML front matter を確かめる。問題があれば、その行、ルール、メッセージ。
+/// 分けていない Slot の YAML front matter を確かめる。問題があれば、その行、ルール、メッセージ。
 fn md_front_problem(def: &Def, text: &str) -> Option<(usize, &'static str, String)> {
     let document = markdown::split(text);
     let Some(fm) = &document.frontmatter else {
@@ -737,7 +415,7 @@ fn md_front_problem(def: &Def, text: &str) -> Option<(usize, &'static str, Strin
         .map(|(line, message)| (line, "slot-mission", message))
 }
 
-/// 分けた md の Slot のページを読む。読めないときは、その理由（行、メッセージ）。
+/// 分けた Slot のページを読む。読めないときは、その理由（行、メッセージ）。
 fn parse_md_page(def: &Def, text: &str) -> Result<ParsedPage, (usize, String)> {
     let document = markdown::split(text);
     let Some(fm) = &document.frontmatter else {
@@ -825,15 +503,6 @@ pub fn placed(project: &Project) -> Result<Vec<&'static str>> {
         .collect())
 }
 
-/// YAML の Slot ファイルのパス（ルートからの相対パス）。
-pub fn yaml_paths(project: &Project) -> Result<Vec<String>> {
-    Ok(slot_files(project)?
-        .into_iter()
-        .filter(|f| f.def.is_some_and(|d| d.format == Format::Yaml))
-        .map(|f| f.path)
-        .collect())
-}
-
 /// Slot を DEFS の順に読む。分けた Slot のページは、order とパスの順に並べる。読めない Slot は飛ばす（check が報告する）。
 pub fn load(project: &Project) -> Result<Vec<Slot>> {
     let files = slot_files(project)?;
@@ -845,22 +514,18 @@ pub fn load(project: &Project) -> Result<Vec<Slot>> {
         }
         let text = fs::read_to_string(project.root.join(&file.path))
             .with_context(|| format!("{} を読めない", file.path))?;
-        let parsed = if file.page && def.format == Format::Markdown {
+        let parsed = if file.page {
             parse_md_page(def, &text)
                 .ok()
-                .map(|p| (Content::Markdown(p.body), Some(p.page)))
-        } else if file.page {
-            Content::parse_page(def, &text)
-                .ok()
-                .map(|(c, page)| (c, Some(page)))
+                .map(|p| (p.body, Some(p.page)))
         } else {
-            Content::parse(def, &text).ok().map(|c| (c, None))
+            Some((markdown::split(&text).body, None))
         };
-        if let Some((content, page)) = parsed {
+        if let Some((body, page)) = parsed {
             slots.push(Slot {
                 def,
                 path: file.path.clone(),
-                content,
+                body,
                 page,
             });
         }
@@ -875,7 +540,7 @@ pub fn load(project: &Project) -> Result<Vec<Slot>> {
     Ok(slots)
 }
 
-/// Slot ファイルを確かめる。
+/// Slot ファイルを確かめる。中身の形は確かめない。
 pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
     let mut diagnostics = Vec::new();
     let mut push = |path: &str, line: usize, rule: &str, message: String| {
@@ -886,29 +551,25 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
             message,
         });
     };
+    let slot_dir = project.slot_dir();
+    let prefix = format!("{slot_dir}/");
     let files = slot_files(project)?;
-    // 分けた Slot のページ。(Slot, パス, ページ, order の行, ページの名前（h1 か title）の行)
+    // 分けた Slot のページ。(Slot, パス, ページ, order の行, h1 の行)
     let mut pages: Vec<(&Def, &str, Page, usize, usize)> = Vec::new();
     for file in &files {
         let Some(def) = file.def else {
-            let message = match suggest(&project.slot_dir(), &file.path) {
-                Some(right) => format!("Slot ファイルは {right} に置く"),
-                None => format!(
-                    "Slot の名前ではない。Slot のディレクトリに置けるのは {}",
-                    file_names()
-                ),
-            };
-            push(&file.path, 1, "slot-unknown", message);
+            let rel = file.path.strip_prefix(&prefix).unwrap_or(&file.path);
+            push(
+                &file.path,
+                1,
+                "slot-unknown",
+                unknown_message(&slot_dir, rel),
+            );
             continue;
         };
         let text = fs::read_to_string(project.root.join(&file.path))
             .with_context(|| format!("{} を読めない", file.path))?;
-        let line_of = |needle: &str| {
-            text.lines()
-                .position(|l| l.contains(needle))
-                .map_or(1, |i| i + 1)
-        };
-        if file.page && def.format == Format::Markdown {
+        if file.page {
             match parse_md_page(def, &text) {
                 Ok(p) => {
                     if let Some((line, message)) =
@@ -916,20 +577,20 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
                     {
                         push(&file.path, line, "slot-mission", message);
                     }
-                    pages.push((def, &file.path, p.page, line_of("order:"), p.title_line));
+                    let order_line = text
+                        .lines()
+                        .position(|l| l.contains("order:"))
+                        .map_or(1, |i| i + 1);
+                    pages.push((def, &file.path, p.page, order_line, p.title_line));
                 }
                 Err((line, message)) => push(&file.path, line, "slot-invalid", message),
             }
             continue;
         }
-        if !file.page
-            && def.format == Format::Markdown
-            && let Some((line, rule, message)) = md_front_problem(def, &text)
-        {
+        if let Some((line, rule, message)) = md_front_problem(def, &text) {
             push(&file.path, line, rule, message);
         }
-        if !file.page
-            && let Some(dir) = def.pages_dir()
+        if let Some(dir) = def.pages_dir()
             && files
                 .iter()
                 .any(|f| f.page && f.def.is_some_and(|d| d.id == def.id))
@@ -939,57 +600,10 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
                 1,
                 "slot-invalid",
                 format!(
-                    "{}が {} と {}/{dir}/ の両方にある。ページに分けるなら {} を消す",
-                    def.label,
-                    file.path,
-                    project.slot_dir(),
-                    file.path
+                    "{}が {} と {slot_dir}/{dir}/ の両方にある。ページに分けるなら {} を消す",
+                    def.label, file.path, file.path
                 ),
             );
-        }
-        // YAML のページは、分けないときと同じ項目に、ページの order と title を足して読む。
-        let parsed = if file.page {
-            Content::parse_page(def, &text).map(|(content, page)| {
-                pages.push((
-                    def,
-                    &file.path,
-                    page,
-                    key_line(&text, "order"),
-                    key_line(&text, "title"),
-                ));
-                content
-            })
-        } else {
-            Content::parse(def, &text)
-        };
-        let content = match parsed {
-            Ok(content) => content,
-            Err(e) => {
-                let line = e.location().map_or(1, |l| l.line());
-                let message = if file.page {
-                    format!(
-                        "{}のページの形に合わない。どのページにも order と title を書く: {e}",
-                        def.label
-                    )
-                } else {
-                    format!("{}の Slot の形に合わない: {e}", def.label)
-                };
-                push(&file.path, line, "slot-invalid", message);
-                continue;
-            }
-        };
-        for (needle, message) in content.problems() {
-            push(&file.path, line_of(&needle), "slot-invalid", message);
-        }
-        for (field, path) in content.paths() {
-            if !project.root.join(path).exists() {
-                push(
-                    &file.path,
-                    line_of(path),
-                    "slot-path-missing",
-                    format!("{field} の {path} がない"),
-                );
-            }
         }
     }
     // 同じ Slot のページどうしで、order と h1 を重ねない。後のパスのページに出す。
@@ -1009,17 +623,12 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
             );
         }
         if let Some((other, _)) = earlier.iter().find(|(_, p)| p.title == page.title) {
-            // md のページの名前は h1、YAML のページの名前は title。
-            let key = match def.format {
-                Format::Markdown => "h1",
-                Format::Yaml => "title",
-            };
             push(
                 path,
                 *title_line,
                 "slot-invalid",
                 format!(
-                    "{key}「{}」が {other} と重なっている。{key} はページの名前で、重ねない",
+                    "h1「{}」が {other} と重なっている。h1 はページの名前で、重ねない",
                     page.title
                 ),
             );
@@ -1028,61 +637,27 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
     Ok(diagnostics)
 }
 
-/// YAML のトップレベルの項目 key の行。なければ 1。
-fn key_line(text: &str, key: &str) -> usize {
-    let prefix = format!("{key}:");
-    text.lines()
-        .position(|l| l.starts_with(&prefix))
-        .map_or(1, |i| i + 1)
-}
-
-/// yaml の Slot のテンプレ。docv gen で書く、項目のサンプル。
-pub fn template(id: &str) -> Option<&'static str> {
-    Some(match id {
-        "install" => include_str!("../assets/template/install.yaml"),
-        "words" => include_str!("../assets/template/words.yaml"),
-        "stack" => include_str!("../assets/template/stack.yaml"),
-        "setup" => include_str!("../assets/template/setup.yaml"),
-        "env" => include_str!("../assets/template/env.yaml"),
-        "develop" => include_str!("../assets/template/develop.yaml"),
-        "cost" => include_str!("../assets/template/cost.yaml"),
-        _ => return None,
-    })
-}
-
-/// md の Slot のテンプレ。docv gen で書く雛形。Doc ガイドの Slot（doc-guide）だけがガイドラインの雛形を持ち、ほかの md の Slot は、YAML front matter の mission だけを書いたファイルを作る。
-pub fn md_template(id: &str) -> Option<&'static str> {
-    match id {
-        "doc-guide" => Some(include_str!("../assets/template/doc-guide.md")),
-        _ => None,
+/// Slot の名前でないファイルの slot-unknown のメッセージ。rel は Slot のディレクトリからの相対パス。
+/// 以前は YAML で書いた Slot のファイルが残っていれば、雛形を見て Markdown に書き直すよう案内する。
+/// Slot の名前に近いパスなら正しいパスを、どれでもなければ置ける名前の一覧を示す。
+fn unknown_message(slot_dir: &str, rel: &str) -> String {
+    if let Some(yaml) = former_yaml(rel) {
+        let page = if yaml.page {
+            "。order と mission は YAML front matter に、title は h1 に書く"
+        } else {
+            ""
+        };
+        return format!(
+            "YAML の Slot はなくなった。docv gen {} --print の雛形を見て、{slot_dir}/{} に Markdown で書き直す{page}",
+            yaml.def.id, yaml.rel
+        );
     }
-}
-
-/// yaml の Slot の JSON Schema。docv slot schema で出し、Slot ファイルの 1 行目から参照する。md の Slot はスキーマを持たない。
-pub fn schema(id: &str) -> Option<&'static str> {
-    Some(match id {
-        "install" => include_str!("../assets/schema/install.schema.json"),
-        "words" => include_str!("../assets/schema/words.schema.json"),
-        "stack" => include_str!("../assets/schema/stack.schema.json"),
-        "setup" => include_str!("../assets/schema/setup.schema.json"),
-        "env" => include_str!("../assets/schema/env.schema.json"),
-        "develop" => include_str!("../assets/schema/develop.schema.json"),
-        "cost" => include_str!("../assets/schema/cost.schema.json"),
-        _ => return None,
-    })
-}
-
-/// Value を表に出す文字列にする。
-pub fn scalar(value: &Value) -> String {
-    match value {
-        Value::Null => "null".to_string(),
-        Value::Bool(b) => b.to_string(),
-        Value::Number(n) => n.to_string(),
-        Value::String(s) => s.clone(),
-        other => serde_yaml_ng::to_string(other)
-            .unwrap_or_default()
-            .trim()
-            .to_string(),
+    match suggest(slot_dir, rel) {
+        Some(right) => format!("Slot ファイルは {right} に置く"),
+        None => format!(
+            "Slot の名前ではない。Slot のディレクトリに置けるのは {}",
+            file_names()
+        ),
     }
 }
 
@@ -1109,7 +684,7 @@ mod tests {
         (dir, project)
     }
 
-    /// md の Slot の中身。YAML front matter の mission に、docv が決めたミッションを書く。
+    /// Slot の中身。YAML front matter の mission に、docv が決めたミッションを書く。
     fn md(id: &str, body: &str) -> String {
         format!("---\nmission: {}\n---\n\n{body}", def(id).unwrap().mission)
     }
@@ -1123,10 +698,16 @@ mod tests {
     }
 
     #[test]
-    fn every_yaml_slot_has_a_template_that_parses() {
-        for def in DEFS.iter().filter(|d| d.format == Format::Yaml) {
-            let text = template(def.id).unwrap();
-            Content::parse(def, text).unwrap_or_else(|e| panic!("{}: {e}", def.id));
+    fn every_template_starts_with_its_mission() {
+        // 雛形にも mission を書いてある。check の slot-mission に当たらない
+        for def in DEFS {
+            if let Some(text) = template(def.id) {
+                assert!(
+                    text.starts_with(&format!("---\nmission: {}\n---\n", def.mission)),
+                    "{}",
+                    def.id
+                );
+            }
         }
     }
 
@@ -1140,26 +721,18 @@ mod tests {
         let slots = load(&project).unwrap();
         let ids: Vec<&str> = slots.iter().map(|s| s.def.id).collect();
         assert_eq!(ids, ["service", "manual", "api"]);
-        assert!(matches!(&slots[0].content, Content::Markdown(text) if text.contains("本文")));
+        assert!(slots[0].body.contains("本文"));
     }
 
     #[test]
     fn reports_problems_of_slot_files() {
         let (_dir, project) = project(&[
-            ("docv/slot/unknown.yaml", "a: 1\n"),
-            ("docv/slot/words.yaml", "groups: []\n"),
-            ("docv/slot/service/03-words.yaml", "groups: []\n"),
-            ("docv/slot/service/words.yaml", "groups: []\nextra: 1\n"),
+            ("docv/slot/unknown.md", "# A\n"),
+            ("docv/slot/words.md", &md("words", "# 用語集\n")),
+            ("docv/slot/service/03-words.md", &md("words", "# 用語集\n")),
             ("docv/slot/system/api.md", &md("api", "API\n")),
             ("docv/slot/system/api.yaml", "ref: openapi.yaml\n"),
-            (
-                "docv/slot/service/install.yaml",
-                "steps:\n  - id: binary\n    name: a\n    items:\n      - os: macos\n      - body_markdown: m\n",
-            ),
-            (
-                "docv/slot/operation/cost.yaml",
-                "accepted_items:\n  - name: a\n    ref: docs/cost.md\n",
-            ),
+            ("docv/slot/service/service.txt", "メモ\n"),
             ("docv/free/a.md", "# A\n\n## 1. ある\n"),
         ]);
         let diagnostics = check(&project).unwrap();
@@ -1170,28 +743,59 @@ mod tests {
         assert_eq!(
             result,
             [
-                "docv/slot/operation/cost.yaml:3 slot-path-missing",
-                "docv/slot/service/03-words.yaml:1 slot-unknown",
-                "docv/slot/service/install.yaml:2 slot-invalid",
-                "docv/slot/service/words.yaml:2 slot-invalid",
+                "docv/slot/service/03-words.md:1 slot-unknown",
+                "docv/slot/service/service.txt:1 slot-unknown",
                 "docv/slot/system/api.yaml:1 slot-unknown",
-                "docv/slot/unknown.yaml:1 slot-unknown",
-                "docv/slot/words.yaml:1 slot-unknown",
+                "docv/slot/unknown.md:1 slot-unknown",
+                "docv/slot/words.md:1 slot-unknown",
             ]
         );
-        // ディレクトリが違う名前、番号を付けた名前には、正しいパスを示す
-        assert!(
-            diagnostics[1]
-                .message
-                .contains("docv/slot/service/words.yaml")
+        // ディレクトリが違う名前、番号を付けた名前、拡張子が違う名前には、正しいパスを示す
+        for i in [0, 4] {
+            assert_eq!(
+                diagnostics[i].message,
+                "Slot ファイルは docv/slot/service/words.md に置く"
+            );
+        }
+        assert_eq!(
+            diagnostics[1].message,
+            "Slot ファイルは docv/slot/service/service.md に置く"
         );
-        assert!(
-            diagnostics[6]
-                .message
-                .contains("docv/slot/service/words.yaml")
+        // 以前から Markdown だった Slot（API 仕様書）の yaml には、書き直しではなく、md のパスを示す
+        assert_eq!(
+            diagnostics[2].message,
+            "Slot ファイルは docv/slot/system/api.md に置く"
         );
-        // API 仕様書は md だけ。yaml には、md のパスを示す
-        assert!(diagnostics[4].message.contains("docv/slot/system/api.md"));
+        assert!(diagnostics[3].message.starts_with("Slot の名前ではない。"));
+    }
+
+    #[test]
+    fn reports_leftover_yaml_slots() {
+        let (_dir, project) = project(&[
+            ("docv/slot/service/words.yaml", "groups: []\n"),
+            ("docv/slot/operation/cost.yaml", "accepted_items: []\n"),
+            ("docv/slot/guide/develop/web.yaml", "order: 1\ntitle: Web\n"),
+            // まとまりのディレクトリが違えば、ほかの名前と同じく、正しいパスを示す
+            ("docv/slot/system/words.yaml", "groups: []\n"),
+        ]);
+        let mut result: Vec<String> = check(&project)
+            .unwrap()
+            .iter()
+            .map(|d| format!("{}:{} {} {}", d.path, d.line, d.rule, d.message))
+            .collect();
+        result.sort();
+        assert_eq!(
+            result,
+            [
+                "docv/slot/guide/develop/web.yaml:1 slot-unknown YAML の Slot はなくなった。docv gen develop --print の雛形を見て、docv/slot/guide/develop/web.md に Markdown で書き直す。order と mission は YAML front matter に、title は h1 に書く",
+                "docv/slot/operation/cost.yaml:1 slot-unknown YAML の Slot はなくなった。docv gen cost --print の雛形を見て、docv/slot/operation/cost.md に Markdown で書き直す",
+                "docv/slot/service/words.yaml:1 slot-unknown YAML の Slot はなくなった。docv gen words --print の雛形を見て、docv/slot/service/words.md に Markdown で書き直す",
+                "docv/slot/system/words.yaml:1 slot-unknown Slot ファイルは docv/slot/service/words.md に置く",
+            ]
+        );
+        // 残った YAML は、読まず、置いたことにも数えない
+        assert!(load(&project).unwrap().is_empty());
+        assert!(placed(&project).unwrap().is_empty());
     }
 
     #[test]
@@ -1343,76 +947,29 @@ mod tests {
     }
 
     #[test]
-    fn splits_the_develop_commands_into_yaml_pages() {
+    fn splits_the_develop_commands_like_the_service_spec() {
+        let develop = def("develop").unwrap().mission;
         let (_dir, project) = project(&[
             (
-                "docv/slot/guide/develop/web.yaml",
-                "order: 2\ntitle: Web\nsteps:\n  - id: test\n    name: テスト\n    items:\n      body_markdown: |\n        npm test\n",
+                "docv/slot/guide/develop/web.md",
+                &format!(
+                    "---\norder: 2\nmission: {develop}\n---\n\n# Web\n\n## テストを実行する\n"
+                ),
             ),
             (
-                "docv/slot/guide/develop/api.yaml",
-                "order: 1\ntitle: API\nrequirements:\n  - name: Go\n",
+                "docv/slot/guide/develop/api.md",
+                &format!("---\norder: 1\nmission: {develop}\n---\n\n# API\n"),
             ),
-            // 分けたページの拡張子は、分けないときの Slot と同じ
-            ("docv/slot/guide/develop/memo.md", "# メモ\n"),
         ]);
-        let diagnostics: Vec<String> = check(&project)
-            .unwrap()
-            .iter()
-            .map(|d| format!("{}:{} {}", d.path, d.line, d.rule))
-            .collect();
-        assert_eq!(
-            diagnostics,
-            ["docv/slot/guide/develop/memo.md:1 slot-unknown"]
-        );
+        let diagnostics = check(&project).unwrap();
+        assert!(diagnostics.is_empty(), "{diagnostics:#?}");
         let slots = load(&project).unwrap();
         let pages: Vec<(&str, Option<&str>)> = slots
             .iter()
             .map(|s| (s.def.id, s.page.as_ref().map(|p| p.title.as_str())))
             .collect();
         assert_eq!(pages, [("develop", Some("API")), ("develop", Some("Web"))]);
-        assert!(matches!(&slots[1].content, Content::Procedure(p) if p.steps[0].id == "test"));
-        // YAML のページも、YAML の Slot として Markdown の項目を検査する
-        assert_eq!(
-            yaml_paths(&project).unwrap(),
-            [
-                "docv/slot/guide/develop/api.yaml",
-                "docv/slot/guide/develop/web.yaml"
-            ]
-        );
-    }
-
-    #[test]
-    fn reports_problems_of_yaml_pages() {
-        let (_dir, project) = project(&[
-            ("docv/slot/guide/develop.yaml", "steps: []\n"),
-            ("docv/slot/guide/develop/a.yaml", "order: 1\ntitle: A\n"),
-            ("docv/slot/guide/develop/b.yaml", "title: A\norder: 1\n"),
-            ("docv/slot/guide/develop/c.yaml", "steps: []\n"),
-            (
-                "docv/slot/guide/develop/d.yaml",
-                "order: 4\ntitle: D\nsteps:\n  - id: x\n    name: X\n  - id: x\n    name: Y\n",
-            ),
-            // 分けないときは、order と title を書かない
-            ("docv/slot/guide/setup.yaml", "order: 1\n"),
-        ]);
-        let mut result: Vec<String> = check(&project)
-            .unwrap()
-            .iter()
-            .map(|d| format!("{}:{} {} {}", d.path, d.line, d.rule, d.message))
-            .collect();
-        result.sort();
-        assert_eq!(
-            result,
-            [
-                "docv/slot/guide/develop.yaml:1 slot-invalid 開発コマンドが docv/slot/guide/develop.yaml と docv/slot/guide/develop/ の両方にある。ページに分けるなら docv/slot/guide/develop.yaml を消す",
-                "docv/slot/guide/develop/b.yaml:1 slot-invalid title「A」が docv/slot/guide/develop/a.yaml と重なっている。title はページの名前で、重ねない",
-                "docv/slot/guide/develop/b.yaml:2 slot-invalid order 1 が docv/slot/guide/develop/a.yaml と重なっている",
-                "docv/slot/guide/develop/c.yaml:1 slot-invalid 開発コマンドのページの形に合わない。どのページにも order と title を書く: missing field `order`",
-                "docv/slot/guide/develop/d.yaml:4 slot-invalid 手順の id x が重なっている",
-                "docv/slot/guide/setup.yaml:1 slot-invalid 環境構築の Slot の形に合わない: unknown field `order`, expected one of `requirements`, `steps`, `appendix_markdown`",
-            ]
-        );
+        assert!(slots[1].body.contains("## テストを実行する"));
     }
 
     #[test]
@@ -1458,9 +1015,7 @@ mod tests {
             ]
         );
         // 本文から YAML front matter を除く
-        assert!(
-            matches!(&slots[1].content, Content::Markdown(text) if text.starts_with("\n# 利用者向け機能"))
-        );
+        assert!(slots[1].body.starts_with("\n# 利用者向け機能"));
     }
 
     #[test]
@@ -1523,48 +1078,15 @@ mod tests {
                 ),
             ]
         );
-        // ページに分けられる Slot だけ、置ける名前の一覧にそのディレクトリを出す。拡張子は Slot と同じ
+        // ページに分けられる Slot だけ、置ける名前の一覧にそのディレクトリを出す
         let names = file_names();
-        assert!(names.contains("service/service.md、service/service/*.md、service/install.yaml"));
-        assert!(names.contains("guide/develop.yaml、guide/develop/*.yaml、guide/architecture.md"));
+        assert!(names.contains("service/service.md、service/service/*.md、service/install.md"));
+        assert!(names.contains("guide/develop.md、guide/develop/*.md、guide/architecture.md"));
         assert!(names.contains(
-            "guide/architecture/*.md、guide/design.md、guide/design/*.md、guide/testing.md、guide/testing/*.md、guide/env.yaml、guide/doc-guide.md"
+            "guide/architecture/*.md、guide/design.md、guide/design/*.md、guide/testing.md、guide/testing/*.md、guide/env.md、guide/doc-guide.md"
         ));
+        assert!(!names.contains(".yaml"));
         assert!(names.contains("operation/infrastructure.md、operation/infrastructure/*.md"));
         assert!(!names.contains("api/*"));
-    }
-
-    #[test]
-    fn needs_ja_or_en_for_each_word() {
-        let (_dir, project) = project(&[(
-            "docv/slot/service/words.yaml",
-            "groups:\n  - name: g\n    items:\n      - en: Slot\n        desc_markdown: |\n          a\n      - desc_markdown: |\n          b\n",
-        )]);
-        let result: Vec<String> = check(&project)
-            .unwrap()
-            .iter()
-            .map(|d| format!("{}:{} {}", d.path, d.line, d.rule))
-            .collect();
-        assert_eq!(result, ["docv/slot/service/words.yaml:8 slot-invalid"]);
-    }
-
-    #[test]
-    fn reads_one_item_or_many() {
-        let install = def("install").unwrap();
-        let one = Content::parse(
-            install,
-            "steps:\n  - id: cargo\n    name: c\n    items:\n      body_markdown: m\n",
-        )
-        .unwrap();
-        let many = Content::parse(
-            install,
-            "steps:\n  - id: binary\n    name: b\n    items:\n      - os: windows\n      - os: macos\n",
-        )
-        .unwrap();
-        let count = |c: &Content| match c {
-            Content::Procedure(p) => p.steps[0].items.len(),
-            _ => 0,
-        };
-        assert_eq!((count(&one), count(&many)), (1, 2));
     }
 }

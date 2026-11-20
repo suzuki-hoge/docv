@@ -31,14 +31,12 @@
   <text x="430" y="290" font-size="12" text-anchor="middle" fill="#57606a">決まり、雛形、HTML の部品を</text>
   <text x="430" y="308" font-size="12" text-anchor="middle" fill="#57606a">埋め込む</text>
 
-  <!-- 出力と Chrome -->
+  <!-- 出力 -->
   <rect x="600" y="150" width="200" height="56" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
   <text x="700" y="183" font-size="15" text-anchor="middle" fill="#1f2328">HTML（dir.html）</text>
-  <rect x="600" y="232" width="200" height="56" rx="8" fill="#fff8c5" stroke="#9a6700" stroke-width="1.5"/>
-  <text x="700" y="256" font-size="15" text-anchor="middle" fill="#1f2328">Chrome</text>
-  <text x="700" y="276" font-size="12" text-anchor="middle" fill="#57606a">JPG を作るときだけ</text>
   <rect x="600" y="314" width="200" height="56" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
-  <text x="700" y="347" font-size="15" text-anchor="middle" fill="#1f2328">JPG（dir.image）</text>
+  <text x="700" y="338" font-size="15" text-anchor="middle" fill="#1f2328">インデックス</text>
+  <text x="700" y="358" font-size="12" text-anchor="middle" fill="#57606a">docv/README.md</text>
 
   <!-- 外の道具と GitHub -->
   <rect x="330" y="430" width="200" height="56" rx="8" fill="#fff8c5" stroke="#9a6700" stroke-width="1.5"/>
@@ -57,9 +55,7 @@
     <polyline points="250,58 430,58 430,148" marker-end="url(#arrow)"/>
     <line x1="328" y1="262" x2="252" y2="262" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
     <line x1="530" y1="178" x2="598" y2="178" marker-end="url(#arrow)"/>
-    <line x1="530" y1="260" x2="598" y2="260" marker-end="url(#arrow)"/>
-    <line x1="700" y1="206" x2="700" y2="230" marker-end="url(#arrow)"/>
-    <line x1="700" y1="288" x2="700" y2="312" marker-end="url(#arrow)"/>
+    <line x1="530" y1="328" x2="598" y2="328" marker-end="url(#arrow)"/>
     <polyline points="1030,232 1030,178 802,178" marker-end="url(#arrow)"/>
     <polyline points="1030,288 1030,342 802,342" marker-end="url(#arrow)"/>
     <line x1="430" y1="370" x2="430" y2="428" marker-end="url(#arrow)"/>
@@ -71,13 +67,11 @@
     <text x="340" y="50" text-anchor="middle">desc、check、fix など</text>
     <text x="290" y="254" text-anchor="middle">読む・直す</text>
     <text x="564" y="170" text-anchor="middle">build</text>
-    <text x="564" y="252" text-anchor="middle">撮らせる</text>
-    <text x="708" y="222">開く</text>
-    <text x="708" y="304">撮る</text>
+    <text x="564" y="320" text-anchor="middle">build</text>
     <text x="915" y="150" text-anchor="middle">ローカルで見る</text>
     <text x="915" y="166" text-anchor="middle">（検索したりリンクを辿れる）</text>
     <text x="915" y="362" text-anchor="middle">GitHub で見る</text>
-    <text x="915" y="378" text-anchor="middle">（clone しなくても概要を把握できる）</text>
+    <text x="915" y="378" text-anchor="middle">（clone しなくても Slot を読める）</text>
     <text x="440" y="404">check、fix</text>
     <text x="573" y="404">diff-open</text>
     <text x="150" y="404">スキーマを参照（版のタグの URL）</text>

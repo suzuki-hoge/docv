@@ -35,7 +35,7 @@ tags: [スキーマ]
           "default": "docv"
         },
         "output": {
-          "description": "docv build の出力先。この下の `html/` に HTML を、`image/` に JPG を出す。AI Agent が `document_root` を読むときに同じ内容が倍入らないように、`document_root` の外に置く。",
+          "description": "docv build の出力先。この下の `html/` に HTML を出す。AI Agent が `document_root` を読むときに同じ内容が倍入らないように、`document_root` の外に置く。",
           "type": "string",
           "minLength": 1,
           "default": "output/docv"
@@ -48,18 +48,6 @@ tags: [スキーマ]
       "items": {
         "type": "string",
         "minLength": 1
-      }
-    },
-    "generate": {
-      "description": "docv build が作るもの。",
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "image": {
-          "description": "YAML の Slot のページを JPG にして、`dir.output` の下の `image/` に出すか。JPG を作るには Chrome が要る。",
-          "type": "boolean",
-          "default": false
-        }
       }
     },
     "tags": {

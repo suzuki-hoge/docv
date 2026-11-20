@@ -18,7 +18,6 @@ mission: 利用者の使い方（CLI のコマンド、GUI の操作など）
 | [`docv build`](#docv-build)                                | 人間向けの HTML を作る                                                       | docv ルート      |
 | [`docv open`](#docv-open)                                  | 作った HTML をブラウザで開く                                                 | docv ルート      |
 | [`docv diff-open [--from <rev>]`](#docv-diff-open)         | git のリビジョンから変わったファイルに印を付けた HTML を作り、ブラウザで開く | docv ルート      |
-| [`docv slot schema <slot>`](#docv-slot-schema)             | YAML の Slot のスキーマを出す                                                | 任意             |
 | [`docv gen <slot>`](#docv-gen)                             | Slot ファイルを、決まったパスに作る                                          | docv ルート      |
 
 docv ルート: `docv.yaml` のあるディレクトリ。
@@ -62,7 +61,7 @@ Free
 
 - Slot は、プロジェクトに置いたかどうかによらず、docv の Slot をすべて、[Slot](service/slot.md) のページの「一覧」の章の順に出す
   - 置いた Slot には、行の頭に `*` を付ける
-  - Slot ごとに、名前（`docv gen` と `docv slot schema` に渡す名前）、パス、Slot の名前とミッションを出す。Slot の名前とミッションの間の `:` は、縦に揃える
+  - Slot ごとに、名前（`docv gen` に渡す名前）、パス、Slot の名前とミッションを出す。Slot の名前とミッションの間の `:` は、縦に揃える
   - ページに分けた Slot は、パスにディレクトリを出し、その下に、ページのファイルとページの名前を `order` の順に出す。ページの行は、ミッションの頭に揃える
   - 置いていない Slot のパスは、分けないときのファイルを出す
 - Free ファイルは、パス、ミッション、タグを出す。`docv_exclude` に当たるファイルは出さない
@@ -84,7 +83,7 @@ docv を更新したときに、版ごとの変更点と対応を表示する。
 - `--from` の版より後の版から、今の docv の版までを、古い版から順に出す。対応のない版も出す
 - 変更 1 つを 1 行にし、何が変わったかと、それへの対応を書く。対応は、要るもの、選ぶもの、要らないものがある
 - どの行も 100 文字以内にする。横に長いと読みにくいため
-- 最後に、`docv_version` と、`docv.yaml` と YAML の Slot の 1 行目にあるスキーマの URL の版を上げるよう案内する
+- 最後に、`docv_version` と、`docv.yaml` の 1 行目にあるスキーマの URL の版を上げるよう案内する
 - `--from` には `1.4.0` の形のほか、`v1.4.0` の形も書ける。最初の版（1.0.0）より前か、今の docv の版より新しければ、終了コード 2 で終わる
 - docv を更新した後は、`docv check` が `docv_version` の違いを指摘し、`--from` に渡す版を案内する（[設定ファイル](service/config.md) の「docv の版」の章）
 
@@ -100,7 +99,7 @@ docv 1.5.0 で実行したときの出力は次のとおり（変更の一部を
 - インストールと環境構築の手順を、h3 の見出しで出すように変更: 対応は要らない
 
 対応が終わったら、docv.yaml の docv_version を 1.5.0 にする
-docv.yaml と YAML の Slot の 1 行目にあるスキーマの URL の版も、v1.5.0 にする
+docv.yaml の 1 行目にあるスキーマの URL の版も、v1.5.0 にする
 最後に docv check で、残りがないかを確かめる
 ```
 
@@ -138,21 +137,21 @@ docv check docv/free/spec/order.md
 
 対象ファイルと主な検査内容は次のとおり。
 
-| 検査内容                                  | Slot ( md ) | Slot ( yaml )          | Free ( md ) | ADR / PDR ( md ) |
-| ----------------------------------------- | ----------- | ---------------------- | ----------- | ---------------- |
-| YAML front matter およびタグ              | ✅          |                        | ✅          | ✅               |
-| ドキュメントのリンク切れ                  | ✅          | ✅ ( markdown 部のみ ) | ✅          | ✅               |
-| 見出しの数と章番号                        | ✅          |                        | ✅          | ✅               |
-| Slot ファイルの名前とスキーマ             | ✅          | ✅                     |             |                  |
-| 太字、斜体、ドルマークの利用 ( 設定次第 ) | ✅          | ✅ ( markdown 部のみ ) | ✅          | ✅               |
-| format ( 設定次第 )                       | ✅          | ✅ ( markdown 部のみ ) | ✅          | ✅               |
-| textlint ( 設定次第 )                     | ✅          | ✅ ( markdown 部のみ ) | ✅          | ✅               |
+| 検査内容                                  | Slot | Free | ADR / PDR |
+| ----------------------------------------- | ---- | ---- | --------- |
+| YAML front matter およびタグ              | ✅   | ✅   | ✅        |
+| ドキュメントのリンク切れ                  | ✅   | ✅   | ✅        |
+| 見出しの数と章番号                        | ✅   | ✅   | ✅        |
+| Slot ファイルの名前                       | ✅   |      |           |
+| 太字、斜体、ドルマークの利用 ( 設定次第 ) | ✅   | ✅   | ✅        |
+| format ( 設定次第 )                       | ✅   | ✅   | ✅        |
+| textlint ( 設定次第 )                     | ✅   | ✅   | ✅        |
 
-Slot ( md ) の YAML front matter は、`mission` が `docv list` のミッションと同じかを検査する。ページに分けた Slot は、`order` とページの名前（md は h1、YAML は `title`）があるかと、同じ Slot のページどうしの重なりも検査する。
+Slot の YAML front matter は、`mission` が `docv list` のミッションと同じかを検査する。ページに分けた Slot は、`order` とページの名前（h1）があるかと、同じ Slot のページどうしの重なりも検査する。中身の形（雛形の見出しや表）は検査しない。
 
-Slot ( yaml ) の markdown 部は、名前が `_markdown` で終わる項目。値は `|` のブロックで書く。`|` で書いていない項目と、それ以外の項目を複数行で書いたものは、スキーマの検査で error にする。
+YAML の Slot（`service/words.yaml` など）が残っていれば error にし、`docv gen <slot> --print` の雛形を見て md に書き直すよう案内する。
 
-あわせて、`docv.yaml` の `docv_version` を docv の版と比べる。`docv.yaml` と YAML の Slot の 1 行目にあるスキーマの URL の版も、`docv_version` と比べる（[設定ファイル](service/config.md) の「docv の版」の章）。
+あわせて、`docv.yaml` の `docv_version` を docv の版と比べる。`docv.yaml` の 1 行目にあるスキーマの URL の版も、`docv_version` と比べる（[設定ファイル](service/config.md) の「docv の版」の章）。
 
 パスを渡しても、検査するファイルが絞られるだけで、検査内容は変わらない。
 
@@ -172,16 +171,8 @@ Slot ( yaml ) の markdown 部は、名前が `_markdown` で終わる項目。�
 人間向けの HTML を生成する。
 
 - 出力先は `docv.yaml` の `dir.output` の下の `html/`
-- `docv.yaml` で `generate.image` を true にすると、YAML の Slot のページを JPG にして `dir.output` の下の `image/` に出す
-  - 要 Google Chrome または Chromium
-  - JPG はマシンのフォントで変わる。チームで共有するなら、GitHub Actions などの決まった環境で作る
 - `document_root` の直下に、Slot ファイルへのリンクを並べたインデックス（`README.md`）を毎回書く
   - ルートの README からリンクすると、GitHub でリポジトリを開いた人が、clone しなくても Slot ファイルを読める
-  - YAML の Slot は JPG へリンクするので、`generate.image` を true にし、JPG を git で管理する
-
-| オプション   | 意味                                                                        |
-| ------------ | --------------------------------------------------------------------------- |
-| `--no-image` | `generate.image` が true でも JPG を作らない。HTML とインデックスだけを作る |
 
 ### docv open
 
@@ -198,7 +189,7 @@ Slot ( yaml ) の markdown 部は、名前が `_markdown` で終わる項目。�
 - 比べるのは、`docv.yaml`、ルートの `README.md`、`document_root` の中のファイル
   - インデックス（`document_root` の `README.md`）と、`docv_exclude` に当たるファイルは比べない
   - まだ git に追加していないファイルも、新しく足したファイルとして比べる
-  - docv の版を上げただけの行（`docv.yaml` と YAML の Slot の 1 行目のスキーマの URL、`docv_version`）は、差分に数えない。版のほかに変わっていないファイルには、印を付けない
+  - docv の版を上げただけの行（`docv.yaml` の 1 行目のスキーマの URL と `docv_version`）は、差分に数えない。版のほかに変わっていないファイルには、印を付けない
 - ページの中には差分を出さない
   - 元のファイルのパスの代わりに `git diff` のコマンドを出すので、詳しい差分はそれを実行して見る
 - HTML は OS のキャッシュのディレクトリに書き、`dir.output` には書かない。実行するたびに作り直す
@@ -214,9 +205,7 @@ Slot ( yaml ) の markdown 部は、名前が `_markdown` で終わる項目。�
 
 Slot ファイルを、決まったパスに作る。
 
-YAML の Slot には、1 行目にスキーマの URL を書く。yaml-language-server に対応したエディタ（VS Code の YAML の拡張など）で、項目の補完と検証が効く。
-
-md の Slot には、YAML front matter の `mission` にミッションを書く。
+YAML front matter の `mission` にミッションを書く。用語集、技術スタック、環境変数、費用、インストール、環境構築、開発コマンド、Doc ガイドは、見出しと表の形を示した雛形を書く。ほかの Slot は、中身の形が自由なので、`mission` だけを書く。
 
 | オプション | 意味                                    |
 | ---------- | --------------------------------------- |
@@ -231,21 +220,6 @@ docv gen doc-guide --print    # 運用中のファイルと雛形を見比べる
 
 Slot をページに分けるときは、`docv/slot/service/service/` などのページのディレクトリの下にページを手で置く（[ページ分け](service/desc.md#ページ分け)）。ページがあるときは、`docv gen service` などは、1 つのファイルを作らずにエラーで終わる。
 
-### docv slot schema
-
-YAML の Slot のスキーマ（JSON Schema）を表示する。
-
-```sh
-docv slot schema words # 用語集のスキーマを表示
-```
-
 ## スキーマ一覧
 
 - [`docv.yaml`](../../free/schema/config.md)
-- [インストール](../../free/schema/install.md)
-- [用語集](../../free/schema/words.md)
-- [技術スタック](../../free/schema/stack.md)
-- [環境構築](../../free/schema/setup.md)
-- [環境変数](../../free/schema/env.md)
-- [開発コマンド](../../free/schema/develop.md)
-- [費用](../../free/schema/cost.md)

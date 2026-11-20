@@ -46,7 +46,7 @@ pub fn format(text: &str) -> Result<String> {
     })
 }
 
-/// YAML のファイル（docv.yaml と YAML の Slot）の整形。末尾の改行を 1 つにする。中身は変えない。
+/// docv.yaml の整形。末尾の改行を 1 つにする。中身は変えない。
 pub fn final_newline(text: &str) -> String {
     let text = text.replace("\r\n", "\n");
     let body = text.trim_end_matches('\n');

@@ -9,8 +9,7 @@ use clap::{Parser, Subcommand};
 use crate::check::Options;
 use crate::workspace::{Locate, Project};
 use crate::{
-    build, check, desc, diff_open, fix, generate, init, list, open, review_guide, schema,
-    update_guide,
+    build, check, desc, diff_open, fix, generate, init, list, open, review_guide, update_guide,
 };
 
 /// 終了コード。docv/slot/service/service/cli.md の「終了コード」。
@@ -84,12 +83,8 @@ enum Command {
         #[arg(long)]
         no_textlint: bool,
     },
-    /// 人間向けの HTML とインデックスを作る。generate.image が true なら、YAML の Slot のページを JPG にする
-    Build {
-        /// generate.image が true でも JPG を作らない。JPG の出力先には触れない
-        #[arg(long)]
-        no_image: bool,
-    },
+    /// 人間向けの HTML とインデックスを作る
+    Build,
     /// docv build が作った HTML（Slot のページ）を、既定のブラウザで開く
     Open,
     /// git のリビジョンと作業ツリーで変わったファイルに印を付けた HTML を作り、既定のブラウザで開く
@@ -97,19 +92,6 @@ enum Command {
         /// 比べる git のリビジョン（ブランチ、タグ、コミット）
         #[arg(long, value_name = "rev", default_value = "HEAD")]
         from: String,
-    },
-    /// YAML の Slot のスキーマを出す
-    #[command(subcommand)]
-    Slot(SlotCommand),
-}
-
-#[derive(Debug, Subcommand)]
-enum SlotCommand {
-    /// YAML の Slot のスキーマを出す
-    Schema {
-        /// スキーマを出す YAML の Slot（docv list の名前）
-        #[arg(value_name = "slot")]
-        slot: String,
     },
 }
 
@@ -154,10 +136,6 @@ fn execute(cli: Cli) -> Result<ExitCode> {
             slot, print: true, ..
         } => {
             print!("{}", generate::print(&slot)?);
-            Ok(ExitCode::SUCCESS)
-        }
-        Command::Slot(SlotCommand::Schema { slot }) => {
-            print!("{}", schema::text(&slot)?);
             Ok(ExitCode::SUCCESS)
         }
         Command::Desc => {
@@ -215,10 +193,9 @@ fn execute_in_project(project: &Project, command: Command) -> Result<ExitCode> {
             println!("{} ファイルを書き換えた", report.changed.len());
             Ok(failure_if(!report.failed.is_empty()))
         }
-        Command::Build { no_image } => {
+        Command::Build => {
             let out = project.out_dir();
-            let image = project.image_dir().filter(|_| !no_image);
-            build::run(project, &out, image.as_deref())?;
+            build::run(project, &out)?;
             println!("{} に出力した", out.display());
             println!("{} を書いた", crate::index::path(project).display());
             Ok(ExitCode::SUCCESS)
@@ -250,11 +227,7 @@ fn execute_in_project(project: &Project, command: Command) -> Result<ExitCode> {
             open::run(program, &out)?;
             Ok(ExitCode::SUCCESS)
         }
-        Command::Init { .. }
-        | Command::Desc
-        | Command::UpdateGuide { .. }
-        | Command::List
-        | Command::Slot(SlotCommand::Schema { .. }) => {
+        Command::Init { .. } | Command::Desc | Command::UpdateGuide { .. } | Command::List => {
             unreachable!("docv.yaml を読まずに実行するコマンド")
         }
     }

@@ -39,7 +39,6 @@ pub fn rows(config: &Config, title: &str) -> Vec<Row> {
         row("dir.document_root", Cell::Value(config.document_root())),
         row("dir.output", Cell::Value(config.output_dir())),
         row("docv_exclude", list(&config.docv_exclude)),
-        row("generate.image", boolean(config.generate.image)),
         row(
             "tags",
             Cell::Tags(config.tags.iter().map(|t| t.name.clone()).collect()),
@@ -113,8 +112,6 @@ dir:
   output: out
 docv_exclude:
   - docv/free/tmp/**
-generate:
-  image: true
 lint:
   bold: deny
   textlint: enable
@@ -134,9 +131,6 @@ dir.output
   out
 docv_exclude
   - docv/free/tmp/**
-generate.image
-  [x] true
-  [ ] false
 tags
   - 仕様
 lint.bold

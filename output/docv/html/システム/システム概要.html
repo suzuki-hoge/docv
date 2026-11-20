@@ -35,10 +35,9 @@
 <tr><td>docv（CLI）</td><td>ドキュメントを検査し、整形し、HTML を作る。決まり、雛形、HTML の部品を埋め込み、1 つのバイナリにする</td></tr>
 <tr><td>リポジトリのドキュメント</td><td><code>docv.yaml</code>、Slot ファイル、Free ファイル、ADR、PDR。AI Agent と人間が書き、docv が読む。fix は書き直す</td></tr>
 <tr><td>textlint</td><td>日本語の文章を検査する。<code>docv.yaml</code> で使うと決めたときだけ、check と fix が npx で呼ぶ</td></tr>
-<tr><td>Chrome</td><td>HTML のページを JPG にする。<code>docv.yaml</code> の <code>generate.image</code> が true のときだけ、build が動かす</td></tr>
 <tr><td>git</td><td>比べるリビジョンと作業ツリーの差分を取る。diff-open のときだけ呼ぶ。diff-open は、変わったファイルに印を付けた HTML を、OS のキャッシュのディレクトリに書いて開く</td></tr>
-<tr><td>HTML、JPG</td><td>build の出力。人間が全体像を掴むために見る。HTML はローカルで開き、検索したりリンクを辿れる。JPG は git で管理すれば GitHub で見られ、clone しなくても概要を把握できる。GitHub で Slot ファイルと JPG を辿る入り口のインデックス（<code>document_root</code> の <code>README.md</code>）も書く</td></tr>
-<tr><td>GitHub</td><td>ソースを置き、スキーマを版のタグごとに公開する。利用者は、ソースから cargo で docv を入れる。YAML の Slot と <code>docv.yaml</code> の 1 行目が、スキーマを指す</td></tr>
+<tr><td>HTML、インデックス</td><td>build の出力。人間が全体像を掴むために見る。HTML はローカルで開き、検索したりリンクを辿れる。インデックス（<code>document_root</code> の <code>README.md</code>）は、GitHub で Slot ファイルを辿る入り口で、clone しなくても Slot を読める</td></tr>
+<tr><td>GitHub</td><td>ソースを置き、スキーマを版のタグごとに公開する。利用者は、ソースから cargo で docv を入れる。<code>docv.yaml</code> の 1 行目が、スキーマを指す</td></tr>
 </tbody></table></div>
 
 </section>

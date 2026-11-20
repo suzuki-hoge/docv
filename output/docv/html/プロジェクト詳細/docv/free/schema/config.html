@@ -58,7 +58,7 @@
 </span><span style="color:#323232;">          </span><span style="font-weight:bold;color:#183691;">&quot;default&quot;</span><span style="color:#323232;">: &quot;docv&quot;
 </span><span style="color:#323232;">        },
 </span><span style="color:#323232;">        </span><span style="font-weight:bold;color:#183691;">&quot;output&quot;</span><span style="color:#323232;">: {
-</span><span style="color:#323232;">          </span><span style="font-weight:bold;color:#183691;">&quot;description&quot;</span><span style="color:#323232;">: &quot;docv build の出力先。この下の `html/` に HTML を、`image/` に JPG を出す。AI Agent が `document_root` を読むときに同じ内容が倍入らないように、`document_root` の外に置く。&quot;,
+</span><span style="color:#323232;">          </span><span style="font-weight:bold;color:#183691;">&quot;description&quot;</span><span style="color:#323232;">: &quot;docv build の出力先。この下の `html/` に HTML を出す。AI Agent が `document_root` を読むときに同じ内容が倍入らないように、`document_root` の外に置く。&quot;,
 </span><span style="color:#323232;">          </span><span style="font-weight:bold;color:#183691;">&quot;type&quot;</span><span style="color:#323232;">: &quot;string&quot;,
 </span><span style="color:#323232;">          </span><span style="font-weight:bold;color:#183691;">&quot;minLength&quot;</span><span style="color:#323232;">: </span><span style="color:#0086b3;">1</span><span style="color:#323232;">,
 </span><span style="color:#323232;">          </span><span style="font-weight:bold;color:#183691;">&quot;default&quot;</span><span style="color:#323232;">: &quot;output/docv&quot;
@@ -71,18 +71,6 @@
 </span><span style="color:#323232;">      </span><span style="font-weight:bold;color:#183691;">&quot;items&quot;</span><span style="color:#323232;">: {
 </span><span style="color:#323232;">        </span><span style="font-weight:bold;color:#183691;">&quot;type&quot;</span><span style="color:#323232;">: &quot;string&quot;,
 </span><span style="color:#323232;">        </span><span style="font-weight:bold;color:#183691;">&quot;minLength&quot;</span><span style="color:#323232;">: </span><span style="color:#0086b3;">1
-</span><span style="color:#323232;">      }
-</span><span style="color:#323232;">    },
-</span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#183691;">&quot;generate&quot;</span><span style="color:#323232;">: {
-</span><span style="color:#323232;">      </span><span style="font-weight:bold;color:#183691;">&quot;description&quot;</span><span style="color:#323232;">: &quot;docv build が作るもの。&quot;,
-</span><span style="color:#323232;">      </span><span style="font-weight:bold;color:#183691;">&quot;type&quot;</span><span style="color:#323232;">: &quot;object&quot;,
-</span><span style="color:#323232;">      </span><span style="font-weight:bold;color:#183691;">&quot;additionalProperties&quot;</span><span style="color:#323232;">: </span><span style="color:#0086b3;">false</span><span style="color:#323232;">,
-</span><span style="color:#323232;">      </span><span style="font-weight:bold;color:#183691;">&quot;properties&quot;</span><span style="color:#323232;">: {
-</span><span style="color:#323232;">        </span><span style="font-weight:bold;color:#183691;">&quot;image&quot;</span><span style="color:#323232;">: {
-</span><span style="color:#323232;">          </span><span style="font-weight:bold;color:#183691;">&quot;description&quot;</span><span style="color:#323232;">: &quot;YAML の Slot のページを JPG にして、`dir.output` の下の `image/` に出すか。JPG を作るには Chrome が要る。&quot;,
-</span><span style="color:#323232;">          </span><span style="font-weight:bold;color:#183691;">&quot;type&quot;</span><span style="color:#323232;">: &quot;boolean&quot;,
-</span><span style="color:#323232;">          </span><span style="font-weight:bold;color:#183691;">&quot;default&quot;</span><span style="color:#323232;">: </span><span style="color:#0086b3;">false
-</span><span style="color:#323232;">        }
 </span><span style="color:#323232;">      }
 </span><span style="color:#323232;">    },
 </span><span style="color:#323232;">    </span><span style="font-weight:bold;color:#183691;">&quot;tags&quot;</span><span style="color:#323232;">: {

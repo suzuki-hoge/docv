@@ -5,7 +5,6 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.104"
-base64 = "0.23.1"
 clap = { version = "4.6.7", features = ["derive"] }
 dirs = "7.0.0"
 dprint-plugin-markdown = "0.26.0"
@@ -17,9 +16,7 @@ serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.152"
 serde_yaml_ng = "0.10.0"
 syntect = { version = "5.3.0", default-features = false, features = ["default-syntaxes", "default-themes", "html", "regex-fancy"] }
-tungstenite = { version = "0.30.0", default-features = false, features = ["handshake"] }
 unicode-width = "0.2.2"
-yaml-rust2 = "0.13.0"
 
 [dev-dependencies]
 tempfile = "3.27.0"

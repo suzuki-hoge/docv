@@ -1,4 +1,4 @@
-//! docv build。人間向けの HTML と、設定で有効なら Slot のページの JPG を生成する。docv/slot/service/service/html.md。
+//! docv build。人間向けの HTML を生成する。docv/slot/service/service/html.md。
 //!
 //! トップは 8 ページに分け、サイドバーで行き来する。ルートに README.md があれば、README のページをサイドバーの先頭に足す。
 //! index.html（Slot）に Slot ファイルのページへのカード、プロジェクト詳細.html（Free）に Free ファイルのツリー、
@@ -9,7 +9,8 @@
 //! Slot は 1 つずつ独立したページにし、`<まとまり>/<Slot>.html` に置く。
 //! ページに分けた Slot は、ページごとに `<まとまり>/<Slot>/<ページの名前>.html` に置き、ページへのリンクをタブにして並べる。
 //! Slot、ADR、PDR、Free ファイルのページには、h1 の上に元のファイルのパスと、それをコピーするボタンを置く。表は、横にスクロールできる包みに入れる。
-//! Markdown の中の `<details>` は閉じたまま出し、印刷の表示（JPG）では CSS で開く。OS ごとの手順のタブは、印刷の表示ではすべて並べる。
+//! 同じページの中で見出しの行が同じ Markdown の表は、列の幅をそろえる。
+//! Markdown の中の `<details>` は閉じたまま出し、印刷の表示では CSS で開く。
 //! document_root の直下に、Slot ファイルへのリンクを並べたインデックス（README.md）も書く（index.rs）。
 //! 左のサイドバーの一番下に、作った docv の版を出す。
 
@@ -31,16 +32,16 @@ use syntect::highlighting::{Theme, ThemeSet};
 use syntect::html::{IncludeBackground, styled_line_to_highlighted_html};
 use syntect::parsing::SyntaxSet;
 use syntect::util::LinesWithEndings;
+use unicode_width::UnicodeWidthChar;
 
 use crate::config_view::{self, Cell};
 use crate::decision::{self, Decision, Kind, Record};
 use crate::diff_open::{Change, Changes, Status};
 use crate::index;
-use crate::jpg;
 use crate::markdown::{self, relative_path, slug};
 use crate::meta;
 use crate::review_guide;
-use crate::slot::{self, Content, DEFS, Group, Slot};
+use crate::slot::{self, DEFS, Group, Slot};
 use crate::textlint;
 use crate::workspace::{Class, Project};
 
@@ -166,33 +167,21 @@ struct SearchEntry {
     lines: Vec<String>,
 }
 
-/// docv build。out（dir.output の下の html/）の中を作り直す。image（generate.image が true なら image/）があれば、Slot のページを JPG にしてそこに置く。
-/// JPG は Slot のページごとに 1 枚（ページに分けた YAML の Slot は、ページごとに 1 枚）。見つけやすいように、まとまりと Slot の表示名をパスにする。
-/// Markdown から作るページ（md の Slot、ADR、Free ファイル）は、GitHub で md をそのまま見られるので JPG にしない。
+/// docv build。out（dir.output の下の html/）の中を作り直す。
 /// インデックスも書く。書けないインデックスなら、何も書かずに error で終わる。
-pub fn run(project: &Project, out: &Path, image: Option<&Path>) -> Result<()> {
+pub fn run(project: &Project, out: &Path) -> Result<()> {
     let index = index::path(project);
     index::ensure_writable(&index)?;
     let out = prepare_out(out)?;
-    let slots = render(project, &out, Some(&index), None)?;
+    render(project, &out, Some(&index), None)?;
     write(&out.join(CSS_FILE), CSS)?;
     write(&out.join(JS_FILE), JS)?;
     write(&out.join(MARKER), MARKER_TEXT)?;
-    if let Some(image) = image {
-        let image = prepare_out(image)?;
-        let shots: Vec<(String, String)> = slots
-            .iter()
-            .filter(|s| !matches!(s.content, Content::Markdown(_)))
-            .map(|s| (page_path(s), jpg_path(s)))
-            .collect();
-        jpg::capture(&out, &image, &shots)?;
-        write(&image.join(MARKER), MARKER_TEXT)?;
-    }
     Ok(())
 }
 
 /// docv diff-open。build と同じページを out に書き、変わったファイルに + と − の印を付ける。
-/// --from にあって作業ツリーにないファイルも、カードや行にして、消したことを見せる。インデックスと JPG は作らない。
+/// --from にあって作業ツリーにないファイルも、カードや行にして、消したことを見せる。インデックスは作らない。
 pub fn run_diff(project: &Project, out: &Path, changes: &Changes) -> Result<()> {
     let out = prepare_out(out)?;
     // 途中で止まっても、次の diff-open で作り直せるように、先に目印を書く。
@@ -256,14 +245,14 @@ impl Deleted {
     }
 }
 
-/// out にすべてのページを書き、index があればインデックスを書いて、読み込んだ Slot を返す。
+/// out にすべてのページを書き、index があればインデックスを書く。
 /// changes があれば（diff-open）、変わったファイルに印を付け、消したファイルのページも書く。
 fn render(
     project: &Project,
     out: &Path,
     index: Option<&Path>,
     changes: Option<&Changes>,
-) -> Result<Vec<Slot>> {
+) -> Result<()> {
     let mut pages = Vec::new();
     for path in project.managed()? {
         pages.push(read_page(project, &path)?);
@@ -348,7 +337,7 @@ fn render(
         let text = index::render(project, index, &slots, !pages.is_empty(), &kinds);
         write(index, &text)?;
     }
-    Ok(slots)
+    Ok(())
 }
 
 /// Slot のページの、出力先からの相対パス。`サービス/利用マニュアル.html`。名前の空白は除く（`開発者向けガイド/Docガイド.html`）。
@@ -363,24 +352,6 @@ fn page_path(slot: &Slot) -> String {
         ),
         None => format!(
             "{}/{}.html",
-            file_name(slot.def.group.label()),
-            file_name(slot.def.label)
-        ),
-    }
-}
-
-/// Slot の JPG の、JPG の出力先（dir.output の下の image/）からの相対パス。`サービス/用語集.jpg`。名前の空白は除く（`開発者向けガイド/Docガイド.jpg`）。
-/// 分けた Slot のページは、HTML と同じく、Slot の名前のディレクトリの下に、ページの名前で置く。`開発者向けガイド/開発コマンド/Web.jpg`。
-pub(crate) fn jpg_path(slot: &Slot) -> String {
-    match &slot.page {
-        Some(page) => format!(
-            "{}/{}/{}.jpg",
-            file_name(slot.def.group.label()),
-            file_name(slot.def.label),
-            file_name(&page.title)
-        ),
-        None => format!(
-            "{}/{}.jpg",
             file_name(slot.def.group.label()),
             file_name(slot.def.label)
         ),
@@ -590,11 +561,7 @@ impl Site<'_> {
 
     /// docv.yaml のルートからの相対パス。ルートの外に置いていれば None。
     fn config_source(&self) -> Option<String> {
-        self.project
-            .config_path
-            .strip_prefix(&self.project.root)
-            .ok()
-            .map(markdown::slash_path)
+        self.project.config_source()
     }
 
     /// diff-open で、消したファイルのページ。元のファイルのパスの行に git diff のコマンドを出す。中身は出さない。
@@ -657,8 +624,8 @@ impl Site<'_> {
         self.page(&escape(&self.project.title()), Nav::Overview, &out)
     }
 
-    /// インデックス.html。インデックス（README.md）と同じ並びで、md や JPG ではなく HTML のページへリンクする。
-    /// YAML の Slot は generate.image によらずすべて並べ、Free ファイル、ADR、PDR はそれぞれの一覧のページへリンクする。
+    /// インデックス.html。インデックス（README.md）と同じ並びで、md ではなく HTML のページへリンクする。
+    /// Free ファイル、ADR、PDR は、それぞれの一覧のページへリンクする。
     fn render_index_page(&self, has_free: bool, kinds: &[Kind]) -> String {
         *self.dir.borrow_mut() = self.out.to_path_buf();
         let mut out = format!("<h1>{}</h1>\n", Nav::Index.heading());
@@ -669,7 +636,7 @@ impl Site<'_> {
                 escape(label)
             )
         };
-        for (group, items) in index::outline(self.slots, |_| true) {
+        for (group, items) in index::outline(self.slots) {
             let _ = writeln!(out, "<h2>{}</h2>\n<ul>", group.label());
             for item in items {
                 match item {
@@ -932,7 +899,8 @@ impl Site<'_> {
         )
     }
 
-    /// HTML の全体。左に README とトップの 8 ページへのサイドバーを、右に h2 と h3 の目次を置く。印刷の表示（JPG）では、どちらも出さない。
+    /// HTML の全体。左に README とトップの 8 ページへのサイドバーを、右に h2 と h3 の目次を置く。印刷の表示では、どちらも出さない。
+    /// 本文の Markdown の表は、見出しの行が同じものどうしで列の幅をそろえる（align_tables）。
     /// サイドバーは SIDEBAR の段ごとに並べ、段の間に横線を引く。
     /// README、ADR、PDR は、そのページがあるときだけ出す。サイドバーの一番下に、作った docv の版を出す。
     fn page(&self, title: &str, current: Nav, body: &str) -> String {
@@ -985,7 +953,7 @@ impl Site<'_> {
             "</ul>\n<p class=\"generated\">{}</p>\n</nav>\n",
             generated_by()
         );
-        let (body, aside) = outline(&wrap_tables(body));
+        let (body, aside) = outline(&wrap_tables(&align_tables(body)));
         let root = |name: &str| relative_path(&self.dir.borrow(), &self.out.join(name));
         page(title, &root(CSS_FILE), &root(JS_FILE), &nav, &body, &aside)
     }
@@ -1294,238 +1262,14 @@ impl Site<'_> {
         let _ = writeln!(out, "</nav>");
     }
 
-    /// Slot ごとの形の中身。
+    /// Slot の本文。h1 を除き、見出しは h2 から始まるように段を付け直す。リンクは、ファイルの場所からの相対パス。
+    /// Slot はページ全体なので、Free ファイルと同じく見出しに id を付け、ページ内リンクで飛べるようにする。
     fn slot_body(&self, slot: &Slot) -> String {
-        let mut body = String::new();
-        let out = &mut body;
-        match &slot.content {
-            Content::Procedure(c) => {
-                self.tools(out, "前提とされるもの", &c.requirements);
-                if slot.def.id == "develop" {
-                    self.step_sections(out, slot.def.id, &c.steps);
-                } else {
-                    self.steps(out, slot.def.id, &c.steps);
-                }
-            }
-            Content::Words(c) => self.words(out, &c.groups),
-            Content::Stack(c) => self.stack(out, &c.stack),
-            Content::Env(c) => self.envs(out, &c.envs),
-            Content::Cost(c) => {
-                let _ = writeln!(out, "<h2>使っているもの</h2>");
-                self.cost(out, &c.accepted_items);
-                let _ = writeln!(out, "<h2>費用を理由にやっていないこと</h2>");
-                self.cost(out, &c.rejected_items);
-            }
-            Content::Markdown(text) => {
-                let base = Path::new(&slot.path)
-                    .parent()
-                    .unwrap_or(Path::new(""))
-                    .to_path_buf();
-                // md の Slot はページ全体なので、Free ファイルと同じく見出しに id を付け、ページ内リンクで飛べるようにする。
-                let html = self.markdown_with_ids(text, &base, true, 2);
-                let _ = writeln!(out, "{html}");
-            }
-        }
-        // YAML の Slot の appendix_markdown は、項目のあとに続けて出す。見出しは h2 から。リンクはルートからの相対パス。
-        if let Some(appendix) = slot.content.appendix() {
-            let _ = writeln!(out, "{}", self.markdown(appendix, Path::new(""), false, 2));
-        }
-        body
-    }
-
-    fn tools(&self, out: &mut String, title: &str, tools: &[slot::Tool]) {
-        if tools.is_empty() {
-            return;
-        }
-        let _ = writeln!(out, "<h2>{title}</h2>");
-        self.tool_table(out, tools);
-    }
-
-    fn tool_table(&self, out: &mut String, tools: &[slot::Tool]) {
-        let _ = writeln!(
-            out,
-            "<table>\n<thead><tr><th>名前</th><th>版</th><th>何に使うか</th></tr></thead>\n<tbody>"
-        );
-        for t in tools {
-            let _ = writeln!(
-                out,
-                "<tr><td>{}</td><td>{}</td><td>{}</td></tr>",
-                name_link(&t.name, t.url.as_deref()),
-                escape(t.version.as_deref().unwrap_or("")),
-                self.inline_opt(t.purpose.as_deref())
-            );
-        }
-        let _ = writeln!(out, "</tbody>\n</table>");
-    }
-
-    /// 手順（インストール、環境構築）。「手順」の h2 の下に、項目ごとに h3 を並べる。
-    fn steps(&self, out: &mut String, slot_id: &str, steps: &[slot::Step]) {
-        if steps.is_empty() {
-            return;
-        }
-        let _ = writeln!(out, "<h2>手順</h2>");
-        for step in steps {
-            let _ = writeln!(
-                out,
-                "<h3 id=\"{}\">{}</h3>",
-                slug(&step.id),
-                escape(&step.name)
-            );
-            self.step_items(out, slot_id, step, 4);
-        }
-    }
-
-    /// 順番のない項目（開発コマンド）。先頭に目次を置き、項目ごとに h2 にする。
-    fn step_sections(&self, out: &mut String, slot_id: &str, steps: &[slot::Step]) {
-        if steps.is_empty() {
-            return;
-        }
-        let _ = writeln!(out, "<ul class=\"toc\">");
-        for step in steps {
-            let _ = writeln!(
-                out,
-                "<li><a href=\"#{}\">{}</a></li>",
-                slug(&step.id),
-                escape(&step.name)
-            );
-        }
-        let _ = writeln!(out, "</ul>");
-        for step in steps {
-            let _ = writeln!(
-                out,
-                "<h2 id=\"{}\">{}</h2>",
-                slug(&step.id),
-                escape(&step.name)
-            );
-            self.step_items(out, slot_id, step, 3);
-        }
-    }
-
-    /// 手順の中身。items が複数あれば os ごとのタブにし、1 つならタブにしない。
-    /// top は、中身の Markdown のいちばん浅い見出しの段。項目の見出しの 1 つ下にする。
-    fn step_items(&self, out: &mut String, slot_id: &str, step: &slot::Step, top: usize) {
-        if let [item] = step.items.as_slice() {
-            let _ = write!(out, "{}", self.step_markdown(item, top));
-            return;
-        }
-        if step.items.is_empty() {
-            return;
-        }
-        let name = format!("tab-{slot_id}-{}", slug(&step.id));
-        let _ = write!(out, "<div class=\"tabs\">");
-        for (i, item) in step.items.iter().enumerate() {
-            let _ = write!(
-                out,
-                "<input type=\"radio\" name=\"{name}\" id=\"{name}-{i}\"{}><label for=\"{name}-{i}\">{}</label>",
-                if i == 0 { " checked" } else { "" },
-                escape(&os_label(item.os.as_deref().unwrap_or("")))
-            );
-        }
-        // 印刷の表示（JPG）ではタブを隠して中身を並べるので、どの OS の中身かを中にも書く。
-        for item in &step.items {
-            let _ = write!(
-                out,
-                "<div class=\"panel\"><p class=\"panel-os\">{}</p>{}</div>",
-                escape(&os_label(item.os.as_deref().unwrap_or(""))),
-                self.step_markdown(item, top)
-            );
-        }
-        let _ = writeln!(out, "</div>");
-    }
-
-    fn step_markdown(&self, item: &slot::StepItem, top: usize) -> String {
-        item.markdown
-            .as_deref()
-            .map(|m| self.markdown(m, Path::new(""), false, top))
-            .unwrap_or_default()
-    }
-
-    /// 用語集。まとまりごとに h2 と「日本語 | 英語 | 意味」の表。
-    fn words(&self, out: &mut String, groups: &[slot::WordGroup]) {
-        for group in groups {
-            let _ = writeln!(
-                out,
-                "<h2>{}</h2>\n<table class=\"words\">\n<thead><tr><th>日本語</th><th>英語</th><th>意味</th></tr></thead>\n<tbody>",
-                escape(&group.name)
-            );
-            for w in &group.items {
-                let _ = writeln!(
-                    out,
-                    "<tr><td>{}</td><td>{}</td><td>{}</td></tr>",
-                    escape(w.ja.as_deref().unwrap_or("")),
-                    escape(w.en.as_deref().unwrap_or("")),
-                    self.inline(&w.desc)
-                );
-            }
-            let _ = writeln!(out, "</tbody>\n</table>");
-        }
-    }
-
-    fn stack(&self, out: &mut String, groups: &[slot::StackGroup]) {
-        for group in groups {
-            let _ = writeln!(out, "<h2>{}</h2>", escape(&group.group));
-            if let Some(image) = &group.image {
-                let _ = writeln!(
-                    out,
-                    "<p><img src=\"{}\" alt=\"\"></p>",
-                    escape(&encode_path(&self.file_path(image)))
-                );
-            }
-            if !group.items.is_empty() {
-                self.tool_table(out, &group.items);
-            }
-        }
-    }
-
-    fn envs(&self, out: &mut String, envs: &[slot::EnvVar]) {
-        if envs.is_empty() {
-            return;
-        }
-        let _ = writeln!(
-            out,
-            "<table>\n<thead><tr><th>キー</th><th>意味</th><th>秘密</th><th>ローカルでの設定場所</th><th>ステージング・本番での設定場所</th></tr></thead>\n<tbody>"
-        );
-        for e in envs {
-            let _ = writeln!(
-                out,
-                "<tr><td><code>{}</code></td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>",
-                escape(&e.key),
-                self.inline(&e.desc),
-                if e.secret { "秘密" } else { "" },
-                self.inline_opt(e.local_from.as_deref()),
-                self.inline_opt(e.release_from.as_deref())
-            );
-        }
-        let _ = writeln!(out, "</tbody>\n</table>");
-    }
-
-    fn cost(&self, out: &mut String, items: &[slot::CostItem]) {
-        if items.is_empty() {
-            let _ = writeln!(out, "<p class=\"note\">なし</p>");
-            return;
-        }
-        let _ = writeln!(
-            out,
-            "<table>\n<thead><tr><th>項目</th><th>説明</th><th>月額</th><th>参考</th></tr></thead>\n<tbody>"
-        );
-        for item in items {
-            let reference = item
-                .reference
-                .as_deref()
-                .map(|r| match self.href(r) {
-                    Some(href) => format!("<a href=\"{}\">{}</a>", escape(&href), escape(r)),
-                    None => escape(r),
-                })
-                .unwrap_or_default();
-            let _ = writeln!(
-                out,
-                "<tr><td>{}</td><td>{}</td><td class=\"num\">{}</td><td>{reference}</td></tr>",
-                escape(&item.name),
-                self.inline_opt(item.desc.as_deref()),
-                escape(&item.monthly.as_ref().map(slot::scalar).unwrap_or_default())
-            );
-        }
-        let _ = writeln!(out, "</tbody>\n</table>");
+        let base = Path::new(&slot.path)
+            .parent()
+            .unwrap_or(Path::new(""))
+            .to_path_buf();
+        format!("{}\n", self.markdown_with_ids(&slot.body, &base, true, 2))
     }
 
     // ---- Free ファイルのツリー ----
@@ -1686,22 +1430,8 @@ impl Site<'_> {
 
     // ---- Markdown ----
 
-    /// Slot の中の文字列（ルートを起点にした Markdown）を描く。h2 の下に置くので、見出しは h3 から。
-    fn md(&self, text: &str) -> String {
-        self.markdown(text, Path::new(""), false, 3)
-    }
-
-    /// 1 行の Markdown を描く。段落の `<p>` を外す。
-    fn inline(&self, text: &str) -> String {
-        strip_paragraph(&self.md(text))
-    }
-
-    fn inline_opt(&self, text: Option<&str>) -> String {
-        text.map(|t| self.inline(t)).unwrap_or_default()
-    }
-
     /// Markdown を HTML にする。base はリンクの起点（ルートからの相対パス）。
-    /// drop_h1 なら、最初の h1 を除く（Markdown の Slot。ページの h1 と重なるため）。
+    /// drop_h1 なら、最初の h1 を除く（ページの h1 と重なるため）。
     /// 見出しは、いちばん浅いものが top の段になるように付け直す。ページの中で h1 から h2、h3 と段を飛ばさないため。
     fn markdown(&self, text: &str, base: &Path, drop_h1: bool, top: usize) -> String {
         self.render_markdown(text, base, drop_h1, top, false)
@@ -1868,12 +1598,7 @@ impl Site<'_> {
     /// ルートからのパスのファイルの、出力先からのページのパス。ページのないファイルは None。
     fn page_of(&self, target: &str) -> Option<String> {
         // 設定ファイルのページは、現在の設定のページ。
-        if self
-            .project
-            .config_path
-            .strip_prefix(&self.project.root)
-            .is_ok_and(|rel| markdown::slash_path(rel) == target)
-        {
+        if self.config_source().as_deref() == Some(target) {
             return Some(CONFIG_PAGE.to_string());
         }
         if target == README_SOURCE && self.readme.is_some() {
@@ -1890,15 +1615,6 @@ impl Site<'_> {
             .chain(self.pdrs)
             .find(|a| a.path == target)
             .map(decision_page)
-    }
-
-    /// URL ならそのまま、ルートからのパスなら、ページのあるファイルだけリンク先にする。
-    fn href(&self, target: &str) -> Option<String> {
-        if slot::is_url(target) {
-            Some(target.to_string())
-        } else {
-            self.link(target, "")
-        }
     }
 
     /// ルートの中のファイルへのリンク先。README.md、Free ファイル、Slot ファイル、ADR、PDR だけ、そのページに出力先の中の相対パスで向ける。
@@ -2033,9 +1749,9 @@ fn page(title: &str, css: &str, js: &str, nav: &str, body: &str, aside: &str) ->
 }
 
 /// Slot、ADR、PDR、Free ファイルのページの h1 の上に置く、元のファイルのルートからのパスと、それをコピーするボタン。
-/// 編集したいときに、元のファイルを見つけられるように。ボタンは JS が動くときだけ出し、印刷の表示（JPG）には写さない。
+/// 編集したいときに、元のファイルを見つけられるように。ボタンは JS が動くときだけ出し、印刷の表示には出さない。
 /// Slot のページでは、同じ行の左に、docv が決めたミッション（mission）を置き、パスを右に寄せる。何を書くページかを、ページの中で分かるようにするため。
-/// md の Slot の YAML front matter の mission は、check で同じ文だと確かめるので読まない。YAML の Slot にも出す。
+/// Slot の YAML front matter の mission は、check で同じ文だと確かめるので読まない。
 fn source(path: &str, mission: Option<&str>) -> String {
     source_line(path, mission, "パスをコピーする")
 }
@@ -2130,6 +1846,215 @@ fn generated_by() -> String {
 fn wrap_tables(body: &str) -> String {
     body.replace("<table", "<div class=\"table-scroll\"><table")
         .replace("</table>", "</table></div>")
+}
+
+/// 列の幅の見積もりの単位は 0.1em。全角の文字（East Asian Width が W か F。どちらとも取れる A も含める）を 1em、ほかの文字を 0.6em とみなす。
+const WIDE: u32 = 10;
+const NARROW: u32 = 6;
+/// インラインコードの左右の余白（CSS の `:not(pre) > code` の padding）。
+const CODE_PADDING: u32 = 6;
+/// セルの左右の余白と罫線（CSS の `th, td` の padding と border）。
+const CELL_PADDING: u32 = 14;
+
+/// 本文の Markdown の表（属性のない `<table>`）。docv が作る表は class を持つので含まない。
+struct MarkdownTable {
+    /// 本文の中の位置。`<table>` の始まりから `</table>` の終わりまで。
+    start: usize,
+    end: usize,
+    /// 見出しの行のセルの文字。
+    header: Vec<String>,
+    /// 列ごとの、セル（見出しも）の中身の幅の見積もりのうち、いちばん広いもの。0.1em 単位。
+    widths: Vec<u32>,
+}
+
+/// 同じページの中で、見出しの行が同じ Markdown の表が 2 つ以上あれば、列の幅をそろえる。並んだ表を、1 つの表のように縦に読めるようにするため。
+/// 列ごとに、そろえる表のすべてのセルの幅を見積もり、いちばん広いものをその列の幅にする。見積もりは build のときにするので、JS は使わない。
+/// 幅のいちばん広い列は、幅を決めずに残りの幅を使わせる。ほかの列（短い列）は、幅を `<col>` に書き、セルを折り返さない（class="short"）。
+/// 見出しの行が同じ表のない表は変えない。
+fn align_tables(body: &str) -> String {
+    let tables = markdown_tables(body);
+    let mut groups: BTreeMap<&[String], Vec<usize>> = BTreeMap::new();
+    for (i, table) in tables.iter().enumerate() {
+        groups.entry(&table.header).or_default().push(i);
+    }
+    // 表ごとの、列の幅。いちばん広い列は None。そろえない表は None。
+    let mut columns: Vec<Option<Vec<Option<u32>>>> = vec![None; tables.len()];
+    for members in groups.values().filter(|members| members.len() > 1) {
+        let widths: Vec<u32> = (0..tables[members[0]].widths.len())
+            .map(|c| {
+                members
+                    .iter()
+                    .map(|&i| tables[i].widths[c])
+                    .max()
+                    .unwrap_or(0)
+            })
+            .collect();
+        // 同じ幅なら、右の列に残りの幅を使わせる。説明の列は、右に置くことが多いため。
+        let flexible = widths
+            .iter()
+            .enumerate()
+            .max_by_key(|(i, w)| (**w, *i))
+            .map(|(i, _)| i);
+        let cols: Vec<Option<u32>> = widths
+            .iter()
+            .enumerate()
+            .map(|(i, w)| (Some(i) != flexible).then_some(*w))
+            .collect();
+        for &i in members {
+            columns[i] = Some(cols.clone());
+        }
+    }
+    let mut out = String::with_capacity(body.len());
+    let mut last = 0;
+    for (table, cols) in tables.iter().zip(&columns) {
+        let Some(cols) = cols else { continue };
+        out.push_str(&body[last..table.start]);
+        out.push_str(&aligned_table(&body[table.start..table.end], cols));
+        last = table.end;
+    }
+    out.push_str(&body[last..]);
+    out
+}
+
+/// 本文の Markdown の表を、出てくる順に返す。
+fn markdown_tables(body: &str) -> Vec<MarkdownTable> {
+    const OPEN: &str = "<table>";
+    const CLOSE: &str = "</table>";
+    let mut tables = Vec::new();
+    let mut from = 0;
+    while let Some(i) = body[from..].find(OPEN) {
+        let start = from + i;
+        let Some(j) = body[start..].find(CLOSE) else {
+            break;
+        };
+        let end = start + j + CLOSE.len();
+        from = end;
+        let html = &body[start..end];
+        // 表の中に表がある（HTML で書いた）ものは、そろえない。
+        if html[OPEN.len()..].contains("<table") {
+            continue;
+        }
+        let rows = table_rows(html);
+        let Some(header) = rows.first().filter(|cells| !cells.is_empty()) else {
+            continue;
+        };
+        let mut widths = vec![0; header.len()];
+        for row in &rows {
+            for (width, cell) in widths.iter_mut().zip(row) {
+                *width = (*width).max(cell_width(cell));
+            }
+        }
+        tables.push(MarkdownTable {
+            start,
+            end,
+            header: header
+                .iter()
+                .map(|cell| unescape(&strip_tags(cell)).trim().to_string())
+                .collect(),
+            widths,
+        });
+    }
+    tables
+}
+
+/// 表の行ごとの、セルの中身（HTML）。見出しの行が先頭。
+fn table_rows(html: &str) -> Vec<Vec<&str>> {
+    let mut rows = Vec::new();
+    for (i, _) in html.match_indices("<tr>") {
+        let row = &html[i..];
+        let row = &row[..row.find("</tr>").unwrap_or(row.len())];
+        let mut cells = Vec::new();
+        for (j, _) in row.match_indices('<') {
+            let tag = &row[j..];
+            let Some(name) = cell_tag(tag) else {
+                continue;
+            };
+            let Some(open) = tag.find('>') else {
+                continue;
+            };
+            let inner = &tag[open + 1..];
+            let close = inner.find(&format!("</{name}>")).unwrap_or(inner.len());
+            cells.push(&inner[..close]);
+        }
+        rows.push(cells);
+    }
+    rows
+}
+
+/// セルの開くタグ（`<th>`、`<td style="...">` など）なら、その名前。`<thead>` などは None。
+fn cell_tag(tag: &str) -> Option<&'static str> {
+    ["th", "td"].into_iter().find(|name| {
+        tag.strip_prefix('<')
+            .and_then(|t| t.strip_prefix(name))
+            .is_some_and(|t| t.starts_with('>') || t.starts_with(' '))
+    })
+}
+
+/// セルの中身の幅の見積もり（0.1em 単位）。`<br>` で分けた行のうち、いちばん広いものに、セルの余白を足す。
+fn cell_width(inner: &str) -> u32 {
+    let lines = inner
+        .replace("<br />", "\n")
+        .replace("<br/>", "\n")
+        .replace("<br>", "\n");
+    let widest = lines
+        .split('\n')
+        .map(|line| {
+            let code = line.matches("<code").count() as u32 * CODE_PADDING;
+            let text: u32 = unescape(&strip_tags(line))
+                .trim()
+                .chars()
+                .map(|c| match UnicodeWidthChar::width_cjk(c) {
+                    Some(2) => WIDE,
+                    Some(0) | None => 0,
+                    _ => NARROW,
+                })
+                .sum();
+            code + text
+        })
+        .max()
+        .unwrap_or(0);
+    widest + CELL_PADDING
+}
+
+/// そろえる表。短い列には、見積もった幅を `<col>` に書き、セルに class="short" を付けて折り返さない。
+/// cols は列ごとの幅（0.1em 単位）。いちばん広い列は None で、幅を決めずに残りの幅を使う。
+fn aligned_table(html: &str, cols: &[Option<u32>]) -> String {
+    let mut out = String::from("<table class=\"aligned\"><colgroup>");
+    for col in cols {
+        match col {
+            Some(width) => {
+                let _ = write!(
+                    out,
+                    "<col style=\"width: {}.{}em\">",
+                    width / 10,
+                    width % 10
+                );
+            }
+            None => out.push_str("<col>"),
+        }
+    }
+    out.push_str("</colgroup>");
+    let rest = &html["<table>".len()..];
+    let mut last = 0;
+    let mut column = 0;
+    for (i, _) in rest.match_indices('<') {
+        let tag = &rest[i..];
+        if tag.starts_with("<tr>") {
+            column = 0;
+            continue;
+        }
+        if cell_tag(tag).is_none() {
+            continue;
+        }
+        if let (Some(Some(_)), Some(open)) = (cols.get(column), tag.find('>')) {
+            out.push_str(&rest[last..i + open]);
+            out.push_str(" class=\"short\"");
+            last = i + open;
+        }
+        column += 1;
+    }
+    out.push_str(&rest[last..]);
+    out
 }
 
 /// 本文の h2 と h3 から、右のサイドバーの目次を作る。id のない見出しには、GitHub と同じ形の id を付ける。
@@ -2281,23 +2206,6 @@ fn no_space(name: &str) -> String {
     name.chars().filter(|c| !c.is_whitespace()).collect()
 }
 
-/// タブに出す OS の名前。
-fn os_label(os: &str) -> String {
-    match os {
-        "macos" => "macOS".to_string(),
-        "windows" => "Windows".to_string(),
-        "linux" => "Linux".to_string(),
-        other => other.to_string(),
-    }
-}
-
-fn name_link(name: &str, url: Option<&str>) -> String {
-    match url {
-        Some(url) => format!("<a href=\"{}\">{}</a>", escape(url), escape(name)),
-        None => escape(name),
-    }
-}
-
 /// フェンスのコードブロックに、言語に合わせて色を付ける。色は `<span style>` で埋め込む。
 /// 言語がないブロックと、docv が知らない言語のブロックは、そのまま出す。
 fn highlight_code_blocks(events: Vec<Event>) -> Vec<Event> {
@@ -2447,17 +2355,6 @@ fn bare_urls(text: &str) -> Vec<(usize, usize)> {
     found
 }
 
-fn strip_paragraph(html: &str) -> String {
-    let trimmed = html.trim();
-    match trimmed
-        .strip_prefix("<p>")
-        .and_then(|s| s.strip_suffix("</p>"))
-    {
-        Some(inner) if !inner.contains("<p>") => inner.to_string(),
-        _ => trimmed.to_string(),
-    }
-}
-
 fn escape(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for c in s.chars() {
@@ -2521,12 +2418,13 @@ mod tests {
             ),
             ("docv/free/tmp/memo.md", "# Memo\n"),
             (
-                "docv/slot/service/install.yaml",
-                "steps:\n  - id: binary\n    name: 取る\n    items:\n      - os: macos\n        body_markdown: \"`curl`\"\n      - os: windows\n  - id: cargo\n    name: cargo\n    items:\n      body_markdown: \"`cargo install`\"\nappendix_markdown: |\n  # 補足\n\n  後書き\n",
+                "docv/slot/service/install.md",
+                "---\nmission: 利用者がこのサービスをインストールする方法\n---\n\n# インストール\n\n## 手順\n\n### 取る\n\n#### macOS\n\n`curl`\n\n### cargo\n\n`cargo install`\n",
             ),
+            // 残った YAML の Slot は、ページにしない
             (
                 "docv/slot/guide/setup.yaml",
-                "steps:\n  - id: clone\n    name: 取ってくる\n    items:\n      body_markdown: |\n        # 注意\n\n        `git clone`\n",
+                "steps:\n  - id: clone\n    name: 取ってくる\n",
             ),
             (
                 "docv/slot/service/service.md",
@@ -2538,12 +2436,12 @@ mod tests {
             ),
             ("docv/slot/system/db.md", "# DB 仕様書\n\n表\n"),
             (
-                "docv/slot/operation/cost.yaml",
-                "accepted_items:\n  - name: サーバー\n    monthly: 3 ドル\n",
+                "docv/slot/operation/cost.md",
+                "---\nmission: かかっている費用と、費用を理由にやっていないこと\n---\n\n# 費用\n\n## かかっている費用\n\n| 説明 | 月額 |\n| --- | --: |\n| サーバーでは、API を動かす | 3 ドル |\n\n## 費用を理由にやっていないこと\n\n| 説明 | 月額 |\n| --- | --: |\n| 監視は入れない | 20 ドル |\n",
             ),
         ]);
         let out = dir.path().join("out");
-        run(&project, &out, None).unwrap();
+        run(&project, &out).unwrap();
 
         // index.html（Slot）には、Slot のページへのカードだけを置く
         let index = fs::read_to_string(out.join(PAGE)).unwrap();
@@ -2555,7 +2453,7 @@ mod tests {
             index.contains("<li><a href=\"README.html\">README</a></li>\n<li><a href=\"index.html\" aria-current=\"page\">Slot</a></li>\n<li><a href=\"プロジェクト詳細.html\">Free</a></li>\n<li><a href=\"ADR.html\">ADR</a></li>\n<li class=\"separator\" role=\"separator\"></li>\n<li><a href=\"インデックス.html\">Index</a></li>\n<li><a href=\"レビューガイド.html\">Review Guide</a></li>\n<li><a href=\"現在の設定.html\">Config</a></li>\n<li class=\"separator\" role=\"separator\"></li>\n<li><a href=\"検索.html\">Search</a></li>"),
             "{index}"
         );
-        // インデックス.html に、インデックスと同じ並びで、md や JPG ではなく HTML のページへのリンクを並べる
+        // インデックス.html に、インデックスと同じ並びで、md ではなく HTML のページへのリンクを並べる
         let index_page = fs::read_to_string(out.join(INDEX_PAGE)).unwrap();
         assert!(
             index_page.contains("<main>\n<h1>Index</h1>\n<h2 id=\"サービス\">サービス</h2>"),
@@ -2589,7 +2487,7 @@ mod tests {
             review.contains("<h2 id=\"一覧\">一覧</h2>\n<p>一覧は、<code>docv review-guide</code> を実行したときに、その時点のファイルから作る。</p>\n</section>"),
             "{review}"
         );
-        assert!(!review.contains("install.yaml"), "{review}");
+        assert!(!review.contains("install.md"), "{review}");
         assert_headings(&review);
         // 検索.html に、Slot ファイル、ADR、Free ファイルの順で、中身を行ごとに索引にして書く。< は書き換え、</script> で閉じない
         let search = fs::read_to_string(out.join(SEARCH_PAGE)).unwrap();
@@ -2602,8 +2500,10 @@ mod tests {
             "{search}"
         );
         let slot_entry = search
-            .find("\"path\":\"docv/slot/service/install.yaml\"")
+            .find("\"path\":\"docv/slot/service/install.md\"")
             .unwrap();
+        // 残った YAML の Slot は、索引にも入れない
+        assert!(!search.contains("setup.yaml"), "{search}");
         let adr_entry = search.find("\"path\":\"docv/adr/go.md\"").unwrap();
         let free_entry = search.find("\"path\":\"docv/free/spec/a.md\"").unwrap();
         assert!(slot_entry < adr_entry && adr_entry < free_entry, "{search}");
@@ -2628,10 +2528,12 @@ mod tests {
             "{config}"
         );
         assert!(
-            config.contains("<tr><td><code>dir.document_root</code></td><td><code>docv</code></td></tr>\n<tr><td><code>dir.output</code></td><td><code>output/docv</code></td></tr>")
-                && config.contains("<tr><td><code>generate.image</code></td><td><div class=\"choices\"><span class=\"choice\">true</span><span class=\"choice on\">false</span></div></td></tr>"),
+            config.contains("<tr><td><code>dir.document_root</code></td><td><code>docv</code></td></tr>\n<tr><td><code>dir.output</code></td><td><code>output/docv</code></td></tr>"),
             "{config}"
         );
+        assert!(!config.contains("generate.image"), "{config}");
+        // docv が作る表は、見出しの行が同じでも、列の幅をそろえない
+        assert!(!config.contains("class=\"aligned\""), "{config}");
         // docv が決めた textlint のルールを、検査項目と非検査項目に分け、プリセットごとの表に並べる
         assert!(
             config.contains("<h3 id=\"検査項目\">検査項目</h3>\n<h4>ja-technical-writing</h4>\n<div class=\"table-scroll\"><table class=\"textlint\">\n<thead><tr><th>ルール</th><th>確かめること</th></tr></thead>\n<tbody>\n<tr><td><code>sentence-length</code></td><td>一文を 100 文字以内にする</td></tr>"),
@@ -2747,13 +2649,12 @@ mod tests {
         assert!(plan < spec, "{detail}");
         assert!(!detail.contains("tmp/"), "{detail}");
 
-        // Slot は 1 つずつ独立したページ。同じ id の手順は os ごとのタブ、ほかは 1 つの手順
+        // Slot は 1 つずつ独立したページ
         let read = |path: &str| fs::read_to_string(out.join(path)).unwrap();
         let install = read("サービス/インストール.html");
-        // Slot の名前の見出しの下に、docv が決めたミッションを出す。YAML の Slot にも出す
-        // Slot のページにも、h1 の上に元のファイルのパスを置く。同じ行の左に、docv が決めたミッションを置く。YAML の Slot にも出す
+        // Slot のページにも、h1 の上に元のファイルのパスを置く。同じ行の左に、docv が決めたミッションを置く
         assert!(
-            install.contains("<main>\n<p class=\"source\"><span class=\"mission\">利用者がこのサービスをインストールする方法</span><code>docv/slot/service/install.yaml</code><button type=\"button\" class=\"copy\" data-path=\"docv/slot/service/install.yaml\" title=\"パスをコピーする\" aria-label=\"パスをコピーする\" hidden>"),
+            install.contains("<main>\n<p class=\"source\"><span class=\"mission\">利用者がこのサービスをインストールする方法</span><code>docv/slot/service/install.md</code><button type=\"button\" class=\"copy\" data-path=\"docv/slot/service/install.md\" title=\"パスをコピーする\" aria-label=\"パスをコピーする\" hidden>"),
             "{install}"
         );
         // Slot のページのサイドバーは、1 つ上のトップのページを指す
@@ -2761,40 +2662,19 @@ mod tests {
             install.contains("<a href=\"../index.html\" aria-current=\"page\">Slot</a>"),
             "{install}"
         );
+        // 本文は、h1 を除き、見出しは h2 から始まるように段を付け直して、そのまま出す。OS ごとのタブは作らない
         assert!(
-            install.contains("<label for=\"tab-install-binary-0\">macOS</label>"),
+            install.contains("<h2 id=\"手順\">手順</h2>\n<h3 id=\"取る\">取る</h3>\n<h4 id=\"macos\">macOS</h4>\n<p><code>curl</code></p>\n<h3 id=\"cargo\">cargo</h3>"),
             "{install}"
         );
+        assert!(!install.contains("class=\"tabs\""), "{install}");
+        // 残った YAML の Slot は、ページにせず、カードも未作成にする
+        assert!(!out.join("開発者向けガイド/環境構築.html").exists());
         assert!(
-            install.contains("<label for=\"tab-install-binary-1\">Windows</label>"),
-            "{install}"
+            index.contains("</svg>環境構築<span class=\"state\">未作成</span></span>"),
+            "{index}"
         );
-        // 手順は、「手順」の h2 の下に、項目ごとの h3 で出す。中身の見出しは h4 から
-        assert!(
-            install.contains(
-                "<h2 id=\"手順\">手順</h2>\n<h3 id=\"binary\">取る</h3>\n<div class=\"tabs\">"
-            ),
-            "{install}"
-        );
-        assert!(
-            install
-                .contains("</div>\n<h3 id=\"cargo\">cargo</h3>\n<p><code>cargo install</code></p>"),
-            "{install}"
-        );
-        let setup = read("開発者向けガイド/環境構築.html");
-        assert!(
-            setup.contains("<h2 id=\"手順\">手順</h2>\n<h3 id=\"clone\">取ってくる</h3>\n<h4>注意</h4>\n<p><code>git clone</code></p>"),
-            "{setup}"
-        );
-        // appendix_markdown は、項目のあとに続けて出す。見出しは h2 から
-        let appendix = install
-            .find("<h2 id=\"補足\">補足</h2>\n<p>後書き</p>")
-            .unwrap();
-        assert!(
-            install.find("cargo install").unwrap() < appendix,
-            "{install}"
-        );
-        // Markdown の Slot は、h1 を除き、見出しを下げて、そのまま出す。見出しには id を付ける。details は閉じたまま出す
+        // Slot は、h1 を除き、見出しを下げて、そのまま出す。見出しには id を付ける。details は閉じたまま出す
         let service = read("サービス/サービス仕様.html");
         assert!(service.contains("<h2 id=\"部品\">部品</h2>"), "{service}");
         assert!(
@@ -2804,7 +2684,7 @@ mod tests {
         );
         assert!(service.contains("<details>"), "{service}");
         assert!(!service.contains("<details open>"), "{service}");
-        // md の Slot の見出しには id が付き、ページ内リンクで飛べる
+        // Slot の見出しには id が付き、ページ内リンクで飛べる
         let manual = read("サービス/利用マニュアル.html");
         assert!(
             manual.contains("<a href=\"#demo-run\">demo run</a>"),
@@ -2818,11 +2698,18 @@ mod tests {
         assert!(index.contains("href=\"システム/DB仕様書.html\""), "{index}");
         assert!(out.join("システム/DB仕様書.html").is_file());
         let cost = read("運用/費用.html");
-        assert!(cost.contains("<td class=\"num\">3 ドル</td>"), "{cost}");
-        assert!(
-            cost.contains("<h2 id=\"費用を理由にやっていないこと\">費用を理由にやっていないこと</h2>\n<p class=\"note\">なし</p>"),
+        // 見出しの行が同じ表は、列の幅をそろえる。短い列（月額）は折り返さず、いちばん長い列（説明）が残りの幅を使う
+        assert_eq!(
+            cost.matches("<table class=\"aligned\">").count(),
+            2,
             "{cost}"
         );
+        assert!(
+            cost.contains("<div class=\"table-scroll\"><table class=\"aligned\"><colgroup><col><col style=\"width: 5.2em\"></colgroup><thead><tr><th>説明</th><th style=\"text-align: right\" class=\"short\">月額</th></tr></thead><tbody>\n<tr><td>サーバーでは、API を動かす</td><td style=\"text-align: right\" class=\"short\">3 ドル</td></tr>"),
+            "{cost}"
+        );
+        // 見出しの行が同じ表のない表は、そのまま出す
+        assert!(!manual_has_aligned(&read("サービス/利用マニュアル.html")));
         // Slot のページにも、id を付けた見出しから右のサイドバーの目次を置く
         assert!(
             cost.contains("<li class=\"h2\"><a href=\"#費用を理由にやっていないこと\">費用を理由にやっていないこと</a></li>"),
@@ -2896,7 +2783,7 @@ mod tests {
             assert_headings(&html);
         }
 
-        run(&project, &out, None).unwrap();
+        run(&project, &out).unwrap();
         assert_eq!(read(PAGE), index);
         assert_eq!(read(DETAIL_PAGE), detail);
         assert_eq!(read(ADR_PAGE), adr_index);
@@ -2941,7 +2828,7 @@ mod tests {
             ),
         ]);
         let out = dir.path().join("out");
-        run(&project, &out, None).unwrap();
+        run(&project, &out).unwrap();
         let read = |path: &str| fs::read_to_string(out.join(path)).unwrap();
 
         // サイドバーの ADR の下に PDR を置く
@@ -3002,7 +2889,7 @@ mod tests {
             "---\ndate: 2026-01-01\n---\n\n# Go にする\n",
         )]);
         let out = dir.path().join("out");
-        run(&project, &out, None).unwrap();
+        run(&project, &out).unwrap();
         assert!(!out.join("PDR.html").exists());
         assert!(!fs::read_to_string(out.join(PAGE)).unwrap().contains("PDR"));
     }
@@ -3022,7 +2909,7 @@ mod tests {
             ),
         ]);
         let out = dir.path().join("out");
-        run(&project, &out, None).unwrap();
+        run(&project, &out).unwrap();
         // つながりのない決定だけなら、レーンを作らない
         let adr_index = fs::read_to_string(out.join(ADR_PAGE)).unwrap();
         assert!(!adr_index.contains("class=\"lanes\""), "{adr_index}");
@@ -3080,7 +2967,7 @@ mod tests {
             ),
         ]);
         let out = dir.path().join("out");
-        run(&project, &out, None).unwrap();
+        run(&project, &out).unwrap();
         let page = fs::read_to_string(out.join("システム/システム仕様.html")).unwrap();
         let detail = fs::read_to_string(out.join(DETAIL_PAGE)).unwrap();
         // ページのないファイルは、リンクにせず文字だけを出す。画像は元のファイルを相対パスで読む
@@ -3119,7 +3006,7 @@ mod tests {
             ),
         ]);
         let out = dir.path().join("out");
-        run(&project, &out, None).unwrap();
+        run(&project, &out).unwrap();
         let readme = fs::read_to_string(out.join(README_PAGE)).unwrap();
         // README.md の h1 をページの h1 にし、見出しは h2 から。GitHub と同じ形のアンカーを付ける
         assert!(
@@ -3164,7 +3051,7 @@ mod tests {
         let (dir, project) = project(&[]);
         let out = dir.path().join("docs");
         write_file(dir.path(), "docs/keep.txt", "keep");
-        let error = run(&project, &out, None).unwrap_err();
+        let error = run(&project, &out).unwrap_err();
         assert!(
             error
                 .to_string()
@@ -3190,7 +3077,7 @@ mod tests {
             ),
         ]);
         let out = dir.path().join("out");
-        run(&project, &out, None).unwrap();
+        run(&project, &out).unwrap();
         let read = |path: &str| fs::read_to_string(out.join(path)).unwrap();
 
         // ページを 1 つずつ、Slot の名前のディレクトリの下に、ページの名前で置く。カードは先頭のページを開く
@@ -3258,14 +3145,14 @@ mod tests {
     fn links_css_and_js_files_from_every_page() {
         let (dir, project) = project(&[
             ("docv/free/spec/a.md", "---\nmission: q\n---\n# A\n"),
-            ("docv/slot/service/install.yaml", "steps: []\n"),
+            ("docv/slot/service/install.md", "# インストール\n"),
             (
                 "docv/adr/go.md",
                 "---\ngroup: 言語\ndate: 2026-01-01\n---\n\n# Go にする\n",
             ),
         ]);
         let out = dir.path().join("out");
-        run(&project, &out, None).unwrap();
+        run(&project, &out).unwrap();
         // CSS と JS は、出力先の直下に、assets と同じ中身で書く
         assert_eq!(fs::read_to_string(out.join("docv.css")).unwrap(), CSS);
         assert_eq!(fs::read_to_string(out.join("docv.js")).unwrap(), JS);
@@ -3306,37 +3193,15 @@ mod tests {
     fn rebuilds_everything_but_the_marker() {
         let (dir, project) = project(&[]);
         let out = dir.path().join("output/docv/html");
-        run(&project, &out, None).unwrap();
-        write_file(&out, "jpg/a.jpg", "jpg");
+        run(&project, &out).unwrap();
+        write_file(&out, "old/a.html", "old");
         write_file(&out, "old.html", "old");
         // 途中で止まって index.html などがない出力先でも、目印があれば作り直せる
         fs::remove_file(out.join(PAGE)).unwrap();
-        run(&project, &out, None).unwrap();
-        assert!(!out.join("jpg").exists());
+        run(&project, &out).unwrap();
+        assert!(!out.join("old").exists());
         assert!(!out.join("old.html").exists());
         assert!(out.join(PAGE).is_file());
-    }
-
-    #[test]
-    fn puts_jpg_under_group_and_label() {
-        let slot = Slot {
-            def: slot::def("words").unwrap(),
-            path: "docv/slot/service/words.yaml".to_string(),
-            content: Content::Markdown(String::new()),
-            page: None,
-        };
-        assert_eq!(jpg_path(&slot), "サービス/用語集.jpg");
-        // 分けた Slot のページは、Slot の名前のディレクトリの下に、ページの名前で置く
-        let page = Slot {
-            def: slot::def("develop").unwrap(),
-            path: "docv/slot/guide/develop/web.yaml".to_string(),
-            content: Content::Markdown(String::new()),
-            page: Some(slot::Page {
-                title: "Web 画面".to_string(),
-                order: 1,
-            }),
-        };
-        assert_eq!(jpg_path(&page), "開発者向けガイド/開発コマンド/Web画面.jpg");
     }
 
     #[test]
@@ -3353,7 +3218,7 @@ mod tests {
             ("docv/slot/guide/doc-guide.md", "# Doc ガイド\n"),
         ]);
         let out = dir.path().join("out");
-        run(&project, &out, None).unwrap();
+        run(&project, &out).unwrap();
         let index = fs::read_to_string(out.join(PAGE)).unwrap();
         assert!(
             index.contains("<a class=\"card\" href=\"開発者向けガイド/アーキテクチャ/Web.html\">"),
@@ -3371,16 +3236,22 @@ mod tests {
     }
 
     #[test]
-    fn builds_each_yaml_page_of_a_split_slot_with_tabs() {
+    fn builds_each_page_of_the_develop_commands_like_other_split_slots() {
+        let mission = slot::def("develop").unwrap().mission;
         let (dir, project) = project(&[
             (
-                "docv/slot/guide/develop/web.yaml",
-                "order: 2\ntitle: Web\nsteps:\n  - id: test\n    name: テストを実行する\n    items:\n      body_markdown: |\n        npm test\n",
+                "docv/slot/guide/develop/web.md",
+                &format!(
+                    "---\norder: 2\nmission: {mission}\n---\n\n# Web\n\n| すること | コマンド |\n| --- | --- |\n| テストを実行する | `npm test` |\n\n## テストを実行する\n\n```sh\nnpm test\n```\n"
+                ),
             ),
-            ("docv/slot/guide/develop/api.yaml", "order: 1\ntitle: API\n"),
+            (
+                "docv/slot/guide/develop/api.md",
+                &format!("---\norder: 1\nmission: {mission}\n---\n\n# API\n"),
+            ),
         ]);
         let out = dir.path().join("out");
-        run(&project, &out, None).unwrap();
+        run(&project, &out).unwrap();
         let read = |path: &str| fs::read_to_string(out.join(path)).unwrap();
 
         // カードは先頭のページを開く
@@ -3389,7 +3260,7 @@ mod tests {
             index.contains("<a class=\"card\" href=\"開発者向けガイド/開発コマンド/API.html\">"),
             "{index}"
         );
-        // YAML のページも、title をページの名前にして、タブを order の順に並べる
+        // h1 をページの名前にして、タブを order の順に並べる
         let web = read("開発者向けガイド/開発コマンド/Web.html");
         assert!(
             web.contains("<title>Web - 開発コマンド - demo</title>"),
@@ -3399,14 +3270,107 @@ mod tests {
             web.contains("</svg>開発コマンド</h1>\n<nav class=\"page-tabs\"><a href=\"API.html\">API</a><a href=\"Web.html\" aria-current=\"page\">Web</a></nav>"),
             "{web}"
         );
-        // 中身は、分けないときの開発コマンドと同じ形で出す
+        // 中身は、ほかの Slot と同じく Markdown のまま出す。先頭に目次の箇条書きは作らない
         assert!(
-            web.contains("<h2 id=\"test\">テストを実行する</h2>"),
+            web.contains("<h2 id=\"テストを実行する\">テストを実行する</h2>"),
             "{web}"
         );
+        assert!(!web.contains("class=\"toc\""), "{web}");
         assert!(
-            web.contains("<p class=\"source\"><span class=\"mission\">テストやビルドなど、開発者が実行するコマンド</span><code>docv/slot/guide/develop/web.yaml</code>"),
+            web.contains("<p class=\"source\"><span class=\"mission\">テストやビルドなど、開発者が実行するコマンド</span><code>docv/slot/guide/develop/web.md</code>"),
             "{web}"
+        );
+    }
+
+    /// 本文の Markdown の表を、見出しの行で 1 つずつ作る。
+    fn table(header: &str, rows: &[&str]) -> String {
+        let mut text = format!(
+            "{header}\n|{}\n",
+            " --- |".repeat(header.matches('|').count() - 1)
+        );
+        for row in rows {
+            text.push_str(row);
+            text.push('\n');
+        }
+        text.push('\n');
+        text
+    }
+
+    fn markdown_html(text: &str) -> String {
+        let mut out = String::new();
+        html::push_html(&mut out, Parser::new_ext(text, markdown::OPTIONS));
+        out
+    }
+
+    fn manual_has_aligned(html: &str) -> bool {
+        html.contains("class=\"aligned\"")
+    }
+
+    #[test]
+    fn aligns_columns_of_tables_with_the_same_header() {
+        let body = markdown_html(&format!(
+            "{}{}{}",
+            table(
+                "| 用語 | 英語 | 意味 |",
+                &["| 注文 | Order | 利用者が、カートの商品を買うと決めたもの |"]
+            ),
+            table(
+                "| 用語 | 英語 | 意味 |",
+                &[
+                    "| 決済 | Payment | 注文の代金を受け取ること |",
+                    "| 返金 | `refund`<br>Refund | 決済を取り消すこと |"
+                ]
+            ),
+            table("| 名前 | 用途 |", &["| Rust | CLI |"]),
+        ));
+        let aligned = align_tables(&body);
+        // 短い列は、どちらの表のセルも折り返さない幅にする。全角は 1em、ほかは 0.6em、コードは余白の分を足し、セルの余白 1.4em を足す
+        // 用語: 全角 2 文字 = 2.0em。英語: `refund` は 6 × 0.6 + 0.6 = 4.2em、Payment は 7 × 0.6 = 4.2em
+        let colgroup = "<table class=\"aligned\"><colgroup><col style=\"width: 3.4em\"><col style=\"width: 5.6em\"><col></colgroup>";
+        assert_eq!(aligned.matches(colgroup).count(), 2, "{aligned}");
+        assert!(
+            aligned.contains("<thead><tr><th class=\"short\">用語</th><th class=\"short\">英語</th><th>意味</th></tr></thead>"),
+            "{aligned}"
+        );
+        assert!(
+            aligned.contains("<tr><td class=\"short\">返金</td><td class=\"short\"><code>refund</code><br>Refund</td><td>決済を取り消すこと</td></tr>"),
+            "{aligned}"
+        );
+        // 見出しの行が同じ表のない表は、そのまま出す
+        assert!(
+            aligned.contains("<table><thead><tr><th>名前</th><th>用途</th></tr></thead>"),
+            "{aligned}"
+        );
+        // 1 つしかなければ、どれも変えない。毎回同じ出力にする
+        let one = markdown_html(&table("| 用語 | 英語 | 意味 |", &["| a | b | c |"]));
+        assert_eq!(align_tables(&one), one);
+        assert_eq!(align_tables(&body), aligned);
+    }
+
+    #[test]
+    fn leaves_the_widest_column_flexible() {
+        // いちばん広い列が残りの幅を使う。同じ幅なら右の列
+        let body = markdown_html(&format!(
+            "{}{}",
+            table("| a | b | c |", &["| とても長い説明の文 | x | y |"]),
+            table("| a | b | c |", &["| z | 同じ幅 | 同じ幅 |"]),
+        ));
+        let aligned = align_tables(&body);
+        assert!(
+            aligned.contains(
+                "<colgroup><col><col style=\"width: 4.4em\"><col style=\"width: 4.4em\"></colgroup>"
+            ),
+            "{aligned}"
+        );
+        let body = markdown_html(&format!(
+            "{}{}",
+            table("| a | b |", &["| 同じ | 同じ |"]),
+            table("| a | b |", &["| x | y |"]),
+        ));
+        assert!(
+            align_tables(&body).contains("<colgroup><col style=\"width: 3.4em\"><col></colgroup>"),
+            "{}",
+            align_tables(&body)
         );
     }
 

@@ -16,30 +16,29 @@
   - [設定ファイル](<slot/service/service/config.md>)
   - [コマンド](<slot/service/service/cli.md>)
   - [ビジュアライズ](<slot/service/service/html.md>)
-- [インストール](<../output/docv/image/サービス/インストール.jpg>)
+- [インストール](<slot/service/install.md>)
 - [利用マニュアル](<slot/service/manual.md>)
-- [用語集](<../output/docv/image/サービス/用語集.jpg>)
+- [用語集](<slot/service/words.md>)
 
 ## システム
 
 - [システム概要](<slot/system/system-overview.md>)
 - [システム仕様](<slot/system/system.md>)
-- [技術スタック](<../output/docv/image/システム/技術スタック.jpg>)
+- [技術スタック](<slot/system/stack.md>)
 
 ## 開発者向けガイド
 
-- [環境構築](<../output/docv/image/開発者向けガイド/環境構築.jpg>)
-- [開発コマンド](<../output/docv/image/開発者向けガイド/開発コマンド.jpg>)
+- [環境構築](<slot/guide/setup.md>)
+- [開発コマンド](<slot/guide/develop.md>)
 - [アーキテクチャ](<slot/guide/architecture.md>)
 - [設計・実装](<slot/guide/design.md>)
 - [テスト方針](<slot/guide/testing.md>)
-- [環境変数](<../output/docv/image/開発者向けガイド/環境変数.jpg>)
 - [Doc ガイド](<slot/guide/doc-guide.md>)
 
 ## 運用
 
 - [リリース](<slot/operation/release.md>)
-- [費用](<../output/docv/image/運用/費用.jpg>)
+- [費用](<slot/operation/cost.md>)
 
 ## Free ファイル
 

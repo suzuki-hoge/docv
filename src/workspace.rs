@@ -86,7 +86,7 @@ impl Project {
         Ok(files)
     }
 
-    /// md の Slot、ADR、PDR（slot/、adr/、pdr/ の中の .md のファイル）を、パスの辞書順で返す。
+    /// Slot、ADR、PDR（slot/、adr/、pdr/ の中の .md のファイル）を、パスの辞書順で返す。
     /// Free ファイルのルールはかけず、整形と textlint だけをかける。シンボリックリンクは書き換えないので除く。
     pub fn docv_markdown(&self) -> Result<Vec<String>> {
         let mut files = Vec::new();
@@ -133,21 +133,19 @@ impl Project {
             .collect())
     }
 
-    /// 末尾の改行を整える YAML のファイル（ルートの中の設定ファイルと、YAML の Slot）。シンボリックリンクは書き換えないので除く。
-    /// targets が空ならすべて、そうでなければそのパス（ルートからの相対パス）だけ。
-    pub fn yaml_targets(&self, targets: &[String]) -> Result<Vec<String>> {
-        let mut files: Vec<String> = self
-            .walk(&self.slot_dir())?
-            .into_iter()
-            .filter(|(rel, symlink)| !symlink && (rel.ends_with(".yaml") || rel.ends_with(".yml")))
-            .map(|(rel, _)| rel)
-            .collect();
-        if let Ok(rel) = self.config_path.strip_prefix(&self.root) {
-            files.push(crate::markdown::slash_path(rel));
-        }
-        files.retain(|path| targets.is_empty() || targets.contains(path));
-        files.sort();
-        Ok(files)
+    /// 設定ファイル（docv.yaml）の、ルートからの相対パス。ルートの外に置いていれば None。
+    pub fn config_source(&self) -> Option<String> {
+        self.config_path
+            .strip_prefix(&self.root)
+            .ok()
+            .map(crate::markdown::slash_path)
+    }
+
+    /// 末尾の改行を整える設定ファイル（docv.yaml）。ルートの外に置いていれば None。
+    /// targets が空なら設定ファイルを、そうでなければ targets（ルートからの相対パス）に含むときだけ返す。
+    pub fn config_target(&self, targets: &[String]) -> Option<String> {
+        self.config_source()
+            .filter(|path| targets.is_empty() || targets.contains(path))
     }
 
     /// dir（ルートからの相対パス）の中のファイルと、それがシンボリックリンクか。
@@ -212,12 +210,7 @@ impl Project {
     /// docv diff-open で印を付けるファイルか。document_root の中（インデックスと docv_exclude に当てはまるものを除く）、
     /// ルートの README.md、設定ファイル。
     pub fn shows_changes_of(&self, rel: &str) -> bool {
-        let config = self
-            .config_path
-            .strip_prefix(&self.root)
-            .map(crate::markdown::slash_path)
-            .unwrap_or_default();
-        if rel == "README.md" || rel == config {
+        if rel == "README.md" || self.config_source().as_deref() == Some(rel) {
             return true;
         }
         is_under(rel, &self.config.document_root())
@@ -244,7 +237,7 @@ impl Project {
             .collect())
     }
 
-    /// fix で書き換えるファイル。管理対象のファイルと、md の Slot、ADR、PDR。
+    /// fix で書き換えるファイル。管理対象のファイルと、Slot、ADR、PDR。
     /// targets が空ならすべて、そうでなければそのパス（ルートからの相対パス）だけ。
     pub fn fix_targets(&self, targets: &[String]) -> Result<Vec<String>> {
         let mut files = self.managed()?;
@@ -262,11 +255,6 @@ impl Project {
     /// docv build の HTML の出力先。
     pub fn out_dir(&self) -> PathBuf {
         self.root.join(self.config.html_dir())
-    }
-
-    /// docv build の JPG の出力先。generate.image が false なら None。
-    pub fn image_dir(&self) -> Option<PathBuf> {
-        self.config.image_dir().map(|dir| self.root.join(dir))
     }
 
     /// docv build が書くインデックスのパス。
@@ -401,6 +389,16 @@ mod tests {
                 .fix_targets(&["docv/adr/rust.md".to_string()])
                 .unwrap(),
             ["docv/adr/rust.md"]
+        );
+        // fix と check が末尾の改行を整える YAML は、docv.yaml だけ
+        assert_eq!(project.config_target(&[]).as_deref(), Some("docv.yaml"));
+        assert_eq!(
+            project.config_target(&["docv.yaml".to_string()]).as_deref(),
+            Some("docv.yaml")
+        );
+        assert_eq!(
+            project.config_target(&["docv/adr/rust.md".to_string()]),
+            None
         );
         assert_eq!(
             project.document_root_files().unwrap(),

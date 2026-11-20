@@ -22,7 +22,7 @@ body { margin: 0; color: var(--fg); background: var(--bg); font-family: -apple-s
 body { display: flex; align-items: flex-start; }
 /* 本文と右の目次をひとまとまりにして、余った幅の真ん中に置く。広い画面でも、目次を本文の隣に置くため */
 main { flex: 1 1 auto; min-width: 0; max-width: 1040px; margin: 0 0 0 auto; padding: 32px 40px 80px; }
-/* トップの 5 ページを行き来するサイドバー。印刷の表示（JPG）では出さない */
+/* トップの 5 ページを行き来するサイドバー。印刷の表示では出さない */
 .sidebar { position: sticky; top: 0; flex: none; display: flex; flex-direction: column; width: 200px; height: 100vh; box-sizing: border-box; padding: 32px 16px; border-right: 1px solid var(--border); background: var(--bg-subtle); }
 .sidebar .project { margin: 0 0 12px; font-weight: 600; }
 .sidebar ul { list-style: none; margin: 0; padding: 0; }
@@ -60,7 +60,7 @@ a { color: var(--accent); text-decoration: none; }
 /* 本文の中のリンクは、色だけに頼らず、薄い下線でも示す。ナビ、カード、目次、タブは下線を付けない */
 main :is(p, li, td, th, dd) > a { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); }
 main :is(p, li, td, th, dd) > a:hover { text-decoration-color: currentColor; }
-main ul.toc a, .hit-file a { text-decoration: none; }
+.hit-file a { text-decoration: none; }
 /* キーボードで移ったとき、どこにいるかを枠で示す */
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
@@ -75,6 +75,8 @@ table { border-collapse: collapse; width: 100%; font-size: 0.93em; }
 th, td { border: 1px solid var(--border); padding: 5px 9px; text-align: left; vertical-align: top; }
 th { background: var(--bg-subtle); white-space: nowrap; }
 td code { white-space: nowrap; }
+/* 同じページの中で、見出しの行が同じ表（build が class="aligned" を付ける）。短い列は、build が見積もった幅にして折り返さず、いちばん長い列が残りの幅を使う */
+table.aligned .short { white-space: nowrap; }
 img { max-width: 100%; }
 hr { height: 0; margin: 32px 0; border: 0; border-top: 1px solid var(--border); }
 /* 直後の h2 の下線と二重にならないように */
@@ -91,11 +93,9 @@ main > h2:first-child { margin-top: 0; }
 h1, h2, h3, h4, th, td, .card, .decision-box, .outline, .sidebar, .page-tabs { word-break: auto-phrase; }
 h1, h2, h3, h4 { text-wrap: balance; }
 p, li { text-wrap: pretty; }
-/* 段落と箇条書きの 1 行の長さ。表、コード、カードは全幅のまま */
-main :is(p, ul, ol) { max-width: 46em; }
 
 /* Slot、ADR、PDR、Free ファイルのページの、h1 の上の元のファイルのパス。編集したいときに、元のファイルを見つけられるように。コピーのボタンは JS が動くときだけ出る */
-.source { display: flex; align-items: center; gap: 2px; max-width: none; margin: 0 0 4px; color: var(--fg-muted); font-size: 0.85em; }
+.source { display: flex; align-items: center; gap: 2px; margin: 0 0 4px; color: var(--fg-muted); font-size: 0.85em; }
 .source code { padding: 0; background: none; font-size: 1em; overflow-wrap: anywhere; }
 /* Slot のページでは、同じ行の左に Slot のミッションを、右にパスを置く。ミッションは、パスと同じ大きさ、色、字体にする。収まらなければ、パスを次の行の右に送る */
 .source:has(.mission) { flex-wrap: wrap; }
@@ -120,13 +120,6 @@ a.card:hover { border-color: var(--accent); color: var(--accent); }
 .card.missing .icon { color: var(--fg-faint); }
 .card .state { position: absolute; top: -0.75em; right: 8px; padding: 0 4px; background: var(--bg); color: var(--fg-muted); font-size: 0.7em; line-height: 1.4; }
 .note { color: var(--fg-muted); font-size: 0.85em; }
-/* 開発コマンドの先頭の目次 */
-ul.toc { margin: 8px 0 16px; padding-left: 1.2em; }
-ul.toc li { margin: 2px 0; }
-/* 用語集の表。まとまりの表どうしで、列の幅をそろえる */
-table.words { table-layout: fixed; }
-table.words th:nth-child(1), table.words th:nth-child(2) { width: 9em; }
-table.words td:nth-child(1), table.words td:nth-child(2) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tag { display: inline-block; border: 1px solid var(--border); border-radius: 10px; padding: 0 7px; margin: 0 3px 2px 0; font-size: 0.8em; color: var(--fg-subtle); }
 /* タグの色。淡い 8 色を、出てきた順に割り当てる */
 .tag.c0 { background: #ddf4ff; border-color: #b6e3ff; }
@@ -173,24 +166,6 @@ mark { background: #fff8c5; color: inherit; }
 .page-tabs a:hover { color: var(--accent); }
 .page-tabs a[aria-current="page"] { border-color: var(--border); border-bottom-color: var(--bg); background: var(--bg); color: var(--fg); font-weight: 600; }
 
-/* OS ごとの手順のタブ。JS は使わない。ラジオボタンは見えないので、キーボードで移ったときはラベルに枠を出す。印刷の表示（JPG）では、すべての OS を並べる */
-.tabs > input { position: absolute; opacity: 0; pointer-events: none; }
-.tabs > label { display: inline-block; padding: 2px 12px; margin-right: 4px; border: 1px solid var(--border); border-bottom: none; border-radius: 6px 6px 0 0; cursor: pointer; color: var(--fg-muted); }
-.tabs > input:checked + label { background: var(--bg-subtle); color: var(--fg); font-weight: 600; }
-.tabs > input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
-.tabs > .panel { display: none; border: 1px solid var(--border); padding: 8px 12px; }
-.tabs > input:nth-of-type(1):checked ~ .panel:nth-of-type(1),
-.tabs > input:nth-of-type(2):checked ~ .panel:nth-of-type(2),
-.tabs > input:nth-of-type(3):checked ~ .panel:nth-of-type(3),
-.tabs > input:nth-of-type(4):checked ~ .panel:nth-of-type(4),
-.tabs > input:nth-of-type(5):checked ~ .panel:nth-of-type(5),
-.tabs > input:nth-of-type(6):checked ~ .panel:nth-of-type(6) { display: block; }
-.panel-os { display: none; }
-@media print {
-  .tabs > label { display: none; }
-  .tabs > .panel { display: block; margin-bottom: 8px; }
-  .panel-os { display: block; margin: 0 0 4px; font-weight: 600; color: var(--fg-muted); }
-}
 /* Markdown の中の <details>。閉じたまま出す。枠で囲み、見出し（summary）と中身を線で分け、見出しを押せると分かるようにする */
 details { margin: 8px 0 16px; padding: 0 12px; border: 1px solid var(--border); border-radius: 6px; }
 details > summary { position: relative; margin: 0 -12px; padding: 6px 12px 6px 28px; cursor: pointer; list-style: none; }
@@ -200,7 +175,7 @@ details > summary::before { content: ""; position: absolute; left: 12px; top: ca
 details[open] > summary::before { transform: translateY(-50%) rotate(90deg); }
 /* 開いているときだけ、見出しの背景を左のサイドバーと同じ色にする。角は枠の内側に合わせて丸める */
 details[open] > summary { border-bottom: 1px solid var(--border); border-radius: 5px 5px 0 0; background: var(--bg-subtle); }
-/* 印刷の表示（JPG）では、画像では開けないので、開いたときと同じ見た目で中身を写す */
+/* 印刷の表示では、紙では開けないので、開いたときと同じ見た目で中身を出す */
 @media print {
   details::details-content { content-visibility: visible; }
   details > summary { border-bottom: 1px solid var(--border); border-radius: 5px 5px 0 0; background: var(--bg-subtle); }
@@ -246,7 +221,7 @@ details[open] > summary { border-bottom: 1px solid var(--border); border-radius:
 .page-tabs a.deleted, table.docs tr.deleted > td { background: #ffebe9; }
 .page-tabs a.deleted, tr.deleted a { color: var(--fg-muted); text-decoration: line-through; }
 
-/* 印刷の表示（JPG）。サイドバー、目次、コピーのボタンを出さず、本文だけを写す。ほかの規則に上書きされないように、最後に書く */
+/* 印刷の表示。サイドバー、目次、コピーのボタンを出さず、本文だけを出す。ほかの規則に上書きされないように、最後に書く */
 @media print {
   body { display: block; }
   main { margin: 0 auto; }

@@ -1,4 +1,4 @@
-//! docv の版。docv.yaml の docv_version と、YAML の 1 行目のスキーマの URL の版を確かめる。docv/slot/service/service/config.md の「docv の版」。
+//! docv の版。docv.yaml の docv_version と、docv.yaml の 1 行目のスキーマの URL の版を確かめる。docv/slot/service/service/config.md の「docv の版」。
 
 use std::fmt;
 use std::fs;
@@ -55,7 +55,7 @@ impl fmt::Display for Version {
     }
 }
 
-/// YAML の 1 行目に docv のスキーマの URL があれば、その版。ローカルのパスなど、版のタグの URL でなければ None。
+/// docv.yaml の 1 行目に docv のスキーマの URL があれば、その版。ローカルのパスなど、版のタグの URL でなければ None。
 pub fn schema_version(text: &str) -> Option<Version> {
     let line = text.lines().next()?;
     let (_, rest) = line.split_once(schema::URL_BASE)?;
@@ -103,7 +103,7 @@ pub fn advice_for_unreadable(config_text: &str) -> Option<String> {
     advice(declared, config_text)
 }
 
-/// docv.yaml の docv_version と、docv.yaml と YAML の Slot の 1 行目のスキーマの URL の版を確かめる。
+/// docv.yaml の docv_version と、docv.yaml の 1 行目のスキーマの URL の版を確かめる。
 /// スキーマの URL は docv_version と比べる。docv_version がなければ、先に docv_version を直すので比べない。
 pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
     let mut diagnostics = Vec::new();
@@ -124,30 +124,24 @@ pub fn check(project: &Project) -> Result<Vec<Diagnostic>> {
             .position(|l| l.starts_with("docv_version:"))
             .map_or(1, |i| i + 1);
         diagnostics.push(Diagnostic {
-            path: config_path,
+            path: config_path.clone(),
             line,
             rule: "docv-version".to_string(),
             message,
         });
     }
-    let Some(declared) = declared else {
-        return Ok(diagnostics);
-    };
-    for path in project.yaml_targets(&[])? {
-        let text = fs::read_to_string(project.root.join(&path))
-            .with_context(|| format!("{path} を読めない"))?;
-        if let Some(version) = schema_version(&text)
-            && version != declared
-        {
-            diagnostics.push(Diagnostic {
-                path,
-                line: 1,
-                rule: "schema-version".to_string(),
-                message: format!(
-                    "スキーマの URL の版は v{version} で、docv_version は {declared}。URL の版を v{declared} にする"
-                ),
-            });
-        }
+    if let Some(declared) = declared
+        && let Some(version) = schema_version(&config_text)
+        && version != declared
+    {
+        diagnostics.push(Diagnostic {
+            path: config_path,
+            line: 1,
+            rule: "schema-version".to_string(),
+            message: format!(
+                "スキーマの URL の版は v{version} で、docv_version は {declared}。URL の版を v{declared} にする"
+            ),
+        });
     }
     Ok(diagnostics)
 }
@@ -203,19 +197,14 @@ mod tests {
             schema_version(&url("1.4.0", "docv.schema.json")),
             Some(Version(1, 4, 0))
         );
-        assert_eq!(
-            schema_version(&schema::header("words.schema.json")),
-            Some(Version::current())
-        );
+        assert_eq!(schema_version(&schema::header()), Some(Version::current()));
         // 1 行目だけを見る。ローカルのパスと、版のタグでない URL は読まない
         assert_eq!(
             schema_version(&format!("a: 1\n{}", url("1.4.0", "x"))),
             None
         );
         assert_eq!(
-            schema_version(
-                "# yaml-language-server: $schema=../../assets/schema/words.schema.json\n"
-            ),
+            schema_version("# yaml-language-server: $schema=./assets/schema/docv.schema.json\n"),
             None
         );
         assert_eq!(
@@ -292,38 +281,31 @@ mod tests {
             "{}docv_version: {current}\n",
             url("1.4.0", "docv.schema.json")
         );
+        // docv.yaml のほかのファイルの URL は比べない。YAML の Slot はなくなった
         let words = format!("{}groups: []\n", url("1.4.0", "words.schema.json"));
         let result = check_files(&[
             ("docv.yaml", &config),
             ("docv/slot/service/words.yaml", &words),
-            // 今の版の URL と、ローカルのパスは指摘しない
-            (
-                "docv/slot/system/stack.yaml",
-                &format!("{}stack: []\n", schema::header("stack.schema.json")),
-            ),
-            (
-                "docv/slot/guide/env.yaml",
-                "# yaml-language-server: $schema=../../assets/schema/env.schema.json\nenvs: []\n",
-            ),
         ]);
-        let message = format!(
-            "schema-version スキーマの URL の版は v1.4.0 で、docv_version は {current}。URL の版を v{current} にする"
-        );
         assert_eq!(
             result,
-            [
-                format!("docv.yaml:1: {message}"),
-                format!("docv/slot/service/words.yaml:1: {message}"),
-            ]
+            [format!(
+                "docv.yaml:1: schema-version スキーマの URL の版は v1.4.0 で、docv_version は {current}。URL の版を v{current} にする"
+            )]
         );
+        // 今の版の URL と、ローカルのパスは指摘しない
+        for first in [
+            schema::header(),
+            "# yaml-language-server: $schema=./assets/schema/docv.schema.json\n".to_string(),
+        ] {
+            let config = format!("{first}docv_version: {current}\n");
+            assert!(check_files(&[("docv.yaml", &config)]).is_empty());
+        }
         // docv_version がなければ、先に docv_version を直すので、URL は比べない
-        let result = check_files(&[
-            (
-                "docv.yaml",
-                &format!("{}title: t\n", url("1.4.0", "docv.schema.json")),
-            ),
-            ("docv/slot/service/words.yaml", &words),
-        ]);
+        let result = check_files(&[(
+            "docv.yaml",
+            &format!("{}title: t\n", url("1.4.0", "docv.schema.json")),
+        )]);
         assert_eq!(result.len(), 1);
         assert!(result[0].contains("docv-version"), "{result:?}");
     }

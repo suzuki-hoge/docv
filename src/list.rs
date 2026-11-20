@@ -285,13 +285,24 @@ mod tests {
         // 形の合わない Slot も、置いたことに数える。形の誤りは check が報告する
         let (_dir, project) = project(
             "dir:\n  document_root: docs\n",
-            &[("docs/slot/service/words.yaml", "groups: 1\n")],
+            &[
+                ("docs/slot/service/words.md", "---\nmission: [\n"),
+                // 残った YAML の Slot は、Slot ではないので、置いたことに数えない（check が slot-unknown にする）
+                ("docs/slot/system/stack.yaml", "stack: []\n"),
+            ],
         );
         let list = text(Some(&project)).unwrap();
         assert!(
             slot_lines(&list, "words")[0].starts_with(&format!(
-                "* {}  docs/slot/service/words.yaml",
+                "* {}  docs/slot/service/words.md",
                 pad("words", 15)
+            )),
+            "{list}"
+        );
+        assert!(
+            slot_lines(&list, "stack")[0].starts_with(&format!(
+                "  {}  docs/slot/system/stack.md",
+                pad("stack", 15)
             )),
             "{list}"
         );

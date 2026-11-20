@@ -46,8 +46,14 @@ pub struct Changes {
 
 impl Changes {
     /// root で git を呼び、--from と作業ツリーの差分のうち、keep が true を返すファイルのものを集める。
+    /// config は、設定ファイル（docv.yaml）のルートからの相対パス。docv の版を上げただけの行を、差分から除く。
     /// git の管理下にないか、--from が解けなければ error。
-    pub fn collect(root: &Path, from: &str, keep: impl Fn(&str) -> bool) -> Result<Changes> {
+    pub fn collect(
+        root: &Path,
+        from: &str,
+        config: Option<&str>,
+        keep: impl Fn(&str) -> bool,
+    ) -> Result<Changes> {
         if git(root, &["rev-parse", "--is-inside-work-tree"]).is_err() {
             bail!("{} は git の管理下にない", root.display());
         }
@@ -91,7 +97,9 @@ impl Changes {
             let text = git(root, &["show", &format!("{from}:./{path}")]).unwrap_or_default();
             changes.deleted.insert(path, text);
         }
-        changes.ignore_version_bumps(root, from);
+        if let Some(config) = config {
+            changes.ignore_version_bump(root, from, config);
+        }
         for path in untracked.split('\0').filter(|p| !p.is_empty() && keep(p)) {
             // git の行数がないので、ファイルの行を数える。読めなければバイナリとみなす。
             let lines = std::fs::read_to_string(root.join(path))
@@ -109,33 +117,30 @@ impl Changes {
         Ok(changes)
     }
 
-    /// docv の版を上げただけの行（docv.yaml と YAML の Slot の 1 行目のスキーマの URL、docv.yaml の docv_version）を、差分から除く。
-    /// 版のほかに変わっていないファイルは、変わっていないとみなす。ほかも変わったファイルは、版の行を行数から引く。
-    /// 版を書くのは YAML だけなので、書き換えた YAML のファイルだけを、--from の中身と比べる。
-    fn ignore_version_bumps(&mut self, root: &Path, from: &str) {
-        let yaml: Vec<String> = self
+    /// docv の版を上げただけの行（docv.yaml の 1 行目のスキーマの URL と docv_version）を、差分から除く。
+    /// 版のほかに変わっていなければ、変わっていないとみなす。ほかも変わっていれば、版の行を行数から引く。
+    /// 版を書くのは docv.yaml だけなので、書き換えた docv.yaml だけを、--from の中身と比べる。config は、そのルートからの相対パス。
+    fn ignore_version_bump(&mut self, root: &Path, from: &str, config: &str) {
+        if self
             .files
-            .iter()
-            .filter(|(p, c)| {
-                c.status == Status::Modified && (p.ends_with(".yaml") || p.ends_with(".yml"))
-            })
-            .map(|(p, _)| p.clone())
-            .collect();
-        for path in yaml {
-            let (Ok(old), Ok(new)) = (
-                git(root, &["show", &format!("{from}:./{path}")]),
-                std::fs::read_to_string(root.join(&path)),
-            ) else {
-                continue;
-            };
-            let bump = version_bump(&old, &new);
-            if bump.only {
-                self.files.remove(&path);
-            } else if let Some(change) = self.files.get_mut(&path) {
-                change.lines = change
-                    .lines
-                    .map(|(a, r)| (a.saturating_sub(bump.lines), r.saturating_sub(bump.lines)));
-            }
+            .get(config)
+            .is_none_or(|c| c.status != Status::Modified)
+        {
+            return;
+        }
+        let (Ok(old), Ok(new)) = (
+            git(root, &["show", &format!("{from}:./{config}")]),
+            std::fs::read_to_string(root.join(config)),
+        ) else {
+            return;
+        };
+        let bump = version_bump(&old, &new);
+        if bump.only {
+            self.files.remove(config);
+        } else if let Some(change) = self.files.get_mut(config) {
+            change.lines = change
+                .lines
+                .map(|(a, r)| (a.saturating_sub(bump.lines), r.saturating_sub(bump.lines)));
         }
     }
 
@@ -306,7 +311,10 @@ pub fn out_dir() -> Result<PathBuf> {
 /// 差分を集め、印を付けた HTML を出力先に書く。差分がなければ何も書かずに None。
 pub fn run(project: &Project, from: &str) -> Result<Option<PathBuf>> {
     // コードなど、docv が扱わないファイルの差分は見ない。
-    let changes = Changes::collect(&project.root, from, |path| project.shows_changes_of(path))?;
+    let config = project.config_source();
+    let changes = Changes::collect(&project.root, from, config.as_deref(), |path| {
+        project.shows_changes_of(path)
+    })?;
     if changes.is_empty() {
         return Ok(None);
     }
@@ -352,31 +360,31 @@ mod tests {
     fn ignores_version_bumps() {
         let schema = |v: &str| {
             format!(
-                "# yaml-language-server: $schema={}{v}/assets/schema/words.schema.json",
+                "# yaml-language-server: $schema={}{v}/assets/schema/docv.schema.json",
                 schema::URL_BASE
             )
         };
         let bump = |lines, only| VersionBump { lines, only };
         // 版は、過ぎた版で書く。今の版を書くと、make new-version が古い版の残りとして見つけるため
-        // YAML の Slot の 1 行目のスキーマの URL の版だけ
-        let old = format!("{}\ngroups: []\n", schema("1.0.0"));
-        let new = format!("{}\ngroups: []\n", schema("1.0.1"));
+        // docv.yaml の 1 行目のスキーマの URL の版だけ
+        let old = format!("{}\ntitle: t\n", schema("1.0.0"));
+        let new = format!("{}\ntitle: t\n", schema("1.0.1"));
         assert_eq!(version_bump(&old, &new), bump(1, true));
         // docv.yaml のスキーマの URL と docv_version。docv_version は引用符で囲んでもよい
         let old = format!("{}\n# 設定\ndocv_version: 1.0.0\n", schema("1.0.0"));
         let new = format!("{}\n# 設定\ndocv_version: \"1.0.1\"\n", schema("1.0.1"));
         assert_eq!(version_bump(&old, &new), bump(2, true));
         // 版のほかも変わっていれば、版の行の数だけを返す
-        let old = format!("{}\ngroups: []\n", schema("1.0.0"));
-        let new = format!("{}\ngroups: [a]\n", schema("1.0.1"));
+        let old = format!("{}\ntitle: t\n", schema("1.0.0"));
+        let new = format!("{}\ntitle: u\n", schema("1.0.1"));
         assert_eq!(version_bump(&old, &new), bump(1, false));
         // 版のタグでない URL から変えたのは、版の行ではない
-        let old = format!("{}\ngroups: []\n", schema("main"));
-        let new = format!("{}\ngroups: []\n", schema("1.0.1"));
+        let old = format!("{}\ntitle: t\n", schema("main"));
+        let new = format!("{}\ntitle: t\n", schema("1.0.1"));
         assert_eq!(version_bump(&old, &new), bump(0, false));
         // 2 行目より後のスキーマの URL は、docv check が見ないので伏せない
-        let old = format!("groups: []\n{}\n", schema("1.0.0"));
-        let new = format!("groups: []\n{}\n", schema("1.0.1"));
+        let old = format!("title: t\n{}\n", schema("1.0.0"));
+        let new = format!("title: t\n{}\n", schema("1.0.1"));
         assert_eq!(version_bump(&old, &new), bump(0, false));
         // 末尾の改行だけの違いは、版を上げただけではない
         assert_eq!(version_bump("a: 1", "a: 1\n"), bump(0, false));

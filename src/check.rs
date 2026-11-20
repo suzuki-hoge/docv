@@ -11,7 +11,7 @@ use crate::markdown::{self, Document, Outline};
 use crate::style::{self, Style};
 use crate::textlint::Textlint;
 use crate::workspace::Project;
-use crate::{decision, format, layout, slot, slot_markdown, version};
+use crate::{decision, format, layout, slot, version};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Options {
@@ -29,51 +29,31 @@ pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Ve
     };
     let mut diagnostics = Vec::new();
     let mut textlint_files = Vec::new();
-    let mut textlint_virtual = Vec::new();
     for path in project.targets(targets)? {
         let text = read(&path)?;
         diagnostics.extend(check_markdown(project, &style, &path, &text, true));
         textlint_files.push(path);
     }
-    // md の Slot、ADR、PDR には、YAML front matter のほかは、Free ファイルと同じ検査をかける。
-    // ADR と PDR の YAML front matter は decision::check で確かめる。
+    // Slot、ADR、PDR には、YAML front matter のほかは、Free ファイルと同じ検査をかける。
+    // Slot の YAML front matter は slot::check で、ADR と PDR の YAML front matter は decision::check で確かめる。
     for path in project.docv_markdown()?.into_iter().filter(|p| wanted(p)) {
         let text = read(&path)?;
         diagnostics.extend(check_markdown(project, &style, &path, &text, false));
         textlint_files.push(path);
     }
-    // YAML の Slot は、Markdown の項目（`_markdown` で終わる項目）の中身に検査をかける。
-    for path in slot::yaml_paths(project)?.into_iter().filter(|p| wanted(p)) {
+    // docv.yaml は、末尾の改行だけを整形と連動させる。
+    if project.config.format.enabled
+        && let Some(path) = project.config_target(targets)
+    {
         let text = read(&path)?;
-        let Some(scan) = slot_markdown::scan(&text) else {
-            continue;
-        };
-        for problem in scan.problems {
+        let formatted = format::final_newline(&text);
+        if formatted != text {
             diagnostics.push(Diagnostic {
-                path: path.clone(),
-                line: problem.line,
-                rule: problem.rule.to_string(),
-                message: problem.message,
+                line: format::first_diff_line(&text, &formatted),
+                path,
+                rule: "format-diff".to_string(),
+                message: "末尾の改行を 1 つにする。docv fix で整形する".to_string(),
             });
-        }
-        for block in &scan.blocks {
-            diagnostics.extend(check_block(project, &style, &path, block));
-        }
-        textlint_virtual.push((path, slot_markdown::virtual_markdown(&text, &scan.blocks)));
-    }
-    // docv.yaml と YAML の Slot は、末尾の改行だけを整形と連動させる。
-    if project.config.format.enabled {
-        for path in project.yaml_targets(targets)? {
-            let text = read(&path)?;
-            let formatted = format::final_newline(&text);
-            if formatted != text {
-                diagnostics.push(Diagnostic {
-                    line: format::first_diff_line(&text, &formatted),
-                    path,
-                    rule: "format-diff".to_string(),
-                    message: "末尾の改行を 1 つにする。docv fix で整形する".to_string(),
-                });
-            }
         }
     }
     // Slot、ADR、PDR は、ファイルどうしのつながり（supersedes など）も見るので、すべて読んでから絞る。
@@ -93,7 +73,7 @@ pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Ve
             .into_iter()
             .filter(|d| wanted(&d.path)),
     );
-    // docv.yaml の docv_version と、docv.yaml と YAML の Slot の 1 行目のスキーマの URL の版。
+    // docv.yaml の docv_version と、docv.yaml の 1 行目のスキーマの URL の版。
     diagnostics.extend(
         version::check(project)?
             .into_iter()
@@ -102,7 +82,7 @@ pub fn run(project: &Project, targets: &[String], options: Options) -> Result<Ve
     if options.textlint
         && let Some(textlint) = Textlint::new(project)
     {
-        diagnostics.extend(textlint.lint(&textlint_files, &textlint_virtual)?);
+        diagnostics.extend(textlint.lint(&textlint_files)?);
     }
     diagnostics.sort();
     Ok(diagnostics)
@@ -153,44 +133,6 @@ fn check_markdown(
     }
 
     check_format(&mut cx, text);
-    cx.diagnostics
-}
-
-/// YAML の Slot の Markdown の項目 1 つ。行番号は YAML の行番号にする。
-/// 項目の中に h1 はなく、HTML では見出しの段を付け直すので、見出しの検査はかけない。
-/// リンクは、HTML と同じく、ルートからの相対パスとして確かめる。
-fn check_block(
-    project: &Project,
-    style: &Style,
-    path: &str,
-    block: &slot_markdown::Block,
-) -> Vec<Diagnostic> {
-    let mut cx = Checker {
-        project,
-        path,
-        diagnostics: Vec::new(),
-    };
-    let document = Document {
-        frontmatter: None,
-        body: block.text.clone(),
-        body_start_line: block.line,
-    };
-    check_links(&mut cx, &markdown::outline(&document), Path::new(""));
-    for found in style::check(style, &document) {
-        if found.rule != "heading-number" {
-            cx.push(found.line, found.rule, found.message);
-        }
-    }
-    if project.config.format.enabled
-        && let Ok(formatted) = format::format(&block.text)
-        && formatted != block.text
-    {
-        cx.push(
-            block.line - 1 + format::first_diff_line(&block.text, &formatted),
-            "format-diff",
-            "整形が必要。docv fix で整形する",
-        );
-    }
     cx.diagnostics
 }
 
@@ -497,6 +439,7 @@ lint:
             ),
             ("docv/free/spec/あ.md", &format!("{}# あ\n", fm(""))),
             ("README.md", "# R\n"),
+            // 残った YAML の Slot は、Markdown に書き直すよう案内する
             ("docv/slot/service/words.yaml", "groups: 1\n"),
             ("docv/adr/a.md", "# A\n"),
             // PDR も ADR と同じく決定として読み、Slot の名前でないファイルとはしない。Markdown には Free ファイルと同じ検査をかける
@@ -520,11 +463,11 @@ lint:
         );
         assert_eq!(
             result[3],
-            "docv/slot/service/words.yaml:1: slot-invalid 用語集の Slot の形に合わない: groups: invalid type: integer `1`, expected a sequence at line 1 column 9"
+            "docv/slot/service/words.yaml:1: slot-unknown YAML の Slot はなくなった。docv gen words --print の雛形を見て、docv/slot/service/words.md に Markdown で書き直す"
         );
     }
 
-    /// md の Slot、ADR、YAML の Slot の Markdown の項目に、Free ファイルと同じ検査をかける（YAML front matter を除く）。
+    /// Slot と ADR に、Free ファイルと同じ検査をかける（YAML front matter を除く）。
     const SLOT_FILES: &[(&str, &str)] = &[
         (
             "docv/slot/service/manual.md",
@@ -533,10 +476,6 @@ lint:
         (
             "docv/adr/a.md",
             "---\ngroup: g\ndate: 2026-01-01\nsupersedes: [none]\n---\n\n# A\n\n[切れた](none.md)\n",
-        ),
-        (
-            "docv/slot/service/words.yaml",
-            "groups:\n  - name: g\n    items:\n      - ja: 用語\n        desc_markdown: |\n          説明\n\n          **太字** [切れた](none.md) [ある](docv/free/spec/b.md)\n      - ja: 二つ目\n        desc_markdown: 1 行\n      - ja: |\n          複数行\n        desc_markdown: |-\n          x\n",
         ),
         ("docv/free/spec/b.md", "---\nmission: q\n---\n\n# B\n"),
     ];
@@ -548,11 +487,6 @@ lint:
         "docv/slot/service/manual.md:7: link-broken リンク先 none.md がない",
         "docv/slot/service/manual.md:7: style-bold 太字を使わない",
         "docv/slot/service/manual.md:9: title-count h1 が 2 個ある。1 つにする",
-        "docv/slot/service/words.yaml:8: link-broken リンク先 none.md がない",
-        "docv/slot/service/words.yaml:8: style-bold 太字を使わない",
-        "docv/slot/service/words.yaml:10: slot-markdown-style desc_markdown は Markdown なので、| のブロックで書く",
-        "docv/slot/service/words.yaml:12: slot-text-multiline ja は 1 行で書く。複数行の文章は、_markdown で終わる項目に書く",
-        "docv/slot/service/words.yaml:13: slot-markdown-style desc_markdown は | だけで書く。|- や |+ や字下げの数は付けない",
     ];
 
     #[test]
@@ -569,11 +503,7 @@ lint:
         }
         let project = Project::open(&Locate::default(), dir.path()).unwrap();
         // パスを渡すと、そのファイルだけを、パスを渡さないときと同じ検査で確かめる
-        for path in [
-            "docv/slot/service/manual.md",
-            "docv/adr/a.md",
-            "docv/slot/service/words.yaml",
-        ] {
+        for path in ["docv/slot/service/manual.md", "docv/adr/a.md"] {
             let result: Vec<String> = run(&project, &[path.to_string()], OPTIONS)
                 .unwrap()
                 .iter()
@@ -616,7 +546,10 @@ lint:
     fn skips_excluded_and_dot_files_in_slot_dir() {
         let result = check(&[
             (".gitignore", "memo.txt\n"),
-            ("docv/slot/service/words.yaml", "groups: []\n"),
+            (
+                "docv/slot/service/words.md",
+                "---\nmission: このプロジェクトの言葉の意味\n---\n\n# 用語集\n",
+            ),
             ("docv/slot/service/.DS_Store", ""),
             ("docv/.cache/a.yaml", "a: 1\n"),
             ("docv/slot/service/memo.txt", "メモ\n"),
@@ -626,15 +559,16 @@ lint:
     }
 
     #[test]
-    fn checks_only_format_in_slot_markdown() {
+    fn checks_format_of_slots_and_the_final_newline_of_the_config() {
         let dir = tempfile::tempdir().unwrap();
+        // docv.yaml は、末尾の改行だけを確かめる
         write(
             dir.path(),
             "docv.yaml",
             concat!(
                 "docv_version: ",
                 env!("CARGO_PKG_VERSION"),
-                "\nformat:\n  enabled: true\n"
+                "\nformat:\n  enabled: true\n\n"
             ),
         );
         write(
@@ -647,7 +581,6 @@ lint:
             "docv/adr/a.md",
             "---\ndate: 2026-10-13\n---\n\n# A\n\n| 種類 | c |\n| ---- | - |\n",
         );
-        write(dir.path(), "docv/slot/service/words.yaml", "groups: []");
         let project = Project::open(&Locate::default(), dir.path()).unwrap();
         let result: Vec<String> = run(&project, &[], OPTIONS)
             .unwrap()
@@ -657,8 +590,8 @@ lint:
         assert_eq!(
             result,
             [
+                "docv.yaml:4: format-diff 末尾の改行を 1 つにする。docv fix で整形する",
                 "docv/slot/service/manual.md:7: format-diff 整形が必要。docv fix で整形する",
-                "docv/slot/service/words.yaml:1: format-diff 末尾の改行を 1 つにする。docv fix で整形する",
             ]
         );
     }

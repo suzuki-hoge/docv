@@ -22,8 +22,8 @@ mission: 外から見た機能と、それぞれの振る舞いと決まり
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | init      | `docv.yaml` だけ。`--print` のときは書かない                                                                                                                                                                                                            |
 | gen       | 指定した Slot ファイルだけ。`--print` のときは書かない                                                                                                                                                                                                  |
-| fix       | 管理対象のファイル、md の Slot、ADR、PDR、YAML の Slot だけ。整形と textlint の自動修正だけをする。YAML の Slot は、Markdown の項目の中身だけを直す。`docv.yaml` と YAML の Slot は、末尾の改行も整える                                                 |
-| build     | `dir.output` の下の `html/` と `image/` の中と、`document_root` の直下の `README.md` だけ。出力先は、目印の `.docv` を残して中を消し、作り直す。`generate.image` が false のときと、`--no-image` のときは `image/` に触れない                           |
+| fix       | 管理対象のファイル、Slot、ADR、PDR と `docv.yaml` だけ。整形と textlint の自動修正だけをする。`docv.yaml` は、末尾の改行だけを整える                                                                                                                    |
+| build     | `dir.output` の下の `html/` の中と、`document_root` の直下の `README.md` だけ。出力先は、目印の `.docv` を残して中を消し、作り直す                                                                                                                      |
 | diff-open | OS のキャッシュのディレクトリの下の `docv/diff-open/` の中だけ（macOS は `~/Library/Caches/docv/diff-open/`、Windows は `%LOCALAPPDATA%\docv\diff-open\`）。build の出力先と同じく、目印の `.docv` を残して中を消し、作り直す。差分がないときは書かない |
 
 - ほかのコマンドは、ファイルを書かない

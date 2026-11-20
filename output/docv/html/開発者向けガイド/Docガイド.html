@@ -106,10 +106,10 @@
 <div class="table-scroll"><table><thead><tr><th>言葉</th><th>指すもの</th><th>書く場所</th></tr></thead><tbody>
 <tr><td>サービス説明</td><td>docv をなにも知らない利用者へ伝える最初の説明</td><td>サービス概要</td></tr>
 <tr><td>サービス仕様</td><td>外から見た機能、振る舞い、決まり。実装をそっくり差し替えても変わらないこと<br>利用者、AI Agent、開発者が読む</td><td>要点はサービス仕様の 1 ページ目（<code>docv desc</code>）<br>詳しいことは 2 ページ目以降</td></tr>
-<tr><td>システム構成</td><td>部品（CLI、リポジトリのドキュメント、textlint、Chrome、出力など）の構成と役割、部品の間の流れ、どの処理をどの部品で行うか<br>開発者が判断を下すときに読む</td><td>全体像はシステム概要。SVG で描く<br>部品ごとの詳しいことはシステム仕様</td></tr>
+<tr><td>システム構成</td><td>部品（CLI、リポジトリのドキュメント、textlint、git、出力など）の構成と役割、部品の間の流れ、どの処理をどの部品で行うか<br>開発者が判断を下すときに読む</td><td>全体像はシステム概要。SVG で描く<br>部品ごとの詳しいことはシステム仕様</td></tr>
 <tr><td>アーキテクチャ</td><td>システム全体で採る方式と決まり（部品の分け方、通信の方式、非同期処理の実現方法など）<br>部品を足したり、つなぎ方を変えたりするときに読む</td><td>アーキテクチャ<br>その方式を選んだ理由は ADR</td></tr>
 <tr><td>サービスエラー</td><td>利用者が書いたドキュメントや渡した引数が原因で起きるエラー<br>例: check の指摘、<code>docv.yaml</code> の誤り、終了コード</td><td>サービス仕様の 2 ページ目以降</td></tr>
-<tr><td>システムエラー</td><td>環境や外の道具が原因で起きるエラーと、その扱い<br>例: Chrome が見つからない、Chrome とのやりとりが途切れる</td><td>システム仕様</td></tr>
+<tr><td>システムエラー</td><td>環境や外の道具が原因で起きるエラーと、その扱い<br>例: textlint に要る Node.js が見つからない、ルートが git の管理下にない</td><td>システム仕様</td></tr>
 <tr><td>設計</td><td>何かを判断し決めること。ドキュメントの種類ではない</td><td>決めたいことは <code>docv/free/plan/</code><br>決めた結果はミッションに沿うファイル<br>経緯や廃案は ADR か PDR</td></tr>
 </tbody></table></div>
 <p>サービス仕様、システム仕様、開発コマンド、アーキテクチャ、設計・実装、テスト方針、インフラと環境は、複数ページに分割できる。明確な分割点は docv では指定しないが、およそ次のような観点でページが肥大化しすぎないよう分割するといい。</p>
@@ -122,9 +122,9 @@
 <p>サービス仕様の 1 ページ目は、<code>docv desc</code> と同じ <code>desc.md</code>（<code>assets/desc.md</code> へのシンボリックリンク）にする。<code>docv desc</code> と一致させるため、このページは 1 ファイルのまま保ち、AI Agent が最初に読む要点だけを書く。詳しいことは 2 ページ目以降に書く。</p>
 <h3 id="書き分けの例">書き分けの例</h3>
 <div class="table-scroll"><table><thead><tr><th>種類</th><th>サービス仕様</th><th>システム仕様</th></tr></thead><tbody>
-<tr><td>出力</td><td>HTML のページの作りと、毎回同じ出力にする決まり</td><td>Chrome を動かして JPG を撮る流れ</td></tr>
+<tr><td>出力</td><td>HTML のページの作りと、毎回同じ出力にする決まり</td><td>出力先を作り直し、埋め込んだ CSS と JS を書く流れ</td></tr>
 <tr><td>エラー</td><td>check の指摘と終了コード</td><td>外の道具が見つからないときや、やりとりが途切れたとき</td></tr>
-<tr><td>スキーマ</td><td>YAML の Slot と <code>docv.yaml</code> の項目</td><td>スキーマを埋め込み、版のタグの URL で公開すること</td></tr>
+<tr><td>スキーマ</td><td><code>docv.yaml</code> の項目</td><td>スキーマを埋め込み、版のタグの URL で公開すること</td></tr>
 <tr><td>外の道具</td><td>textlint で確かめる項目と、使うかどうかの設定</td><td>どのコマンドが、どの道具を、いつ呼ぶか</td></tr>
 </tbody></table></div>
 <h2 id="事柄の割り方と持ち主">事柄の割り方と持ち主</h2>
@@ -301,12 +301,11 @@
 <h2 id="タグ">タグ</h2>
 <p>Free ファイルにはタグをつけ、ディレクトリを細かく設計せずにタグで分類する。いちばんの目的は、ディレクトリの構造によるドキュメントの管理が破綻しやすいことを避けるため。往々にして複数の属性を持つファイルがあり、ディレクトリで分けると置き場所が定まらない。タグで分類すると、HTML で絞り込んで閲覧しやすくもなる。</p>
 <div class="table-scroll"><table><thead><tr><th>タグ</th><th>書くこと</th></tr></thead><tbody>
-<tr><td>スキーマ</td><td><code>docv.yaml</code> と YAML の Slot の JSON Schema の写し（<code>docv/free/schema/</code>）</td></tr>
+<tr><td>スキーマ</td><td><code>docv.yaml</code> の JSON Schema の写し（<code>docv/free/schema/</code>）</td></tr>
 </tbody></table></div>
 <h2 id="ai-agent-への指示">AI Agent への指示</h2>
 <ul>
 <li>セッション開始時に <code>docv desc</code> と <code>docv list</code> を実行し、本ファイルの指示に従いドキュメント管理をすること</li>
-<li>YAML の Slot のスキーマは <code>docv slot schema</code> で確認すること</li>
 <li>ドキュメント変更時は <code>docv fix</code> を通すこと</li>
 <li>ドキュメントを書き足すときは、増えた情報を適切な量で反映すること</li>
 <li>実装は、指示がない限り書かないこと</li>

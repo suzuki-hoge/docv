@@ -9,9 +9,6 @@ dir:
 docv_exclude:
   - docv/free/plan/**
 
-generate:
-  image: true
-
 tags:
   - name: スキーマ
     color: blue

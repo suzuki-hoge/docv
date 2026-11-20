@@ -84,7 +84,7 @@ CLI は Rust で書き、単一のバイナリにして配る。CLI の外で動
 
 ## 参考
 
-- [技術スタック](../system/stack.yaml)
+- [技術スタック](../slot/system/stack.md)
 ```
 
 ---

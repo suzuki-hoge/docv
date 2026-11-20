@@ -143,8 +143,8 @@ mod tests {
                     "---\norder: 1\nmission: 外から見た機能と、それぞれの振る舞いと決まり\n---\n\n# 利用者向け\n\n## 注文\n",
                 ),
                 (
-                    "docv/slot/service/install.yaml",
-                    "steps:\n  - id: cargo\n    name: cargo\n    items:\n      body_markdown: |\n        cargo install\n",
+                    "docv/slot/service/install.md",
+                    "---\nmission: 利用者がこのサービスをインストールする方法\n---\n\n# インストール\n\n## 手順\n",
                 ),
                 (
                     "docv/free/order.md",

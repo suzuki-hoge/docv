@@ -23,8 +23,6 @@ pub struct Config {
     /// docv が読まないファイルの glob。docv/slot/service/service/config.md の「docv が読むファイル」。
     #[serde(default)]
     pub docv_exclude: Vec<String>,
-    #[serde(default)]
-    pub generate: Generate,
     /// タグの一覧。YAML front matter の tags には、ここにあるタグだけを書ける。
     #[serde(default)]
     pub tags: Vec<TagDef>,
@@ -68,7 +66,7 @@ pub struct Dirs {
     /// ドキュメントを置くディレクトリ。この下に free/、slot/、adr/、pdr/ と、build が作るインデックスの README.md を置く。
     #[serde(default = "default_document_root")]
     pub document_root: String,
-    /// docv build の出力先。この下に html/ と image/ を作る。
+    /// docv build の出力先。この下に html/ を作る。
     #[serde(default = "default_output")]
     pub output: String,
 }
@@ -82,14 +80,6 @@ impl Default for Dirs {
     }
 }
 
-/// generate。docv build が作るもの。
-#[derive(Debug, Clone, Default, Deserialize)]
-pub struct Generate {
-    /// YAML の Slot のページを JPG にするか。
-    #[serde(default)]
-    pub image: bool,
-}
-
 /// document_root の下の、Free ファイルのディレクトリ。
 pub const FREE_DIR: &str = "free";
 /// document_root の下の、Slot ファイルのディレクトリ。
@@ -98,8 +88,6 @@ pub const SLOT_DIR: &str = "slot";
 pub const INDEX_FILE: &str = "README.md";
 /// dir.output の下の、HTML のディレクトリ。
 pub const HTML_DIR: &str = "html";
-/// dir.output の下の、JPG のディレクトリ。
-pub const IMAGE_DIR: &str = "image";
 
 /// lint。docv/slot/service/service/config.md の 4 章と 5 章。
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -190,13 +178,6 @@ impl Config {
     /// HTML を出すディレクトリ（ルートからの相対パス）。
     pub fn html_dir(&self) -> String {
         format!("{}/{HTML_DIR}", self.output_dir())
-    }
-
-    /// JPG を出すディレクトリ（ルートからの相対パス）。generate.image が false なら None で、JPG を作らない。
-    pub fn image_dir(&self) -> Option<String> {
-        self.generate
-            .image
-            .then(|| format!("{}/{IMAGE_DIR}", self.output_dir()))
     }
 
     /// インデックスのパス（ルートからの相対パス）。
@@ -317,7 +298,6 @@ mod tests {
         assert_eq!(config.free_dir(), "docv/free");
         assert_eq!(config.slot_dir(), "docv/slot");
         assert_eq!(config.html_dir(), "output/docv/html");
-        assert_eq!(config.image_dir(), None);
         assert_eq!(config.index_path(), "docv/README.md");
         assert!(config.docv_exclude.is_empty());
         assert!(!config.format.enabled);
@@ -388,15 +368,12 @@ mod tests {
 
     #[test]
     fn reads_dirs() {
-        let config =
-            parse("dir:\n  document_root: ./notes/\n  output: out\ngenerate:\n  image: true\n")
-                .unwrap();
+        let config = parse("dir:\n  document_root: ./notes/\n  output: out\n").unwrap();
         assert_eq!(config.document_root(), "notes");
         assert_eq!(config.free_dir(), "notes/free");
         assert_eq!(config.slot_dir(), "notes/slot");
         assert_eq!(config.index_path(), "notes/README.md");
         assert_eq!(config.html_dir(), "out/html");
-        assert_eq!(config.image_dir().as_deref(), Some("out/image"));
         for key in ["document_root", "output"] {
             let error = error_of(&format!("dir:\n  {key}: .\n"));
             assert!(
@@ -410,6 +387,9 @@ mod tests {
             assert!(error.contains("スキーマに合わない"), "{key}: {error}");
         }
         let error = error_of("ignore:\n  - x\n");
+        assert!(error.contains("スキーマに合わない"), "{error}");
+        // JPG はなくなったので、generate.image も書けない
+        let error = error_of("generate:\n  image: true\n");
         assert!(error.contains("スキーマに合わない"), "{error}");
     }
 
