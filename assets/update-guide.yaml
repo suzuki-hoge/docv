@@ -3,6 +3,35 @@
 # change は何が変わったか、action はそれへの対応。対応は、要る（〜する）、選ぶ（〜なら〜できる）、要らない（対応は要らない）のどれかで書く
 # docv update-guide が出す 1 行（「- change: action」）は 100 文字以内にする。収まらなければ、変更を分ける。cargo test で確かめる
 
+- version: 3.0.0
+  changes:
+    - change: YAML の Slot（用語集、技術スタックなど 7 つ）を Markdown に変更
+      action: docv gen <slot> --print の雛形を見て md に書き直し、YAML を消す
+    - change: docv slot gen を docv gen に、docv slot list を docv list に変更
+      action: エージェントの指示ファイルなどに書いたコマンドを書き換える
+    - change: docv slot schema を廃止
+      action: 対応は要らない
+    - change: JPG の出力を廃止し、Chrome を不要に変更
+      action: 出力先の image/ を消す
+    - change: docv.yaml の generate と、docv build の --no-image を廃止
+      action: generate を消し、--no-image を使っていたら外す
+    - change: YAML front matter に adr と pdr を追加し、本文では ADR と PDR を案内しない決まりに変更
+      action: 本文の ADR と PDR へのリンクを、adr と pdr に移す
+    - change: docv check に warning を追加（打ち消された決定を adr と pdr で指しているとき）
+      action: 対応は要らない（warning だけなら終了コードは 0）
+    - change: 費用の Slot のミッションを変更
+      action: docv check の slot-mission に従い、mission を書き換える
+    - change: Doc ガイドの雛形を、Slot、Free、ADR、PDR などの章に組み直し
+      action: docv gen doc-guide --print と見比べ、取り入れるものを選ぶ
+    - change: docv review-guide の観点を、docv が守らせるものと Doc ガイドの基準に分割
+      action: レビューの基準を変えたいなら、Doc ガイドを直せる
+    - change: docv review-guide の一覧から Slot と Free ファイルを外し、手順で docv list を実行させるように変更
+      action: 対応は要らない
+    - change: docv desc に、ADR と PDR の group の分け方と、書き換えてよい間を追加
+      action: 対応は要らない
+    - change: 同じページで見出しの行が同じ表は、列の幅を揃えるように変更
+      action: 対応は要らない
+
 - version: 2.3.2
   changes:
     - change: docv review-guide に、ほかの Slot の案内だけの文を消す観点を追加

@@ -275,7 +275,7 @@ dependencies = [
 
 [[package]]
 name = "docv"
-version = "2.3.2"
+version = "3.0.0"
 dependencies = [
  "anyhow",
  "clap",
